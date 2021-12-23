@@ -13,11 +13,12 @@ import os
 import time
 from horizon.ros import utils as horizon_ros_utils
 
+
+plot_all = False
+
 try:
     from horizon.ros.replay_trajectory import *
     do_replay = True
-    horizon_ros_utils.roslaunch("horizon_examples", "cart_pole.launch")
-    rospy.sleep(3)
 except ImportError:
     do_replay = False
 
@@ -116,24 +117,24 @@ solution = solver.getSolutionDict()
 q_hist = solution["q"]
 
 time = np.arange(0.0, tf+1e-6, tf/ns)
-a = plt.figure()
+plt.figure()
 plt.plot(time, q_hist[0,:])
 plt.plot(time, q_hist[1,:])
 plt.suptitle('$\mathrm{Base \ Position}$', size = 20)
 plt.xlabel('$\mathrm{[sec]}$', size = 20)
 plt.ylabel('$\mathrm{[m]}$', size = 20)
 
-plot_all = True
+
 if plot_all:
-    plt.show()
     hplt = PlotterHorizon(prb, solution)
     # hplt.plotVariables()
-    del a
     hplt.plotFunction('inverse_dynamics', dim=[1], show_bounds=True)
     plt.show()
 
-if do_replay:
-    joint_list = ["cart_joint", "pole_joint"]
+if do_replay and not plot_all:
+    horizon_ros_utils.roslaunch("horizon_examples", "cart_pole.launch")
+    rospy.sleep(3)
+    joint_list=["cart_joint", "pole_joint"]
     replay_trajectory(tf/ns, joint_list, q_hist).replay(is_floating_base=False)
 
 
