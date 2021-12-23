@@ -9,6 +9,7 @@ import time
 import os, math
 from itertools import filterfalse
 import argparse
+from horizon.ros import utils as horizon_ros_utils
 
 # command line arguments
 parser = argparse.ArgumentParser('Horizon\'s twist jump motion with BostonDynamics SpotMini robot.')
@@ -235,6 +236,12 @@ else:
     # remember to run a robot_state_publisher
     repl = replay_trajectory(dt, joint_names, solution['q'], contact_map, pin_ref_frame, kindyn)
 
-print('view animated solution with roslaunch horizon_examples spot.launch!')
+
+display = True
+if display:
+    horizon_ros_utils.roslaunch("horizon_examples", "spot.launch")
+    rospy.sleep(3)
+else:
+    print('view animated solution with roslaunch horizon_examples spot.launch!')
 repl.replay(is_floating_base=True)
 
