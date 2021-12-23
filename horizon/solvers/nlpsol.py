@@ -295,7 +295,8 @@ class NlpsolSolver(Solver):
                 # here dt at node 0 is not defined
                 self.dt_solution[node_n] = dt.getValues(node_n)
         # if dt is a value, set it to each element of dt_solution
-        elif isinstance(dt, (float, int)):
+        elif isinstance(dt, (float, int, cs.SX)):
+            # TODO: when cs.SX needs to be evaluated!
             for node_n in range(self.prb.getNNodes() - 1):
                 self.dt_solution[node_n] = dt
         # if dt is a list, get each dt separately
