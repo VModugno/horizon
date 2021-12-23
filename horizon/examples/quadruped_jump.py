@@ -114,8 +114,8 @@ lift_node = 10
 touch_down_node = 30
 q_fb_trg = np.array([q_init[0], q_init[1], q_init[2] + 0.9, 0.0, 0.0, 0.0, 1.0]).tolist()
 
-prb.createCostFunction("jump", 10.*cs.dot(q[0:3] - q_fb_trg[0:3], q[0:3] - q_fb_trg[0:3]), nodes=list(range(lift_node, touch_down_node)))
-prb.createCostFunction("min_qdot", 10.*cs.dot(qdot, qdot))
+prb.createCost("jump", 10.*cs.dot(q[0:3] - q_fb_trg[0:3], q[0:3] - q_fb_trg[0:3]), nodes=list(range(lift_node, touch_down_node)))
+prb.createCost("min_qdot", 10.*cs.dot(qdot, qdot))
 #prb.createCostFunction("min_qddot", 1e-4*cs.dot(qddot, qddot), nodes= list(range(0, ns)))
 #prb.createCostFunction("min_force", 1e-4*cs.dot( f1 + f2 + f3 + f4, f1 + f2 + f3 + f4), nodes=list(range(0, ns)))
 
