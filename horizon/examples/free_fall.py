@@ -10,11 +10,10 @@ import os
 import time
 from horizon.ros import utils as horizon_ros_utils
 
-# horizon_ros_utils.roslaunch("horizon_examples", "roped_template.launch")
-# time.sleep(3.)
+replay = True
 
 # Switch between suspended and free fall
-FREE_FALL = True
+FREE_FALL = False
 
 # Loading URDF model in pinocchio
 urdffile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'urdf', 'roped_template.urdf')
@@ -135,7 +134,7 @@ input = prb.getInput()
 input_prev = input.getVarOffset(-1)
 
 x_prev, _ = utils.double_integrator_with_floating_base(state_prev[0], state_prev[1], input_prev[0])
-x_int = F_integrator(x0=x_prev, p=input_prev[0])
+x_int = F_integrator(x0=x_prev, p=input_prev[0], time=dt)
 
 prb.createConstraint("multiple_shooting", x_int["xf"] - x, nodes=list(range(1, ns+1)), bounds=dict(lb=np.zeros(nv+nq).tolist(), ub=np.zeros(nv+nq).tolist()))
 
@@ -198,7 +197,7 @@ frame_force_hist_mapping = {'Contact1': f1_hist, 'Contact2': f2_hist, 'rope_anch
 q_res, qdot_res, qddot_res, frame_force_res_mapping, tau_res = resampler_trajectory.resample_torques(q_hist, qdot_hist, qddot_hist, dt, dt_res, dae, frame_force_hist_mapping, kindyn)
 
 
-PRINT = True
+PRINT = False
 if PRINT:
     # plots raw solution
     time = np.arange(0.0, tf+1e-6, dt)
@@ -271,11 +270,15 @@ if PRINT:
 
 
 
-# REPLAY TRAJECTORY
-joint_list = ['Contact1_x', 'Contact1_y', 'Contact1_z',
-              'Contact2_x', 'Contact2_y', 'Contact2_z',
-              'rope_anchor1_1_x', 'rope_anchor1_2_y', 'rope_anchor1_3_z',
-              'rope_joint']
+if replay and not PRINT:
+    horizon_ros_utils.roslaunch("horizon_examples", "roped_template.launch")
+    time.sleep(3.)
 
-replay_trajectory(dt_res, joint_list, q_res, frame_force_res_mapping).replay()
+    # REPLAY TRAJECTORY
+    joint_list = ['Contact1_x', 'Contact1_y', 'Contact1_z',
+                  'Contact2_x', 'Contact2_y', 'Contact2_z',
+                  'rope_anchor1_1_x', 'rope_anchor1_2_y', 'rope_anchor1_3_z',
+                  'rope_joint']
+
+    replay_trajectory(dt_res, joint_list, q_res, frame_force_res_mapping).replay()
 
