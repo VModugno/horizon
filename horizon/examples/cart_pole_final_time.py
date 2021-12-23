@@ -16,6 +16,9 @@ import os
 import os
 import time
 from horizon.ros import utils as horizon_ros_utils
+import rospy
+
+replay = False
 
 
 # Loading URDF model in pinocchio
@@ -117,9 +120,11 @@ plt.suptitle('$\mathrm{Base \ Position}$', size = 20)
 plt.xlabel('$\mathrm{[sec]}$', size = 20)
 plt.ylabel('$\mathrm{[m]}$', size = 20)
 
-
-joint_list=["cart_joint", "pole_joint"]
-replay_trajectory(Tf/ns, joint_list, q_hist).replay(is_floating_base=False)
+if replay:
+    horizon_ros_utils.roslaunch("horizon_examples", "cart_pole.launch")
+    rospy.sleep(3)
+    joint_list=["cart_joint", "pole_joint"]
+    replay_trajectory(Tf/ns, joint_list, q_hist).replay(is_floating_base=False)
 
 
 
