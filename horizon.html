@@ -34,7 +34,8 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/>
-        <link rel="up" title="casadi_horizon" href="modules.html"/> 
+        <link rel="up" title="casadi_horizon" href="modules.html"/>
+        <link rel="next" title="horizon.ros package" href="horizon.ros.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -98,7 +99,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-horizon.functions">horizon.functions module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-horizon.misc_function">horizon.misc_function module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-horizon.nodes">horizon.nodes module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#horizon-nodes-module">horizon.nodes module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-horizon.problem">horizon.problem module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-horizon.type_doc">horizon.type_doc module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-horizon.variables">horizon.variables module</a></li>
@@ -236,7 +237,7 @@
 <span id="horizon-functions-module"></span><h2>horizon.functions module<a class="headerlink" href="#module-horizon.functions" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="horizon.functions.Constraint">
-<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">Constraint</code><span class="sig-paren">(</span><em>name: str, f: &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f113b0e99d0&gt;, used_vars: list, used_pars: list, nodes: Union[int, Iterable[T_co]], bounds=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">Constraint</code><span class="sig-paren">(</span><em>name: str, f: &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f6149984a60&gt;, used_vars: list, used_pars: list, nodes: Union[int, Iterable[T_co]], bounds=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#horizon.functions.Function" title="horizon.functions.Function"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.functions.Function</span></code></a></p>
 <p>Constraint Function of Horizon.</p>
 <dl class="method">
@@ -399,7 +400,7 @@
 
 <dl class="class">
 <dt id="horizon.functions.Function">
-<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">Function</code><span class="sig-paren">(</span><em>name: str, f: &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f113c4c89a0&gt;, used_vars: list, used_pars: list, nodes: Union[int, Iterable[T_co]]</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Function" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">Function</code><span class="sig-paren">(</span><em>name: str, f: &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f6149483760&gt;, used_vars: list, used_pars: list, nodes: Union[int, Iterable[T_co]]</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Function" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Function of Horizon: generic function of SX values from CASADI.</p>
 <p class="rubric">Notes</p>
@@ -435,7 +436,7 @@ An abstract function gets internally implemented at each node, using the variabl
 
 <dl class="method">
 <dt id="horizon.functions.Function.getFunction">
-<code class="descname">getFunction</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f113c4c8a00&gt;<a class="headerlink" href="#horizon.functions.Function.getFunction" title="Permalink to this definition">¶</a></dt>
+<code class="descname">getFunction</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f61494837c0&gt;<a class="headerlink" href="#horizon.functions.Function.getFunction" title="Permalink to this definition">¶</a></dt>
 <dd><p>Getter for the CASADI function</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -744,19 +745,8 @@ It is used internally by the Problem to get the abstract and implemented functio
 <dd></dd></dl>
 
 </div>
-<div class="section" id="module-horizon.nodes">
-<span id="horizon-nodes-module"></span><h2>horizon.nodes module<a class="headerlink" href="#module-horizon.nodes" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="horizon.nodes.Nodes">
-<em class="property">class </em><code class="descclassname">horizon.nodes.</code><code class="descname">Nodes</code><span class="sig-paren">(</span><em>value</em>, <em>lb=None</em>, <em>ub=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.nodes.Nodes" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="method">
-<dt id="horizon.nodes.Nodes.getValue">
-<code class="descname">getValue</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.nodes.Nodes.getValue" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+<div class="section" id="horizon-nodes-module">
+<h2>horizon.nodes module<a class="headerlink" href="#horizon-nodes-module" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="module-horizon.problem">
 <span id="horizon-problem-module"></span><h2>horizon.problem module<a class="headerlink" href="#module-horizon.problem" title="Permalink to this headline">¶</a></h2>
@@ -1177,7 +1167,7 @@ Parameters are specified before building the problem and can be ‘assigned’ a
 
 <dl class="method">
 <dt id="horizon.problem.Problem.getDynamics">
-<code class="descname">getDynamics</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f113af6f340&gt;<a class="headerlink" href="#horizon.problem.Problem.getDynamics" title="Permalink to this definition">¶</a></dt>
+<code class="descname">getDynamics</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f614971b1f0&gt;<a class="headerlink" href="#horizon.problem.Problem.getDynamics" title="Permalink to this definition">¶</a></dt>
 <dd><p>Getter of the system Dynamics used in the optimization problem.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1458,7 +1448,7 @@ Parameters are specified before building the problem and can be ‘assigned’ a
 Used to store more variables of the same nature.</p>
 <dl class="method">
 <dt id="horizon.variables.AbstractAggregate.getVars">
-<code class="descname">getVars</code><span class="sig-paren">(</span><em>abstr=False</em><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f113af1a400&gt;<a class="headerlink" href="#horizon.variables.AbstractAggregate.getVars" title="Permalink to this definition">¶</a></dt>
+<code class="descname">getVars</code><span class="sig-paren">(</span><em>abstr=False</em><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7f614968d5b0&gt;<a class="headerlink" href="#horizon.variables.AbstractAggregate.getVars" title="Permalink to this definition">¶</a></dt>
 <dd><p>Getter for the variable stored in the aggregate.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3068,6 +3058,13 @@ It is used internally by the Problem to get the abstract and implemented variabl
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="horizon.ros.html" class="btn btn-neutral float-right" title="horizon.ros package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
   
 
   <hr/>
