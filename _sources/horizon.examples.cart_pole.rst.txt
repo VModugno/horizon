@@ -1,0 +1,62 @@
+horizon.examples.cart\_pole package
+===================================
+
+Submodules
+----------
+
+horizon.examples.cart\_pole.cart\_pole module
+---------------------------------------------
+
+.. automodule:: horizon.examples.cart_pole.cart_pole
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.examples.cart\_pole.cart\_pole\_fd module
+-------------------------------------------------
+
+.. automodule:: horizon.examples.cart_pole.cart_pole_fd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.examples.cart\_pole.cart\_pole\_feedback\_solver module
+---------------------------------------------------------------
+
+.. automodule:: horizon.examples.cart_pole.cart_pole_feedback_solver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.examples.cart\_pole.cart\_pole\_feedback\_sqp module
+------------------------------------------------------------
+
+.. automodule:: horizon.examples.cart_pole.cart_pole_feedback_sqp
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.examples.cart\_pole.cart\_pole\_final\_time module
+----------------------------------------------------------
+
+.. automodule:: horizon.examples.cart_pole.cart_pole_final_time
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.examples.cart\_pole.cart\_pole\_sin module
+--------------------------------------------------
+
+.. automodule:: horizon.examples.cart_pole.cart_pole_sin
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: horizon.examples.cart_pole
+    :members:
+    :undoc-members:
+    :show-inheritance:

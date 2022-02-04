@@ -33,7 +33,10 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/> 
+    <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/>
+        <link rel="up" title="horizon package" href="horizon.html"/>
+        <link rel="next" title="horizon.solvers package" href="horizon.solvers.html"/>
+        <link rel="prev" title="horizon.playground.spot package" href="horizon.playground.spot.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -84,8 +87,33 @@
             
             
                 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">horizon</a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">casadi_horizon</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="copy_external_dependencies.html">copy_external_dependencies module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="horizon.html">horizon package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="horizon.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html">horizon.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html">horizon.playground package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">horizon.ros package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html">horizon.solvers package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html">horizon.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html">horizon.transcriptions package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html">horizon.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.functions">horizon.functions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.misc_function">horizon.misc_function module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.nodes">horizon.nodes module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.problem">horizon.problem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.type_doc">horizon.type_doc module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.variables">horizon.variables module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
 </ul>
 
             
@@ -130,6 +158,10 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
+          <li><a href="modules.html">casadi_horizon</a> &raquo;</li>
+        
+          <li><a href="horizon.html">horizon package</a> &raquo;</li>
+        
       <li>horizon.ros package</li>
     
     
@@ -163,11 +195,16 @@
 
 <dl class="class">
 <dt id="horizon.ros.replay_trajectory.replay_trajectory">
-<em class="property">class </em><code class="descclassname">horizon.ros.replay_trajectory.</code><code class="descname">replay_trajectory</code><span class="sig-paren">(</span><em>dt</em>, <em>joint_list</em>, <em>q_replay</em>, <em>frame_force_mapping=None</em>, <em>force_reference_frame=ReferenceFrame.LOCAL</em>, <em>kindyn=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.replay_trajectory.replay_trajectory" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">horizon.ros.replay_trajectory.</code><code class="descname">replay_trajectory</code><span class="sig-paren">(</span><em>dt</em>, <em>joint_list</em>, <em>q_replay</em>, <em>frame_force_mapping=None</em>, <em>force_reference_frame=&lt;ReferenceFrame.LOCAL: 1&gt;</em>, <em>kindyn=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.replay_trajectory.replay_trajectory" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="method">
 <dt id="horizon.ros.replay_trajectory.replay_trajectory.publishContactForces">
-<code class="descname">publishContactForces</code><span class="sig-paren">(</span><em>time</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.replay_trajectory.replay_trajectory.publishContactForces" title="Permalink to this definition">¶</a></dt>
+<code class="descname">publishContactForces</code><span class="sig-paren">(</span><em>time</em>, <em>qk</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.replay_trajectory.replay_trajectory.publishContactForces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.ros.replay_trajectory.replay_trajectory.publish_joints">
+<code class="descname">publish_joints</code><span class="sig-paren">(</span><em>qk</em>, <em>is_floating_base=True</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.replay_trajectory.replay_trajectory.publish_joints" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -176,12 +213,44 @@
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="horizon.ros.replay_trajectory.replay_trajectory.setSlowDownFactor">
+<code class="descname">setSlowDownFactor</code><span class="sig-paren">(</span><em>slow_down_factor</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.replay_trajectory.replay_trajectory.setSlowDownFactor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a slow down factor for the replay of the trajectory
+:param slow_down_factor: fator to slow down</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="horizon.ros.replay_trajectory.replay_trajectory.sleep">
 <code class="descname">sleep</code><span class="sig-paren">(</span><em>secs</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.replay_trajectory.replay_trajectory.sleep" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set sleep time between trajectory sequences
 :param secs: time to sleep in seconds</p>
 </dd></dl>
 
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.ros.tf_broadcaster_simple">
+<span id="horizon-ros-tf-broadcaster-simple-module"></span><h2>horizon.ros.tf_broadcaster_simple module<a class="headerlink" href="#module-horizon.ros.tf_broadcaster_simple" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.ros.tf_broadcaster_simple.TransformBroadcaster">
+<em class="property">class </em><code class="descclassname">horizon.ros.tf_broadcaster_simple.</code><code class="descname">TransformBroadcaster</code><a class="headerlink" href="#horizon.ros.tf_broadcaster_simple.TransformBroadcaster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="horizon.ros.tf_broadcaster_simple.TransformBroadcaster.sendTransform">
+<code class="descname">sendTransform</code><span class="sig-paren">(</span><em>pos</em>, <em>rot</em>, <em>time</em>, <em>child_frame_id</em>, <em>frame_id</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.tf_broadcaster_simple.TransformBroadcaster.sendTransform" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.ros.utils">
+<span id="horizon-ros-utils-module"></span><h2>horizon.ros.utils module<a class="headerlink" href="#module-horizon.ros.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="horizon.ros.utils.roslaunch">
+<code class="descclassname">horizon.ros.utils.</code><code class="descname">roslaunch</code><span class="sig-paren">(</span><em>package</em>, <em>launch</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.ros.utils.roslaunch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a roslaunch in a separate thread
+:param package: where the roslaunch is located
+:param launch: file</p>
 </dd></dl>
 
 </div>
@@ -194,6 +263,15 @@
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="horizon.solvers.html" class="btn btn-neutral float-right" title="horizon.solvers package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="horizon.playground.spot.html" class="btn btn-neutral" title="horizon.playground.spot package" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

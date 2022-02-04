@@ -33,7 +33,10 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/> 
+    <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/>
+        <link rel="up" title="horizon package" href="horizon.html"/>
+        <link rel="next" title="horizon.transcriptions package" href="horizon.transcriptions.html"/>
+        <link rel="prev" title="horizon.solvers package" href="horizon.solvers.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -84,8 +87,33 @@
             
             
                 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">horizon</a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">casadi_horizon</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="copy_external_dependencies.html">copy_external_dependencies module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="horizon.html">horizon package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="horizon.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html">horizon.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html">horizon.playground package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.ros.html">horizon.ros package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html">horizon.solvers package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">horizon.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html">horizon.transcriptions package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html">horizon.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.functions">horizon.functions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.misc_function">horizon.misc_function module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.nodes">horizon.nodes module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.problem">horizon.problem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.type_doc">horizon.type_doc module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.variables">horizon.variables module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
 </ul>
 
             
@@ -130,6 +158,10 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
+          <li><a href="modules.html">casadi_horizon</a> &raquo;</li>
+        
+          <li><a href="horizon.html">horizon package</a> &raquo;</li>
+        
       <li>horizon.tests package</li>
     
     
@@ -154,195 +186,246 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="module-horizon.tests.class_try">
-<span id="horizon-tests-class-try-module"></span><h2>horizon.tests.class_try module<a class="headerlink" href="#module-horizon.tests.class_try" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-horizon.tests.collision_tests">
+<span id="horizon-tests-collision-tests-module"></span><h2>horizon.tests.collision_tests module<a class="headerlink" href="#module-horizon.tests.collision_tests" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.tests.collision_tests.CollisionTest">
+<em class="property">class </em><code class="descclassname">horizon.tests.collision_tests.</code><code class="descname">CollisionTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.collision_tests.CollisionTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="horizon.tests.collision_tests.CollisionTest.setUp">
+<code class="descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#horizon.tests.collision_tests.CollisionTest.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook method for setting up the test fixture before exercising it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.collision_tests.CollisionTest.test_parallel_capsules">
+<code class="descname">test_parallel_capsules</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.collision_tests.CollisionTest.test_parallel_capsules" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.collision_tests.CollisionTest.test_robot">
+<code class="descname">test_robot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.collision_tests.CollisionTest.test_robot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.collision_tests.CollisionTest.test_touching_capsules">
+<code class="descname">test_touching_capsules</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.collision_tests.CollisionTest.test_touching_capsules" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.collision_tests.CollisionTest.test_touching_capsules_rot">
+<code class="descname">test_touching_capsules_rot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.collision_tests.CollisionTest.test_touching_capsules_rot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
-<div class="section" id="module-horizon.tests.horizon_old">
-<span id="horizon-tests-horizon-old-module"></span><h2>horizon.tests.horizon_old module<a class="headerlink" href="#module-horizon.tests.horizon_old" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-horizon.tests.ilqr_tests">
+<span id="horizon-tests-ilqr-tests-module"></span><h2>horizon.tests.ilqr_tests module<a class="headerlink" href="#module-horizon.tests.ilqr_tests" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
-<dt id="horizon.tests.horizon_old.Constraint">
-<em class="property">class </em><code class="descclassname">horizon.tests.horizon_old.</code><code class="descname">Constraint</code><span class="sig-paren">(</span><em>N</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dt id="horizon.tests.ilqr_tests.EqualityConstrained">
+<em class="property">class </em><code class="descclassname">horizon.tests.ilqr_tests.</code><code class="descname">EqualityConstrained</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.ilqr_tests.EqualityConstrained" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
 <dl class="method">
-<dt id="horizon.tests.horizon_old.Constraint.addConstraint">
-<code class="descname">addConstraint</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint.addConstraint" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="horizon.tests.ilqr_tests.EqualityConstrained.setUp">
+<code class="descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#horizon.tests.ilqr_tests.EqualityConstrained.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook method for setting up the test fixture before exercising it.</p>
+</dd></dl>
 
 <dl class="method">
-<dt id="horizon.tests.horizon_old.Constraint.addConstraintBounds">
-<code class="descname">addConstraintBounds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint.addConstraintBounds" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Constraint.getConstraints">
-<code class="descname">getConstraints</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint.getConstraints" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Constraint.setConstraintBounds">
-<code class="descname">setConstraintBounds</code><span class="sig-paren">(</span><em>lbg</em>, <em>ubg</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint.setConstraintBounds" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Constraint.setConstraintBoundsFromName">
-<code class="descname">setConstraintBoundsFromName</code><span class="sig-paren">(</span><em>name</em>, <em>nodes</em>, <em>ubg</em>, <em>lbg</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint.setConstraintBoundsFromName" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Constraint.setConstraintFunction">
-<code class="descname">setConstraintFunction</code><span class="sig-paren">(</span><em>name</em>, <em>g</em>, <em>nodes=None</em>, <em>bounds=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint.setConstraintFunction" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Constraint.update">
-<code class="descname">update</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Constraint.update" title="Permalink to this definition">¶</a></dt>
+<dt id="horizon.tests.ilqr_tests.EqualityConstrained.test_simple_constrained">
+<code class="descname">test_simple_constrained</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.ilqr_tests.EqualityConstrained.test_simple_constrained" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
+</div>
+<div class="section" id="module-horizon.tests.paramter_support_test">
+<span id="horizon-tests-paramter-support-test-module"></span><h2>horizon.tests.paramter_support_test module<a class="headerlink" href="#module-horizon.tests.paramter_support_test" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
-<dt id="horizon.tests.horizon_old.Problem">
-<em class="property">class </em><code class="descclassname">horizon.tests.horizon_old.</code><code class="descname">Problem</code><span class="sig-paren">(</span><em>N</em>, <em>crash_if_suboptimal=False</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dt id="horizon.tests.paramter_support_test.ParamTest">
+<em class="property">class </em><code class="descclassname">horizon.tests.paramter_support_test.</code><code class="descname">ParamTest</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.paramter_support_test.ParamTest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
 <dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.addCostFunction">
-<code class="descname">addCostFunction</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.addCostFunction" title="Permalink to this definition">¶</a></dt>
+<dt id="horizon.tests.paramter_support_test.ParamTest.setUp">
+<code class="descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#horizon.tests.paramter_support_test.ParamTest.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook method for setting up the test fixture before exercising it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.paramter_support_test.ParamTest.test_blocksqp_vs_ilqr">
+<code class="descname">test_blocksqp_vs_ilqr</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.paramter_support_test.ParamTest.test_blocksqp_vs_ilqr" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.addInitialGuess">
-<code class="descname">addInitialGuess</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.addInitialGuess" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.buildProblem">
-<code class="descname">buildProblem</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.buildProblem" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.getFunction">
-<code class="descname">getFunction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.getFunction" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.getOptimizedVariables">
-<code class="descname">getOptimizedVariables</code><span class="sig-paren">(</span><em>w_opt</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.getOptimizedVariables" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.getVariable">
-<code class="descname">getVariable</code><span class="sig-paren">(</span><em>k=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.getVariable" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.setCostFunction">
-<code class="descname">setCostFunction</code><span class="sig-paren">(</span><em>name</em>, <em>j</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.setCostFunction" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.setFunction">
-<code class="descname">setFunction</code><span class="sig-paren">(</span><em>name</em>, <em>f</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.setFunction" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.setInitialGuess">
-<code class="descname">setInitialGuess</code><span class="sig-paren">(</span><em>name</em>, <em>nodes</em>, <em>vals</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.setInitialGuess" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.setStateBounds">
-<code class="descname">setStateBounds</code><span class="sig-paren">(</span><em>lbw</em>, <em>ubw</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.setStateBounds" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.setStateBoundsFromName">
-<code class="descname">setStateBoundsFromName</code><span class="sig-paren">(</span><em>name</em>, <em>ubw</em>, <em>lbw</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.setStateBoundsFromName" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.setVariable">
-<code class="descname">setVariable</code><span class="sig-paren">(</span><em>name</em>, <em>var_dim</em>, <em>k_node=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.setVariable" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.showVariables">
-<code class="descname">showVariables</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.showVariables" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.solveProblem">
-<code class="descname">solveProblem</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.solveProblem" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.Problem.updateVariables">
-<code class="descname">updateVariables</code><span class="sig-paren">(</span><em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.Problem.updateVariables" title="Permalink to this definition">¶</a></dt>
+<dt id="horizon.tests.paramter_support_test.ParamTest.test_blocksqp_vs_ipopt">
+<code class="descname">test_blocksqp_vs_ipopt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.paramter_support_test.ParamTest.test_blocksqp_vs_ipopt" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="function">
-<dt id="horizon.tests.horizon_old.RK4">
-<code class="descclassname">horizon.tests.horizon_old.</code><code class="descname">RK4</code><span class="sig-paren">(</span><em>M</em>, <em>L</em>, <em>x</em>, <em>u</em>, <em>xdot</em>, <em>dt</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.RK4" title="Permalink to this definition">¶</a></dt>
-<dd><p>RK4 Runge-Kutta 4 integrator
-TODO: PUT IT IN ANOTHER CLASS
-Input:</p>
-<blockquote>
-<div>L: objective fuction to integrate
-M: RK steps
-T: final time
-N: numbr of shooting nodes:
-x: state varibales
-u: controls</div></blockquote>
-</dd></dl>
-
-<dl class="class">
-<dt id="horizon.tests.horizon_old.StepSolver">
-<em class="property">class </em><code class="descclassname">horizon.tests.horizon_old.</code><code class="descname">StepSolver</code><a class="headerlink" href="#horizon.tests.horizon_old.StepSolver" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="method">
-<dt id="horizon.tests.horizon_old.StepSolver.buildProblemStep">
-<code class="descname">buildProblemStep</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.StepSolver.buildProblemStep" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.StepSolver.getEdges">
-<code class="descname">getEdges</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.StepSolver.getEdges" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.StepSolver.solveProblemStep">
-<code class="descname">solveProblemStep</code><span class="sig-paren">(</span><em>initial_com</em>, <em>initial_l_foot</em>, <em>initial_r_foot</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.StepSolver.solveProblemStep" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="horizon.tests.horizon_old.StepSolver.stepPattern">
-<code class="descname">stepPattern</code><span class="sig-paren">(</span><em>prb_vars</em>, <em>prb_funs</em>, <em>initial_n</em>, <em>final_n</em>, <em>type_leg</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.StepSolver.stepPattern" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="function">
-<dt id="horizon.tests.horizon_old.casadi_sum">
-<code class="descclassname">horizon.tests.horizon_old.</code><code class="descname">casadi_sum</code><span class="sig-paren">(</span><em>x</em>, <em>axis=None</em>, <em>out=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.casadi_sum" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="horizon.tests.horizon_old.interpolator">
-<code class="descclassname">horizon.tests.horizon_old.</code><code class="descname">interpolator</code><span class="sig-paren">(</span><em>traj_old</em>, <em>step_i</em>, <em>step_f</em>, <em>step_height</em>, <em>time</em>, <em>t_i</em>, <em>t_f</em>, <em>freq</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.interpolator" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="horizon.tests.horizon_old.ordered_dict_prepend">
-<code class="descclassname">horizon.tests.horizon_old.</code><code class="descname">ordered_dict_prepend</code><span class="sig-paren">(</span><em>dct</em>, <em>key</em>, <em>value</em>, <em>dict_setitem=&lt;slot wrapper '__setitem__' of 'dict' objects&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.horizon_old.ordered_dict_prepend" title="Permalink to this definition">¶</a></dt>
+<dt id="horizon.tests.paramter_support_test.make_problem">
+<code class="descclassname">horizon.tests.paramter_support_test.</code><code class="descname">make_problem</code><span class="sig-paren">(</span><em>solver_type</em>, <em>A11</em>, <em>A13</em>, <em>A21</em>, <em>A32</em>, <em>B21</em>, <em>B32</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.paramter_support_test.make_problem" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </div>
-<div class="section" id="horizon-tests-jac-test-module">
-<h2>horizon.tests.jac_test module<a class="headerlink" href="#horizon-tests-jac-test-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-horizon.tests.solver_lq_test">
+<span id="horizon-tests-solver-lq-test-module"></span><h2>horizon.tests.solver_lq_test module<a class="headerlink" href="#module-horizon.tests.solver_lq_test" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.tests.solver_lq_test.SolverConsistency">
+<em class="property">class </em><code class="descclassname">horizon.tests.solver_lq_test.</code><code class="descname">SolverConsistency</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.solver_lq_test.SolverConsistency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="horizon.tests.solver_lq_test.SolverConsistency.setUp">
+<code class="descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#horizon.tests.solver_lq_test.SolverConsistency.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook method for setting up the test fixture before exercising it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.solver_lq_test.SolverConsistency.test_blocksqp_vs_ilqr">
+<code class="descname">test_blocksqp_vs_ilqr</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.solver_lq_test.SolverConsistency.test_blocksqp_vs_ilqr" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.solver_lq_test.SolverConsistency.test_blocksqp_vs_ipopt">
+<code class="descname">test_blocksqp_vs_ipopt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.solver_lq_test.SolverConsistency.test_blocksqp_vs_ipopt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.solver_lq_test.make_problem">
+<code class="descclassname">horizon.tests.solver_lq_test.</code><code class="descname">make_problem</code><span class="sig-paren">(</span><em>solver_type</em>, <em>A11</em>, <em>A13</em>, <em>A21</em>, <em>A32</em>, <em>B21</em>, <em>B32</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.solver_lq_test.make_problem" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
-<div class="section" id="horizon-tests-test-parameters-module">
-<h2>horizon.tests.test_parameters module<a class="headerlink" href="#horizon-tests-test-parameters-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-horizon.tests.solver_lq_test_GNSSQP">
+<span id="horizon-tests-solver-lq-test-gnssqp-module"></span><h2>horizon.tests.solver_lq_test_GNSSQP module<a class="headerlink" href="#module-horizon.tests.solver_lq_test_GNSSQP" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.tests.solver_lq_test_GNSSQP.SolverConsistency">
+<em class="property">class </em><code class="descclassname">horizon.tests.solver_lq_test_GNSSQP.</code><code class="descname">SolverConsistency</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.solver_lq_test_GNSSQP.SolverConsistency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="horizon.tests.solver_lq_test_GNSSQP.SolverConsistency.setUp">
+<code class="descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#horizon.tests.solver_lq_test_GNSSQP.SolverConsistency.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook method for setting up the test fixture before exercising it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.solver_lq_test_GNSSQP.SolverConsistency.test_gnsqp">
+<code class="descname">test_gnsqp</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.solver_lq_test_GNSSQP.SolverConsistency.test_gnsqp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.solver_lq_test_GNSSQP.make_problem">
+<code class="descclassname">horizon.tests.solver_lq_test_GNSSQP.</code><code class="descname">make_problem</code><span class="sig-paren">(</span><em>solver_type</em>, <em>A11</em>, <em>A13</em>, <em>A21</em>, <em>A32</em>, <em>B21</em>, <em>B32</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.solver_lq_test_GNSSQP.make_problem" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-horizon.tests.something">
+<span id="horizon-tests-something-module"></span><h2>horizon.tests.something module<a class="headerlink" href="#module-horizon.tests.something" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="horizon.tests.something.test_view">
+<code class="descclassname">horizon.tests.something.</code><code class="descname">test_view</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.something.test_view" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-horizon.tests.test_get_set">
+<span id="horizon-tests-test-get-set-module"></span><h2>horizon.tests.test_get_set module<a class="headerlink" href="#module-horizon.tests.test_get_set" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.tests.test_get_set.SolverConsistency">
+<em class="property">class </em><code class="descclassname">horizon.tests.test_get_set.</code><code class="descname">SolverConsistency</code><span class="sig-paren">(</span><em>methodName='runTest'</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_get_set.SolverConsistency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">unittest.case.TestCase</span></code></p>
+<dl class="method">
+<dt id="horizon.tests.test_get_set.SolverConsistency.setUp">
+<code class="descname">setUp</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#horizon.tests.test_get_set.SolverConsistency.setUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hook method for setting up the test fixture before exercising it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.test_get_set.SolverConsistency.test_bounds">
+<code class="descname">test_bounds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_get_set.SolverConsistency.test_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.test_get_set.SolverConsistency.test_constr_bounds">
+<code class="descname">test_constr_bounds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_get_set.SolverConsistency.test_constr_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.test_get_set.SolverConsistency.test_initial_guess">
+<code class="descname">test_initial_guess</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_get_set.SolverConsistency.test_initial_guess" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.tests.test_get_set.SolverConsistency.test_param_values">
+<code class="descname">test_param_values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_get_set.SolverConsistency.test_param_values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.tests.test_horizon">
+<span id="horizon-tests-test-horizon-module"></span><h2>horizon.tests.test_horizon module<a class="headerlink" href="#module-horizon.tests.test_horizon" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_bounds_2">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_bounds_2</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_bounds_2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_bounds_input">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_bounds_input</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_bounds_input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_boundsarray">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_boundsarray</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_boundsarray" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_constraintBounds">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_constraintBounds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_constraintBounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_intermediateConstraint">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_intermediateConstraint</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_intermediateConstraint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_parameters">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_prev">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_prev</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_prev" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_singleParameter">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_singleParameter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_singleParameter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_singleVariable">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_singleVariable</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_singleVariable" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_variables">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_variables</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_variables" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.tests.test_horizon.test_view">
+<code class="descclassname">horizon.tests.test_horizon.</code><code class="descname">test_view</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.tests.test_horizon.test_view" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
 <div class="section" id="module-horizon.tests">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-horizon.tests" title="Permalink to this headline">¶</a></h2>
@@ -353,6 +436,15 @@ u: controls</div></blockquote>
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="horizon.transcriptions.html" class="btn btn-neutral float-right" title="horizon.transcriptions package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="horizon.solvers.html" class="btn btn-neutral" title="horizon.solvers package" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

@@ -1,0 +1,166 @@
+horizon.playground.spot package
+===============================
+
+Submodules
+----------
+
+horizon.playground.spot.experiment\_augmenting module
+-----------------------------------------------------
+
+.. automodule:: horizon.playground.spot.experiment_augmenting
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_backflip\_manual module
+-----------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_backflip_manual
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_direct\_collo module
+--------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_direct_collo
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_fd module
+---------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_fd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_fd\_manual module
+-----------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_fd_manual
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_fd\_step\_manual module
+-----------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_fd_step_manual
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_jump\_fb module
+---------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_jump_fb
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_jump\_re\_refiner module
+------------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_jump_re_refiner
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_jump\_refined\_global module
+----------------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_jump_refined_global
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_jump\_refined\_local module
+---------------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_jump_refined_local
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_jump\_simplified module
+-----------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_jump_simplified
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_jump\_twist\_refined module
+---------------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_jump_twist_refined
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_leap module
+-----------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_leap
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_leg\_raise module
+-----------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_leg_raise
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_step module
+-----------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_step
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_step\_fd module
+---------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_step_fd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_step\_manual module
+-------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_step_manual
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_wheelie module
+--------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_wheelie
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot.spot\_wheelie\_manual module
+----------------------------------------------------
+
+.. automodule:: horizon.playground.spot.spot_wheelie_manual
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: horizon.playground.spot
+    :members:
+    :undoc-members:
+    :show-inheritance:

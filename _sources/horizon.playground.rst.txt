@@ -1,0 +1,165 @@
+horizon.playground package
+==========================
+
+Subpackages
+-----------
+
+.. toctree::
+
+    horizon.playground.spot
+
+Submodules
+----------
+
+horizon.playground.cart\_pole\_fd\_ilqr module
+----------------------------------------------
+
+.. automodule:: horizon.playground.cart_pole_fd_ilqr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.cart\_pole\_feedback module
+----------------------------------------------
+
+.. automodule:: horizon.playground.cart_pole_feedback
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.cart\_pole\_manual module
+--------------------------------------------
+
+.. automodule:: horizon.playground.cart_pole_manual
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.collision\_example module
+--------------------------------------------
+
+.. automodule:: horizon.playground.collision_example
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.compute\_hessian module
+------------------------------------------
+
+.. automodule:: horizon.playground.compute_hessian
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.lwr\_ik module
+---------------------------------
+
+.. automodule:: horizon.playground.lwr_ik
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.opti\_spot module
+------------------------------------
+
+.. automodule:: horizon.playground.opti_spot
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.quadruped\_jump\_fd module
+---------------------------------------------
+
+.. automodule:: horizon.playground.quadruped_jump_fd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.quadrupedal\_walk module
+-------------------------------------------
+
+.. automodule:: horizon.playground.quadrupedal_walk
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.rope\_jump module
+------------------------------------
+
+.. automodule:: horizon.playground.rope_jump
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot\_ilqr\_balance module
+---------------------------------------------
+
+.. automodule:: horizon.playground.spot_ilqr_balance
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.spot\_ilqr\_front\_jump module
+-------------------------------------------------
+
+.. automodule:: horizon.playground.spot_ilqr_front_jump
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.sqp\_problem module
+--------------------------------------
+
+.. automodule:: horizon.playground.sqp_problem
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.swing module
+-------------------------------
+
+.. automodule:: horizon.playground.swing
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.trial\_hessian module
+----------------------------------------
+
+.. automodule:: horizon.playground.trial_hessian
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.trial\_single\_var module
+--------------------------------------------
+
+.. automodule:: horizon.playground.trial_single_var
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.try\_variable\_conversion module
+---------------------------------------------------
+
+.. automodule:: horizon.playground.try_variable_conversion
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.playground.unit\_mass\_collocation module
+-------------------------------------------------
+
+.. automodule:: horizon.playground.unit_mass_collocation
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: horizon.playground
+    :members:
+    :undoc-members:
+    :show-inheritance:

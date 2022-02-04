@@ -1,7 +1,0 @@
-.. includeme:
-
-Include
-========
-
-.. include:: ../README.md
-

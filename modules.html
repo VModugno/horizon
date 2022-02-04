@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>horizon &mdash; horizon 1.0.0. documentation</title>
+  <title>casadi_horizon &mdash; horizon 1.0.0. documentation</title>
   
 
   
@@ -34,7 +34,7 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/>
-        <link rel="next" title="horizon package" href="horizon.html"/>
+        <link rel="next" title="copy_external_dependencies module" href="copy_external_dependencies.html"/>
         <link rel="prev" title="Welcome to horizon’s documentation!" href="index.html"/> 
 
   
@@ -87,8 +87,10 @@
             
                 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">horizon</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">casadi_horizon</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="copy_external_dependencies.html">copy_external_dependencies module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="horizon.html">horizon package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
 </ul>
 </li>
 </ul>
@@ -135,7 +137,7 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
-      <li>horizon</li>
+      <li>casadi_horizon</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -154,20 +156,127 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="horizon">
-<h1>horizon<a class="headerlink" href="#horizon" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="casadi-horizon">
+<h1>casadi_horizon<a class="headerlink" href="#casadi-horizon" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="copy_external_dependencies.html">copy_external_dependencies module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="horizon.html">horizon package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.function">horizon.function module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="horizon.examples.html">horizon.examples package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#module-horizon.examples.cart_pole">horizon.examples.cart_pole module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-quadruped-jump-module">horizon.examples.quadruped_jump module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-roped-robot-module">horizon.examples.roped_robot module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-roped-robot-rappel-module">horizon.examples.roped_robot_rappel module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-roped-robot-sim-module">horizon.examples.roped_robot_sim module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-rviz-jump-module">horizon.examples.rviz_jump module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#module-horizon.examples.spot">horizon.examples.spot module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-spot-motions-module">horizon.examples.spot_motions module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-spot-walk-module">horizon.examples.spot_walk module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#horizon-examples-unit-mass-module">horizon.examples.unit_mass module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html#module-horizon.examples">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.playground.html">horizon.playground package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-cart-pole-fd-ilqr-module">horizon.playground.cart_pole_fd_ilqr module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-cart-pole-feedback-module">horizon.playground.cart_pole_feedback module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-cart-pole-manual-module">horizon.playground.cart_pole_manual module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-collision-example-module">horizon.playground.collision_example module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#module-horizon.playground.compute_hessian">horizon.playground.compute_hessian module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-lwr-ik-module">horizon.playground.lwr_ik module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-opti-spot-module">horizon.playground.opti_spot module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-quadruped-jump-fd-module">horizon.playground.quadruped_jump_fd module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-quadrupedal-walk-module">horizon.playground.quadrupedal_walk module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-rope-jump-module">horizon.playground.rope_jump module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-spot-ilqr-balance-module">horizon.playground.spot_ilqr_balance module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-spot-ilqr-front-jump-module">horizon.playground.spot_ilqr_front_jump module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-sqp-problem-module">horizon.playground.sqp_problem module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-swing-module">horizon.playground.swing module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-trial-hessian-module">horizon.playground.trial_hessian module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-trial-single-var-module">horizon.playground.trial_single_var module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-try-variable-conversion-module">horizon.playground.try_variable_conversion module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#horizon-playground-unit-mass-collocation-module">horizon.playground.unit_mass_collocation module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html#module-horizon.playground">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.ros.html">horizon.ros package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="horizon.ros.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.ros.html#module-horizon.ros.replay_trajectory">horizon.ros.replay_trajectory module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.ros.html#module-horizon.ros.tf_broadcaster_simple">horizon.ros.tf_broadcaster_simple module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.ros.html#module-horizon.ros.utils">horizon.ros.utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.ros.html#module-horizon.ros">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.solvers.html">horizon.solvers package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.blocksqp">horizon.solvers.blocksqp module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.ilqr">horizon.solvers.ilqr module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.ipopt">horizon.solvers.ipopt module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.nlpsol">horizon.solvers.nlpsol module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.solver">horizon.solvers.solver module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.sqp">horizon.solvers.sqp module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.tests.html">horizon.tests package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.collision_tests">horizon.tests.collision_tests module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.ilqr_tests">horizon.tests.ilqr_tests module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.paramter_support_test">horizon.tests.paramter_support_test module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.solver_lq_test">horizon.tests.solver_lq_test module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.solver_lq_test_GNSSQP">horizon.tests.solver_lq_test_GNSSQP module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.something">horizon.tests.something module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.test_get_set">horizon.tests.test_get_set module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests.test_horizon">horizon.tests.test_horizon module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html#module-horizon.tests">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.transcriptions.html">horizon.transcriptions package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.integrators">horizon.transcriptions.integrators module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.methods">horizon.transcriptions.methods module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.transcriptor">horizon.transcriptions.transcriptor module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.trial_integrator">horizon.transcriptions.trial_integrator module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.utils.html">horizon.utils package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.collision">horizon.utils.collision module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.kin_dyn">horizon.utils.kin_dyn module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.mat_storer">horizon.utils.mat_storer module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.plotter">horizon.utils.plotter module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.refiner">horizon.utils.refiner module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-module">horizon.utils.replayer module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-fd-module">horizon.utils.replayer_fd module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-fd-mx-module">horizon.utils.replayer_fd_mx module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-mx-module">horizon.utils.replayer_mx module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.resampler_trajectory">horizon.utils.resampler_trajectory module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.rti">horizon.utils.rti module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#horizon-utils-send-to-gazebo-module">horizon.utils.send_to_gazebo module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.utils">horizon.utils.utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#horizon-utils-vis-refiner-global-module">horizon.utils.vis_refiner_global module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#horizon-utils-vis-refiner-local-module">horizon.utils.vis_refiner_local module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html#module-horizon.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.functions">horizon.functions module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.misc_function">horizon.misc_function module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.nodes">horizon.nodes module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.problem">horizon.problem module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.state_variables">horizon.state_variables module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.type_doc">horizon.type_doc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon.variables">horizon.variables module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon">Module contents</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">setup module</a></li>
 </ul>
 </div>
 </div>
@@ -179,7 +288,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="horizon.html" class="btn btn-neutral float-right" title="horizon package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="copy_external_dependencies.html" class="btn btn-neutral float-right" title="copy_external_dependencies module" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="index.html" class="btn btn-neutral" title="Welcome to horizon’s documentation!" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

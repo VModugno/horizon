@@ -1,0 +1,7 @@
+copy\_external\_dependencies module
+===================================
+
+.. automodule:: copy_external_dependencies
+    :members:
+    :undoc-members:
+    :show-inheritance:

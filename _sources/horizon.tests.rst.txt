@@ -4,34 +4,66 @@ horizon.tests package
 Submodules
 ----------
 
-horizon.tests.class\_try module
--------------------------------
-
-.. automodule:: horizon.tests.class_try
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-horizon.tests.horizon\_old module
----------------------------------
-
-.. automodule:: horizon.tests.horizon_old
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-horizon.tests.jac\_test module
-------------------------------
-
-.. automodule:: horizon.tests.jac_test
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-horizon.tests.test\_parameters module
+horizon.tests.collision\_tests module
 -------------------------------------
 
-.. automodule:: horizon.tests.test_parameters
+.. automodule:: horizon.tests.collision_tests
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.tests.ilqr\_tests module
+--------------------------------
+
+.. automodule:: horizon.tests.ilqr_tests
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.tests.paramter\_support\_test module
+--------------------------------------------
+
+.. automodule:: horizon.tests.paramter_support_test
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.tests.solver\_lq\_test module
+-------------------------------------
+
+.. automodule:: horizon.tests.solver_lq_test
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.tests.solver\_lq\_test\_GNSSQP module
+---------------------------------------------
+
+.. automodule:: horizon.tests.solver_lq_test_GNSSQP
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.tests.something module
+------------------------------
+
+.. automodule:: horizon.tests.something
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.tests.test\_get\_set module
+-----------------------------------
+
+.. automodule:: horizon.tests.test_get_set
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.tests.test\_horizon module
+----------------------------------
+
+.. automodule:: horizon.tests.test_horizon
     :members:
     :undoc-members:
     :show-inheritance:

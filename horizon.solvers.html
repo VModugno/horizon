@@ -33,7 +33,10 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/> 
+    <link rel="top" title="horizon 1.0.0. documentation" href="index.html"/>
+        <link rel="up" title="horizon package" href="horizon.html"/>
+        <link rel="next" title="horizon.tests package" href="horizon.tests.html"/>
+        <link rel="prev" title="horizon.ros package" href="horizon.ros.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -84,8 +87,33 @@
             
             
                 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">horizon</a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">casadi_horizon</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="copy_external_dependencies.html">copy_external_dependencies module</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="horizon.html">horizon package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="horizon.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="horizon.examples.html">horizon.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.playground.html">horizon.playground package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.ros.html">horizon.ros package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">horizon.solvers package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.tests.html">horizon.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.transcriptions.html">horizon.transcriptions package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="horizon.utils.html">horizon.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.functions">horizon.functions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.misc_function">horizon.misc_function module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.nodes">horizon.nodes module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.problem">horizon.problem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.type_doc">horizon.type_doc module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon.variables">horizon.variables module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.html#module-horizon">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
 </ul>
 
             
@@ -130,6 +158,10 @@
     
       <li><a href="index.html">Docs</a> &raquo;</li>
         
+          <li><a href="modules.html">casadi_horizon</a> &raquo;</li>
+        
+          <li><a href="horizon.html">horizon package</a> &raquo;</li>
+        
       <li>horizon.solvers package</li>
     
     
@@ -154,165 +186,415 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
+<div class="section" id="module-horizon.solvers.blocksqp">
+<span id="horizon-solvers-blocksqp-module"></span><h2>horizon.solvers.blocksqp module<a class="headerlink" href="#module-horizon.solvers.blocksqp" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.solvers.blocksqp.BlockSqpSolver">
+<em class="property">class </em><code class="descclassname">horizon.solvers.blocksqp.</code><code class="descname">BlockSqpSolver</code><span class="sig-paren">(</span><em>prb: horizon.problem.Problem, opts: Dict[KT, VT]</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.blocksqp.BlockSqpSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.solvers.nlpsol.NlpsolSolver" title="horizon.solvers.nlpsol.NlpsolSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.solvers.nlpsol.NlpsolSolver</span></code></a></p>
+<dl class="method">
+<dt id="horizon.solvers.blocksqp.BlockSqpSolver.configure_rti">
+<code class="descname">configure_rti</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.solvers.blocksqp.BlockSqpSolver.configure_rti" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take appropriate actions to make the solver suitable for
+a RTI scheme</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">success flag</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 <div class="section" id="module-horizon.solvers.ilqr">
 <span id="horizon-solvers-ilqr-module"></span><h2>horizon.solvers.ilqr module<a class="headerlink" href="#module-horizon.solvers.ilqr" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
-<dt id="horizon.solvers.ilqr.iterativeLQR">
-<em class="property">class </em><code class="descclassname">horizon.solvers.ilqr.</code><code class="descname">iterativeLQR</code><span class="sig-paren">(</span><em>x</em>, <em>u</em>, <em>xdot</em>, <em>dt</em>, <em>N</em>, <em>intermediate_cost</em>, <em>final_cost</em>, <em>intermediate_constraints={}</em>, <em>final_constraint=None</em>, <em>sym_t=&lt;sphinx.ext.autodoc.importer._MockObject object&gt;</em>, <em>opt={}</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="docutils">
-<dt>The iterativeLQR class solves a nonlinear, (equality)constrained iLQR problem for a given</dt>
-<dd><ul class="first simple">
-<li>system dynamics (continuous time)</li>
-<li>intermediate cost l(x,u)</li>
-<li>final cost lf(x)</li>
+<dt id="horizon.solvers.ilqr.SolverILQR">
+<em class="property">class </em><code class="descclassname">horizon.solvers.ilqr.</code><code class="descname">SolverILQR</code><span class="sig-paren">(</span><em>prb: horizon.problem.Problem</em>, <em>opts: Dict[KT</em>, <em>VT] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.solvers.solver.Solver" title="horizon.solvers.solver.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.solvers.solver.Solver</span></code></a></p>
+<dl class="method">
+<dt id="horizon.solvers.ilqr.SolverILQR.configure_rti">
+<code class="descname">configure_rti</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR.configure_rti" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take appropriate actions to make the solver suitable for
+a RTI scheme</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">success flag</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.ilqr.SolverILQR.getDt">
+<code class="descname">getDt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR.getDt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s dt as a vector of dt for each node.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">array of dt values for each node</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.ilqr.SolverILQR.getSolutionDict">
+<code class="descname">getSolutionDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR.getSolutionDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s solution</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dictionary of variable optimized</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.ilqr.SolverILQR.print_timings">
+<code class="descname">print_timings</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR.print_timings" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.ilqr.SolverILQR.save">
+<code class="descname">save</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.ilqr.SolverILQR.set_iteration_callback">
+<code class="descname">set_iteration_callback</code><span class="sig-paren">(</span><em>cb=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR.set_iteration_callback" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.ilqr.SolverILQR.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.SolverILQR.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solve the horizon’s problem</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">success flag</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.solvers.ipopt">
+<span id="horizon-solvers-ipopt-module"></span><h2>horizon.solvers.ipopt module<a class="headerlink" href="#module-horizon.solvers.ipopt" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.solvers.ipopt.IpoptSolver">
+<em class="property">class </em><code class="descclassname">horizon.solvers.ipopt.</code><code class="descname">IpoptSolver</code><span class="sig-paren">(</span><em>prb: horizon.problem.Problem, opts: Dict[KT, VT]</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ipopt.IpoptSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.solvers.nlpsol.NlpsolSolver" title="horizon.solvers.nlpsol.NlpsolSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.solvers.nlpsol.NlpsolSolver</span></code></a></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.solvers.nlpsol">
+<span id="horizon-solvers-nlpsol-module"></span><h2>horizon.solvers.nlpsol module<a class="headerlink" href="#module-horizon.solvers.nlpsol" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.solvers.nlpsol.NlpsolSolver">
+<em class="property">class </em><code class="descclassname">horizon.solvers.nlpsol.</code><code class="descname">NlpsolSolver</code><span class="sig-paren">(</span><em>prb: horizon.problem.Problem, opts: Dict[KT, VT], solver_plugin: str</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.nlpsol.NlpsolSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.solvers.solver.Solver" title="horizon.solvers.solver.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.solvers.solver.Solver</span></code></a></p>
+<dl class="method">
+<dt id="horizon.solvers.nlpsol.NlpsolSolver.build">
+<code class="descname">build</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.nlpsol.NlpsolSolver.build" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>fill the dictionary “state_var_impl”</dt>
+<dd><ul class="first last simple">
+<li>key: nodes (nNone, n0, n1, …) nNone contains single variables that are not projected in nodes</li>
+<li>val: dict with name and value of implemented variable</li>
 </ul>
-<p class="last">Equality constraints are treated by mean of projection: cost function is projected onto equality constraints.</p>
 </dd>
 </dl>
-<dl class="class">
-<dt id="horizon.solvers.ilqr.iterativeLQR.LinearConstraint">
-<em class="property">class </em><code class="descname">LinearConstraint</code><span class="sig-paren">(</span><em>nx</em>, <em>nu</em>, <em>nc</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.LinearConstraint" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="horizon.solvers.ilqr.iterativeLQR.LinearDynamics">
-<em class="property">class </em><code class="descname">LinearDynamics</code><span class="sig-paren">(</span><em>nx</em>, <em>nu</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.LinearDynamics" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="horizon.solvers.ilqr.iterativeLQR.PropagateResult">
-<em class="property">class </em><code class="descname">PropagateResult</code><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.PropagateResult" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="horizon.solvers.ilqr.iterativeLQR.QuadraticCost">
-<em class="property">class </em><code class="descname">QuadraticCost</code><span class="sig-paren">(</span><em>nx</em>, <em>nu</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.QuadraticCost" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 </dd></dl>
 
 <dl class="method">
-<dt id="horizon.solvers.ilqr.iterativeLQR.get_kkt_rcond">
-<code class="descname">get_kkt_rcond</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.get_kkt_rcond" title="Permalink to this definition">¶</a></dt>
+<dt id="horizon.solvers.nlpsol.NlpsolSolver.getConstraintSolutionDict">
+<code class="descname">getConstraintSolutionDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.nlpsol.NlpsolSolver.getConstraintSolutionDict" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="horizon.solvers.ilqr.iterativeLQR.get_svd_thr">
-<code class="descname">get_svd_thr</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.get_svd_thr" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="horizon.solvers.nlpsol.NlpsolSolver.getDt">
+<code class="descname">getDt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.nlpsol.NlpsolSolver.getDt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s dt as a vector of dt for each node.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">array of dt values for each node</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
-<dt id="horizon.solvers.ilqr.iterativeLQR.randomizeInitialGuess">
-<code class="descname">randomizeInitialGuess</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.randomizeInitialGuess" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="horizon.solvers.nlpsol.NlpsolSolver.getSolutionDict">
+<code class="descname">getSolutionDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.nlpsol.NlpsolSolver.getSolutionDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s solution</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dictionary of variable optimized</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
-<dt id="horizon.solvers.ilqr.iterativeLQR.setInitialState">
-<code class="descname">setInitialState</code><span class="sig-paren">(</span><em>x0</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.setInitialState" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="horizon.solvers.nlpsol.NlpsolSolver.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.solvers.nlpsol.NlpsolSolver.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solve the horizon’s problem</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">success flag</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.solvers.solver">
+<span id="horizon-solvers-solver-module"></span><h2>horizon.solvers.solver module<a class="headerlink" href="#module-horizon.solvers.solver" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.solvers.solver.Solver">
+<em class="property">class </em><code class="descclassname">horizon.solvers.solver.</code><code class="descname">Solver</code><span class="sig-paren">(</span><em>prb: horizon.problem.Problem</em>, <em>opts: Dict[KT</em>, <em>VT] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.solver.Solver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>Solver is an abstract interface for a generic solver
+that aims to find a solution of an instance of
+horizon.Problem.</p>
+<p>The typical usage requires to (i) given an horizon.Problem,
+call the factory make_solver() to retrieve a solver concrete instance,
+(ii) to call solve() on it, and (iii) to retrieve the solution as
+solver.x_opt, and solver.u_opt.</p>
+<dl class="method">
+<dt id="horizon.solvers.solver.Solver.configure_rti">
+<code class="descname">configure_rti</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.solvers.solver.Solver.configure_rti" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take appropriate actions to make the solver suitable for
+a RTI scheme</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">success flag</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
-<dt id="horizon.solvers.ilqr.iterativeLQR.set_kkt_rcond">
-<code class="descname">set_kkt_rcond</code><span class="sig-paren">(</span><em>rcond</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.set_kkt_rcond" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="horizon.solvers.solver.Solver.getDt">
+<code class="descname">getDt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.solver.Solver.getDt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s dt as a vector of dt for each node.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">array of dt values for each node</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
-<dt id="horizon.solvers.ilqr.iterativeLQR.set_svd_thr">
-<code class="descname">set_svd_thr</code><span class="sig-paren">(</span><em>svd_thr</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.set_svd_thr" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="horizon.solvers.solver.Solver.getSolutionDict">
+<code class="descname">getSolutionDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.solver.Solver.getSolutionDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s solution</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dictionary of variable optimized</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="horizon.solvers.solver.Solver.make_solver">
+<em class="property">classmethod </em><code class="descname">make_solver</code><span class="sig-paren">(</span><em>type: str</em>, <em>prb: horizon.problem.Problem</em>, <em>opts: Dict[KT</em>, <em>VT] = None</em><span class="sig-paren">)</span> &#x2192; horizon.solvers.solver.Solver<a class="headerlink" href="#horizon.solvers.solver.Solver.make_solver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a solver from its type name</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>type</strong> (<em>str</em>) – a string indicating the solver type (e.g., blocksqp, ipopt, ilqr)</li>
+<li><strong>prb</strong> (<a class="reference internal" href="horizon.html#horizon.problem.Problem" title="horizon.problem.Problem"><em>Problem</em></a>) – the horizon’s problem instance to be solved</li>
+<li><strong>dt</strong> (<em>float</em>) – the discretization step, None if not needed</li>
+<li><strong>opts</strong> (<em>Dict</em><em>, </em><em>optional</em>) – A solver-dependent Dict of options. Defaults to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
-<dt id="horizon.solvers.ilqr.iterativeLQR.solve">
-<code class="descname">solve</code><span class="sig-paren">(</span><em>niter</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.ilqr.iterativeLQR.solve" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="horizon.solvers.solver.Solver.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.solvers.solver.Solver.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solve the horizon’s problem</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">success flag</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </dd></dl>
 
 </div>
 <div class="section" id="module-horizon.solvers.sqp">
 <span id="horizon-solvers-sqp-module"></span><h2>horizon.solvers.sqp module<a class="headerlink" href="#module-horizon.solvers.sqp" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="horizon.solvers.sqp.osqpOptions">
-<code class="descclassname">horizon.solvers.sqp.</code><code class="descname">osqpOptions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.osqpOptions" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="horizon.solvers.sqp.qpoasesMPCOptions">
-<code class="descclassname">horizon.solvers.sqp.</code><code class="descname">qpoasesMPCOptions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.qpoasesMPCOptions" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="class">
-<dt id="horizon.solvers.sqp.sqp">
-<em class="property">class </em><code class="descclassname">horizon.solvers.sqp.</code><code class="descname">sqp</code><span class="sig-paren">(</span><em>name</em>, <em>qp_solver</em>, <em>problem_dict</em>, <em>options_dict</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Implements a sqp solver using Gauss-Newton approximation of the Hessian</p>
+<dt id="horizon.solvers.sqp.GNSQPSolver">
+<em class="property">class </em><code class="descclassname">horizon.solvers.sqp.</code><code class="descname">GNSQPSolver</code><span class="sig-paren">(</span><em>prb: horizon.problem.Problem, opts: Dict[KT, VT], qp_solver_plugin: str</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.solvers.solver.Solver" title="horizon.solvers.solver.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.solvers.solver.Solver</span></code></a></p>
 <dl class="method">
-<dt id="horizon.solvers.sqp.sqp.f">
-<code class="descname">f</code><span class="sig-paren">(</span><em>f</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp.f" title="Permalink to this definition">¶</a></dt>
-<dd><p>Permits to update cost function
-:param f: new cost function</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="horizon.solvers.sqp.sqp.g">
-<code class="descname">g</code><span class="sig-paren">(</span><em>g</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp.g" title="Permalink to this definition">¶</a></dt>
-<dd><p>permits to update constraints
-:param g: new constraints</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="horizon.solvers.sqp.sqp.get_hessian_computation_time">
-<code class="descname">get_hessian_computation_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp.get_hessian_computation_time" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns: list of logged time to compute the hessian</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="horizon.solvers.sqp.sqp.get_qp_computation_time">
-<code class="descname">get_qp_computation_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp.get_qp_computation_time" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns: list of logged time to setup and solve a QP</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="horizon.solvers.sqp.sqp.plot">
-<code class="descname">plot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp.plot" title="Permalink to this definition">¶</a></dt>
-<dd><p>Shows plots of value of objective function and constraint violation</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="horizon.solvers.sqp.sqp.qpsolve">
-<code class="descname">qpsolve</code><span class="sig-paren">(</span><em>H</em>, <em>g</em>, <em>lbx</em>, <em>ubx</em>, <em>A</em>, <em>lba</em>, <em>uba</em>, <em>init=True</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp.qpsolve" title="Permalink to this definition">¶</a></dt>
-<dd><p>Internal qp solver to solve differential problem
-:param H: Hessian cos function
-:param g: gradient cost function
-:param lbx: lower bounds
-:param ubx: upper bounds
-:param A: Constraints
-:param lba: lower constraints
-:param uba: upper constraints</p>
-<p>Returns: solution of differential problem</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="horizon.solvers.sqp.sqp.qpsolver_option_parser">
-<code class="descname">qpsolver_option_parser</code><span class="sig-paren">(</span><em>qpsolver</em>, <em>options</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqp.qpsolver_option_parser" title="Permalink to this definition">¶</a></dt>
+<dt id="horizon.solvers.sqp.GNSQPSolver.getAlpha">
+<code class="descname">getAlpha</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getAlpha" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getBeta">
+<code class="descname">getBeta</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getBeta" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getConstraintNormIterations">
+<code class="descname">getConstraintNormIterations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getConstraintNormIterations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getConstraintSolutionDict">
+<code class="descname">getConstraintSolutionDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getConstraintSolutionDict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getDt">
+<code class="descname">getDt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getDt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s dt as a vector of dt for each node.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">array of dt values for each node</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">array</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
-<dl class="function">
-<dt id="horizon.solvers.sqp.sqpsol">
-<code class="descclassname">horizon.solvers.sqp.</code><code class="descname">sqpsol</code><span class="sig-paren">(</span><em>name</em>, <em>qp_solver</em>, <em>problem_dict</em>, <em>options_dict</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.sqpsol" title="Permalink to this definition">¶</a></dt>
-<dd><p>sqpsol creates a sqp solver using Gauss-Newton approximation of the Hessian
-:param name: name of the solver (not used at the moment)
-:param qp_solver: internal qp solver name
-:param problem_dict: {‘f’: cost_function (residual!), ‘g’: constraints, ‘x’: variables}
-:param options_dict: {‘max_iter’: iterations}</p>
-<p>Returns: a sqp object</p>
-<p>NOTE: the cost function has to be passed in a residual form: [f1, f2, f3, …]
-where F = ||f1|| + ||f2|| + …</p>
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getHessianComputationTime">
+<code class="descname">getHessianComputationTime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getHessianComputationTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getLineSearchComputationTime">
+<code class="descname">getLineSearchComputationTime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getLineSearchComputationTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getObjectiveIterations">
+<code class="descname">getObjectiveIterations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getObjectiveIterations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getQPComputationTime">
+<code class="descname">getQPComputationTime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getQPComputationTime" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.getSolutionDict">
+<code class="descname">getSolutionDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.getSolutionDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the horizon’s solution</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dictionary of variable optimized</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.setAlphaMin">
+<code class="descname">setAlphaMin</code><span class="sig-paren">(</span><em>alpha_min</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.setAlphaMin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.setBeta">
+<code class="descname">setBeta</code><span class="sig-paren">(</span><em>beta</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.setBeta" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.set_iteration_callback">
+<code class="descname">set_iteration_callback</code><span class="sig-paren">(</span><em>cb=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.set_iteration_callback" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.solvers.sqp.GNSQPSolver.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.solvers.sqp.GNSQPSolver.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solve the horizon’s problem</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">success flag</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </dd></dl>
 
 </div>
@@ -325,6 +607,15 @@ where F = ||f1|| + ||f2|| + …</p>
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="horizon.tests.html" class="btn btn-neutral float-right" title="horizon.tests package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="horizon.ros.html" class="btn btn-neutral" title="horizon.ros package" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>
