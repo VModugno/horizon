@@ -152,37 +152,32 @@
             
   <div class="section" id="welcome-to-horizon-s-documentation">
 <h1>Welcome to horizon’s documentation!<a class="headerlink" href="#welcome-to-horizon-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>A library for optimal control with a special focus on robotics systems.
-It relies on direct methods to reduce the problem into a NLP taht can be solved using any desired state-of-the-art solver.</p>
-<p>Horizon is based on <a class="reference external" href="https://web.casadi.org/">CasADi</a>, a tool for nonlinear optimization and algorithmic differentiation.</p>
+<p>A framework for trajectory optimization and optimal control tailored to robotic systems.
+It relies on direct methods to reduce an optimization problem into a NLP that can be solved using many state-of-the-art solvers.</p>
+<p>Horizon is based on <a class="reference external" href="https://web.casadi.org/">CasADi</a>, a tool for nonlinear optimization and algorithmic differentiation.
+It uses <a class="reference external" href="https://github.com/stack-of-tasks/pinocchio">Pinocchio</a> to smoothly integrate the robot model into the optimization problem.</p>
 </div>
 <div class="section" id="features">
 <h1>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><strong>Powerful</strong> and <strong>intuitive</strong></li>
-<li>nothing else</li>
+<li>complete <strong>pipeline</strong> from model aquisition to robot deployment</li>
+<li><strong>intuitive</strong> API allowing a quick setup of the optimization problem</li>
+<li>ease of configuration and highly <em>customizable</em>: integrators, transcription methods, solvers..</li>
+<li>support <strong>state-of-the-art</strong> non linear solvers</li>
 </ul>
 </div>
 <div class="section" id="install">
 <h1>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h1>
-<dl class="docutils">
-<dt>pip package is not supported yet, but until then:</dt>
-<dd><ul class="first last simple">
-<li>clone the github repo <a class="reference external" href="https://github.com/FrancescoRuscelli/horizon_gui">horizon</a></li>
-<li>run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code></li>
-</ul>
-</dd>
-</dl>
+<p>A <em>pip</em> package is available: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">casadi_horizon</span></code></p>
+<p>..or, alternatively, a <em>conda</em> package is supported: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">horizon</span> <span class="pre">-c</span> <span class="pre">francesco_ruscelli</span></code></p>
 </div>
 <div class="section" id="getting-started">
 <h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
-<p>If you want to get acquainted with Horizon, I prepared a brief tutorial for you:</p>
+<p>Some examples demonstrating trajectory optimization for different robots are available.
+Besides installing Horizon on your machine and running the examples, you can try out the framework in independent evinronments:</p>
 <ul class="simple">
-<li>install the jupyter notebook (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">notebook</span></code>)</li>
-<li>open a web browser (e.g. chrome, firefox, …)</li>
-<li>go to the horizon folder</li>
-<li><code class="docutils literal notranslate"><span class="pre">jupyter</span> <span class="pre">notebook</span> <span class="pre">horizon-notebook.ipynb</span></code></li>
-<li>the notebook should display in a page of your browser</li>
+<li>on your browser, through JupyterLab: <a class="reference external" href="https://mybinder.org/v2/gh/FrancescoRuscelli/horizon-live/main?urlpath=lab/tree/index.ipynb">Horizon-web</a></li>
+<li>on your machine, through Docker: <cite>Horizon-docker</cite> (tbd)</li>
 </ul>
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
