@@ -1,0 +1,38 @@
+horizon.examples.demo\_code.spot package
+========================================
+
+Submodules
+----------
+
+horizon.examples.demo\_code.spot.spot\_ilqr\_jump module
+--------------------------------------------------------
+
+.. automodule:: horizon.examples.demo_code.spot.spot_ilqr_jump
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.examples.demo\_code.spot.spot\_jump module
+--------------------------------------------------
+
+.. automodule:: horizon.examples.demo_code.spot.spot_jump
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+horizon.examples.demo\_code.spot.spot\_walk module
+--------------------------------------------------
+
+.. automodule:: horizon.examples.demo_code.spot.spot_walk
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: horizon.examples.demo_code.spot
+    :members:
+    :undoc-members:
+    :show-inheritance:
