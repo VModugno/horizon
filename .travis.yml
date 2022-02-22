@@ -61,11 +61,7 @@ script:
        python3 -m build --wheel
        twine upload -u __token__ -p $PYPI_TOKEN dist/*.whl
        # upload to docker
-       REPO=francescoruscelli
-       cd docker && ./build
-       docker tag horizon $REPO/horizon
-       docker login --username=$REPO --password=$DOCKER_TOKEN
-       docker push $REPO/horizon;
+       cd docker && ./upload.sh
     
     fi
 
