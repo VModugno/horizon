@@ -27,8 +27,6 @@ def main(args):
         input("code for ilqr will be generated in: '/tmp/ilqr_walk'. Press a key to resume. \n")
 
     solver_type = 'ilqr'
-    resampling = False
-    load_initial_guess = False
 
     if rviz_replay:
         from horizon.ros.replay_trajectory import replay_trajectory
@@ -36,7 +34,6 @@ def main(args):
         plot_sol = False
 
     path_to_examples = os.path.dirname(os.path.realpath(__file__))
-    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
     if warmstart_flag:
         file_name = os.path.splitext(os.path.basename(__file__))[0]
@@ -326,6 +323,8 @@ def main(args):
         try:
             # set ROS stuff and launchfile
             import subprocess
+            # temporary add the example path to the environment
+            os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
             subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
             rospy.loginfo("'spot' visualization started.")
         except:

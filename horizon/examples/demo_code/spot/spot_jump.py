@@ -374,9 +374,9 @@ if rviz_replay:
     # set ROS stuff and launchfile
     from horizon.ros.replay_trajectory import *
     import rospy
-
-    # set ROS stuff and launchfile
     import subprocess
+    # temporary add the example path to the environment
+    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
     subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
     rospy.loginfo("'spot' visualization started.")
 

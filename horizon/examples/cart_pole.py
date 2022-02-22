@@ -6,7 +6,6 @@ An example of the cart-pole problem
 
 import argparse
 import os
-
 import casadi as cs
 import matplotlib.pyplot as plt
 import numpy as np
@@ -57,7 +56,6 @@ def main(args):
 
 
     path_to_examples = os.path.dirname(os.path.realpath(__file__))
-    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
     # Create CasADi interface to Pinocchio
     urdffile = os.path.join(path_to_examples, 'urdf', 'cart_pole_xy.urdf')
@@ -286,11 +284,10 @@ def main(args):
         plt.show()
 
     if rviz_replay:
-
-        # set ROS stuff and launchfile
         try:
             # set ROS stuff and launchfile
-            import subprocess 
+            import subprocess
+            os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
             subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=cart_pole_xy'])
             rospy.loginfo("'cart_pole' visualization started.")
         except:

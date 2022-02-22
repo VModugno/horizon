@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 import os, math
 from itertools import filterfalse
 
+# get path to the examples folder
 path_to_examples = os.path.abspath(__file__ + "/../../../")
-os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
 # mat storer
 file_name = os.path.splitext(os.path.basename(__file__))[0]
@@ -33,7 +33,7 @@ n_nodes = 100
 t_jump = (1.0, 1.5)
 
 # load urdf
-urdffile = rospkg.RosPack().get_path('spot_urdf') + '/urdf/spot.urdf'
+urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
 urdf = open(urdffile, 'r').read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
 
@@ -301,6 +301,8 @@ if rviz_replay:
     try:
         # set ROS stuff and launchfile
         import subprocess
+        # temporary add the example path to the environment
+        os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
         subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
         rospy.loginfo("'spot' visualization started.")
     except:
