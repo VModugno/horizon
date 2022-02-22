@@ -14,7 +14,7 @@ branches:
 jobs:
   include:
     - stage: compile
-      script: ./travis/compile.sh
+      script: ./travis/python_compile.sh
     - stage: test
       script: .travis/test.sh
     - stage: deploy
