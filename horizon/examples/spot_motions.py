@@ -285,7 +285,7 @@ def main(args):
             opts['merit_derivative_tolerance'] = 1e-6
             opts['constraint_violation_tolerance'] = n_nodes * 1e-6
             opts['osqp.polish'] = True # without this
-            opts['osqp.delta'] = 1e-9 # and this, it does not converge!
+            opts['osqp.delta'] = 1e-6 # and this, it does not converge!
             opts['osqp.verbose'] = False
             opts['osqp.rho'] = 0.02
             opts['osqp.scaled_termination'] = False
@@ -303,7 +303,7 @@ def main(args):
             opts["enableRegularisation"] = True
             opts["numRegularisationSteps"] = 2
             opts["epsRegularisation"] = 5. * 10e3 * 1e-7
-            opts['hessian_type'] =  'posdef'
+            opts['hessian_type'] = 'posdef'
 
     solv = solver.Solver.make_solver(solver_type, prb, opts)
 
