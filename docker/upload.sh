@@ -1,7 +1,7 @@
 #!/bin/bash
 
 REPO=francescoruscelli
-cd docker && ./build
+./docker/build.sh
 docker tag horizon $REPO/horizon
 docker login --username=$REPO --password=$DOCKER_TOKEN
-docker push $REPO/horizon;
+docker push $REPO/horizon
