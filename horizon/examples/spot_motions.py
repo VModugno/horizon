@@ -285,7 +285,7 @@ def main(args):
             opts['merit_derivative_tolerance'] = 1e-6
             opts['constraint_violation_tolerance'] = n_nodes * 1e-6
             opts['osqp.polish'] = True # without this
-            opts['osqp.delta'] = 1e-6 # and this, it does not converge!
+            opts['osqp.delta'] = 1e-7 # and this, it does not converge!
             opts['osqp.verbose'] = False
             opts['osqp.rho'] = 0.02
             opts['osqp.scaled_termination'] = False
