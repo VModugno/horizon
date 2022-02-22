@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 import numpy as np
 from horizon import problem
 from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter
@@ -28,7 +29,6 @@ def main(args):
 
 
     path_to_examples = os.path.dirname(os.path.realpath(__file__))
-    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
     # Loading URDF model in pinocchio
     urdffile = os.path.join(path_to_examples, 'urdf', 'roped_template.urdf')
@@ -227,34 +227,6 @@ def main(args):
         frope_prev = frope.getVarOffset(-1)
         prb.createCost("min_dfrope", 1000. * cs.sumsqr(frope-frope_prev), range(1, n_nodes))
 
-
-    # if rope_mode == 'jump':
-    #     lift_node = 3
-    #     touch_down_node = 25
-    #     x_distance = -0.4
-        # prb.createCost("wall_distance", 100. * cs.sumsqr(q[0] - x_distance), nodes=range(lift_node, n_nodes + 1))
-
-        # for frame, f in frame_force_mapping.items():
-        #     if frame != 'rope_anchor2':
-        #         FK = cs.Function.deserialize(kindyn.fk(frame))
-        #         DFK = cs.Function.deserialize(kindyn.frameVelocity(frame, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED))
-        #         p = FK(q=q)['ee_pos']
-        #         v = DFK(q=q, qdot=qdot)['ee_vel_linear']
-        #         p_init = FK(q=q_init)['ee_pos']
-
-                # prb.createConstraint(f"{frame}_before_jump", v, nodes=range(0, lift_node))
-                # prb.createConstraint(f"zero_{frame}_vel_after_jump", v, nodes=range(lift_node, touch_down_node))
-
-                # flight phase
-                # prb.createConstraint(f"{frame}_no_force_during_jump", f, nodes=range(lift_node, touch_down_node))
-
-                # alpha = 0.3
-                # x_foot = rope_lenght * np.sin(alpha)
-                # surface_dict = {'a': 1., 'd': -x_foot}
-                # c, lb, ub = kin_dyn.surface_point_contact(surface_dict, q, kindyn, frame)
-                # prb.createConstraint(f"{frame}_on_wall", c, nodes=range(touch_down_node, n_nodes + 1), bounds=dict(lb=lb, ub=ub))
-
-
     # Creates problem
     opts = {'ipopt.tol': 1e-3,
             'ipopt.constr_viol_tol': 1e-3,
@@ -333,49 +305,13 @@ def main(args):
         plt.xlabel('$\mathrm{[sec]}$', size=20)
         plt.ylabel('$\mathrm{ [N] }} $', size=20)
 
-        # if resample:
-        #
-        #     plt.figure()
-        #     for i in range(0, 3):
-        #         plt.plot(time_res, q_res[i, :])
-        #     plt.suptitle('$\mathrm{Base \ Position \ Resampled}$', size=20)
-        #     plt.xlabel('$\mathrm{[sec]}$', size=20)
-        #     plt.ylabel('$\mathrm{[m]}$', size=20)
-        #
-        #     plt.figure()
-        #     for i in range(0, 3):
-        #         plt.plot(time_res[:-1], qddot_res[i, :])
-        #     plt.suptitle('$\mathrm{Base \ Acceleration \ Resampled}$', size=20)
-        #     plt.xlabel('$\mathrm{[sec]}$', size=20)
-        #     plt.ylabel('$\mathrm{ [m] } /  \mathrm{ [sec^2] } $', size=20)
-        #
-        #     plt.figure()
-        #     f1_res = frame_force_res_mapping["Contact1"]
-        #     f2_res = frame_force_res_mapping["Contact2"]
-        #     frope_res = frame_force_res_mapping["rope_anchor2"]
-        #     for i in range(0, 3):
-        #         plt.plot(time_res[:-1], f1_res[i, :])
-        #         plt.plot(time_res[:-1], f2_res[i, :])
-        #         plt.plot(time_res[:-1], frope_res[i, :])
-        #     plt.suptitle('$\mathrm{force \ feet \ and \ rope \ resampled}$', size=20)
-        #     plt.xlabel('$\mathrm{[sec]}$', size=20)
-        #     plt.ylabel('$\mathrm{ [N] } /  \mathrm{ [sec^2] } $', size=20)
-        #
-        #     plt.figure()
-        #     for i in range(0, 6):
-        #         plt.plot(time_res[:-1], tau_res[i, :], '-x')
-        #     plt.suptitle('$\mathrm{base \ force \ resampled}$', size=20)
-        #     plt.xlabel('$\mathrm{[sec]}$', size=20)
-        #     plt.ylabel('$\mathrm{ [N] }} $', size=20)
-        #
-        # plt.show()
-
 
     if rviz_replay:
 
         try:
             # set ROS stuff and launchfile
-            import subprocess 
+            import subprocess
+            os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
             subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=roped_template'])
             rospy.loginfo("'roped_robot' visualization started.")
         except:

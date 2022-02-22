@@ -1,14 +1,12 @@
+#!/usr/bin/env python3
+
 import time
 from typing import List
-
 from horizon import problem
-from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter, mat_storer
-from horizon.transcriptions import integrators
+from horizon.utils import utils, kin_dyn, plotter, mat_storer
 from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
-from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers import solver
-import os, math, argparse
-from itertools import filterfalse
+import os, argparse
 import numpy as np
 import casadi as cs
 
@@ -36,7 +34,6 @@ def main(args):
         plot_sol = False
 
     path_to_examples = os.path.dirname(os.path.realpath(__file__))
-    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
     if warmstart_flag:
         file_name = os.path.splitext(os.path.basename(__file__))[0]
@@ -325,7 +322,8 @@ def main(args):
 
         try:
             # set ROS stuff and launchfile
-            import subprocess 
+            import subprocess
+            os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
             subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
             rospy.loginfo("'spot' visualization started.")
         except:

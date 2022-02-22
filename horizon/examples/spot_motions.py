@@ -1,14 +1,11 @@
-from asyncio import subprocess
-import time
+#!/usr/bin/env python3
 
 from horizon import problem
 from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter, mat_storer
-from horizon.transcriptions import integrators
 from horizon.transcriptions.transcriptor import Transcriptor
 from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
 from horizon.solvers import solver
 import os, argparse
-from scipy.io import loadmat
 from itertools import filterfalse
 import numpy as np
 import casadi as cs
@@ -42,7 +39,6 @@ def main(args):
 
 
     path_to_examples = os.path.dirname(os.path.realpath(__file__))
-    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
     # mat storer
     if warmstart_flag:
@@ -64,7 +60,6 @@ def main(args):
     # options
     transcription_method = 'multiple_shooting'
     transcription_opts = dict(integrator='RK4')
-    ilqr_plot_iter = False
 
     tf = 2.5
     n_nodes = 50
@@ -142,9 +137,6 @@ def main(args):
         q_dot.setInitialGuess(q_dot_ig)
         q_ddot.setInitialGuess(q_ddot_ig)
         [f.setInitialGuess(f_ig) for f, f_ig in zip(f_list, f_ig_list)]
-
-        if isinstance(dt, cs.SX):
-            dt.setInitialGuess(dt_ig)
     else:
         [f.setInitialGuess([0, 0, 55]) for f in f_list]
 
@@ -315,12 +307,6 @@ def main(args):
 
     solv = solver.Solver.make_solver(solver_type, prb, opts)
 
-    try:
-        solv.set_iteration_callback()
-        solv.plot_iter = ilqr_plot_iter
-    except:
-        pass
-
     solv.solve()
 
     if solver_type == 'ilqr':
@@ -407,6 +393,7 @@ def main(args):
         try:
             # set ROS stuff and launchfile
             import subprocess
+            os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
             subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
             rospy.loginfo("'spot' visualization started.")
             
