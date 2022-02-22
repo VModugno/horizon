@@ -1,0 +1,42 @@
+os: linux
+language: cpp
+compiler: g++
+
+dist: 
+- focal
+- bionic
+
+branches:
+  only:
+    - devel
+    # - /^v\d+\.\d+\.\d+.*$/  # version tags
+
+jobs:
+  include:
+    - stage: compile
+      script: .travis/compile.sh
+    - stage: test
+      script: .travis/test.sh
+    - stage: deploy
+      script: .travis/deploy.sh
+      on:
+        tags: true
+
+
+services:
+  - docker
+  
+notifications:
+  email:
+    recipients:
+      - francesco.ruscelli@iit.it
+      - arturo.laurenzi@iit.it
+      - enrico.mingo@pal-robotics.com
+    on_success: never
+    on_failure: always
+
+before_install:
+  - rm -rf /opt/pyenv
+
+before_script:
+  - .travis/forest.sh
