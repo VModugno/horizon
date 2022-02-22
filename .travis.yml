@@ -16,7 +16,7 @@ jobs:
     - stage: compile
       script: ./travis/python_compile.sh
     - stage: test
-      script: .travis/test.sh
+      script: ./travis/test.sh
     - stage: deploy
       script: ./travis/deploy.sh
       on:
