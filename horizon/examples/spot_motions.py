@@ -307,6 +307,11 @@ def main(args):
 
     solv = solver.Solver.make_solver(solver_type, prb, opts)
 
+    try:
+        solv.set_iteration_callback()
+    except:
+        pass
+
     solv.solve()
 
     if solver_type == 'ilqr':
