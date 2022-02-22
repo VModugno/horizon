@@ -15,12 +15,28 @@ jobs:
   include:
     - stage: compile
       script: ./travis/python_compile.sh
+      dist: focal
+    -
+      script: ./travis/python_compile.sh
+      dist: bionic
+      # ----
     - stage: test
       script: ./travis/test.sh
+      dist: focal
+    - 
+      script: ./travis/test.sh
+      dist: bionic
+      # ----
     - stage: deploy
       script: ./travis/deploy.sh
       on:
         tags: true
+      dist: focal
+    - 
+      script: ./travis/deploy.sh
+      on:
+        tags: true
+      dist: bionic
 
 
 services:
