@@ -58,8 +58,8 @@ script:
        echo "Not a tag build, will not upload to pypi"; 
     else
        # upload to pypi
-       python3 -m build --wheel
-       twine upload -u __token__ -p $PYPI_TOKEN dist/*.whl
+       python3 -m build --wheel;
+       twine upload -u __token__ -p $PYPI_TOKEN dist/*.whl;
        # upload to docker
        ./docker/upload.sh;
     
