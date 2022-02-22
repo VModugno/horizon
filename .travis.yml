@@ -54,15 +54,15 @@ script:
   - cd src/horizon
   - pip3 install .
   - python3 horizon/tests/test_get_set.py
-  - if [ -z $TRAVIS_TAG ]; then 
-       echo "Not a tag build, will not upload to pypi"; 
+  - |
+    if [ -z $TRAVIS_TAG ]; then 
+      echo "Not a tag build, will not upload to pypi"; 
     else
-       # upload to pypi
-       python3 -m build --wheel;
-       twine upload -u __token__ -p $PYPI_TOKEN dist/*.whl;
-       # upload to docker
-       ./docker/upload.sh;
-    
+      # upload to pypi
+      python3 -m build --wheel;
+      twine upload -u __token__ -p $PYPI_TOKEN dist/*.whl;
+      # upload to docker
+      ./docker/upload.sh;
     fi
 
 
