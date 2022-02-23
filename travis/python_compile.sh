@@ -5,4 +5,5 @@ cd $FOREST_DIR
 forest casadi $FOREST_ARGS
 forest pybind11 $FOREST_ARGS
 cd src/horizon
+export HORIZON_DIR=$PWD
 pip3 install .
