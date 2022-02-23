@@ -5,13 +5,13 @@ curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo ap
 sudo apt update && sudo apt install libgtest-dev libyaml-cpp-dev python3-pip python3-setuptools liburdfdom-dev cmake libeigen3-dev libboost-filesystem-dev libboost-serialization-dev libblas-dev liblapack-dev patchelf python3-venv
 
 
-if [ '$DISTRIBUTION' = python ]; then
+if [ "$DISTRIBUTION" = "python" ]; then
     # prepare environment for python install
     ./forest_init.sh;
 fi
 
 
-if [ '$DISTRIBUTION' = conda ]; then
+if [ "$DISTRIBUTION" = "conda" ]; then
     # prepare environment for python install
     ./conda_init.sh;
 fi
