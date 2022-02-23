@@ -12,10 +12,7 @@ branches:
     # - /^v\d+\.\d+\.\d+.*$/  # version tags
 
 env:
-- SRC_DIR=$PWD
-- BUILD_DIR=$PWD/build
-- FOREST_DIR=$PWD/../forest_ws
-- HORIZON_DIR=$FOREST_DIR/src/horizon
+- SRC_DIR=$PWD BUILD_DIR=$PWD/build FOREST_DIR=$PWD/../forest_ws HORIZON_DIR=$FOREST_DIR/src/horizon
 
 jobs:
   include:
