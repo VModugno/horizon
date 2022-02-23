@@ -23,6 +23,7 @@ def get_version(rel_path):
 def _pre_build(dirname):
     # create a build dir and run 'make generate_python_package'
     current_dir = os.getcwd()
+    print('building from dir: ', current_dir)
     os.makedirs(dirname, exist_ok=True)
     build_dir = current_dir + '/' + dirname
 
