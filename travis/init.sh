@@ -7,9 +7,11 @@ sudo apt update && sudo apt install libgtest-dev libyaml-cpp-dev python3-pip pyt
 
 if [ '$DISTRIBUTION' = python ]; then
     # prepare environment for python install
-    ./forest_init.sh
+    ./forest_init.sh;
+fi
 
 
 if [ '$DISTRIBUTION' = conda ]; then
     # prepare environment for python install
-    ./conda_init.sh
+    ./conda_init.sh;
+fi
