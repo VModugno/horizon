@@ -34,7 +34,6 @@ jobs:
       if: branch = devel AND tag IS present
     - 
       script: ./travis/deploy.sh
-      tags: true
       dist: bionic
       if: branch = devel AND tag IS present
 
