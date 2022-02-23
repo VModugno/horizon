@@ -11,8 +11,6 @@ branches:
     - devel
     # - /^v\d+\.\d+\.\d+.*$/  # version tags
 
-env:
-- SRC_DIR=$PWD BUILD_DIR=$PWD/build FOREST_DIR=$PWD/../forest_ws HORIZON_DIR=$FOREST_DIR/src/horizon
 
 jobs:
   include:
@@ -32,16 +30,15 @@ jobs:
       # ----
     - stage: deploy
       script: ./travis/deploy.sh
-      on:
-        tags: true
       dist: focal
+      if: branch = devel AND tag IS present
     - 
       script: ./travis/deploy.sh
-      on:
-        tags: true
+      tags: true
       dist: bionic
+      if: branch = devel AND tag IS present
 
-
+  
 services:
   - docker
   
@@ -52,10 +49,15 @@ notifications:
       - arturo.laurenzi@iit.it
       - enrico.mingo@pal-robotics.com
     on_success: never
-    on_failure: always
+    on_failure: never
 
 before_install:
   - rm -rf /opt/pyenv
 
 before_script:
+  - export SRC_DIR=$PWD 
+  - export BUILD_DIR=$PWD/build 
+  - export FOREST_DIR=$PWD/../forest_ws 
+  - export HORIZON_DIR=$FOREST_DIR/src/horizon
+  - ./travis/init.sh
   - ./travis/forest.sh
