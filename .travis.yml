@@ -2,42 +2,20 @@ os: linux
 language: cpp
 compiler: g++
 
-dist: 
-- focal
-- bionic
-
 branches:
   only:
     - devel
-    # - /^v\d+\.\d+\.\d+.*$/  # version tags
+    - /^v\d+\.\d+\.\d+.*$/
 
+env:
+  - DISTRIBUTION=python
+  # - DISTRIBUTION=conda
 
 jobs:
   include:
-    - stage: compile
-      script: ./travis/python_compile.sh
-      dist: focal
-    -
-      script: ./travis/python_compile.sh
-      dist: bionic
-      # ----
-    - stage: test
-      script: ./travis/test.sh
-      dist: focal
-    - 
-      script: ./travis/test.sh
-      dist: bionic
-      # ----
-    - stage: deploy
-      script: ./travis/deploy.sh
-      dist: focal
-      if: branch = devel AND tag IS present
-    - 
-      script: ./travis/deploy.sh
-      dist: bionic
-      if: branch = devel AND tag IS present
+    - dist: focal
+    - dist: bionic
 
-  
 services:
   - docker
   
@@ -55,8 +33,14 @@ before_install:
 
 before_script:
   - export SRC_DIR=$PWD 
-  - export BUILD_DIR=$PWD/build 
+  - export BUILD_DIR=$PWD/build
   - export FOREST_DIR=$PWD/../forest_ws 
   - export HORIZON_DIR=$FOREST_DIR/src/horizon
+
   - ./travis/init.sh
-  - ./travis/forest.sh
+
+script:
+
+  - ./travis/compile.sh
+  - ./travis/test.sh
+  - ./travis/deploy.sh
