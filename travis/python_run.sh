@@ -6,7 +6,7 @@ cd $FOREST_DIR
 forest casadi $FOREST_ARGS
 forest pybind11 $FOREST_ARGS
 
-cd $SRC_DIR
+cd src/horizon 
 pip3 install -v .
 
 # run tests
