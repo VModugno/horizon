@@ -5,6 +5,12 @@
 ENVIRONMENT_NAME=hori
 PACKAGE_NAME=horizon
 
+# if push is not a tag, do not upload
+if [ -z $TRAVIS_TAG ]; then
+    echo "Not a tag build, will not upload to conda";
+else
+    conda config --set anaconda_upload yes;
+fi
 
 # sourcing base conda path to activate environment
 source $(conda info --base)/etc/profile.d/conda.sh

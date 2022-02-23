@@ -41,6 +41,4 @@ before_script:
 
 script:
 
-  - ./travis/compile.sh
-  - ./travis/test.sh
-  - ./travis/deploy.sh
+  - ./travis/run.sh
