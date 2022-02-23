@@ -1,7 +1,7 @@
 if [ "$DISTRIBUTION" = "python" ]; then
-    ./python_compile.sh;
+    ./travis/python_compile.sh;
 fi
 
-if [ "$DISTRIBUTION" = "python" ]; then
-    ./conda_compile.sh;
+if [ "$DISTRIBUTION" = "conda" ]; then
+    ./travis/conda_compile.sh;
 fi
