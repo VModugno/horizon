@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 sudo pip3 install build twine hhcm_forest==0.0.26
 mkdir $BUILD_DIR

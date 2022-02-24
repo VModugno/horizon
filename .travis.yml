@@ -14,7 +14,7 @@ env:
 jobs:
   include:
     - dist: focal
-    - dist: bionic
+    # - dist: bionic
 
 services:
   - docker
@@ -57,5 +57,5 @@ script:
   # - pip3 install -v .
 
   # - cd $FOREST_DIR && source setup.bash
-  - source ./travis/python_run.sh
+  - ./travis/python_run.sh
   # - ./travis/run.sh

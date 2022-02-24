@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # run python or conda distribution
 if [ "$DISTRIBUTION" = "python" ]; then
