@@ -16,8 +16,8 @@ jobs:
     - dist: focal
     - dist: bionic
 
-services:
-  - docker
+# services:
+#   - docker
   
 notifications:
   email:
