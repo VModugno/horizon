@@ -2,6 +2,7 @@
 
 # run python or conda distribution
 if [ "$DISTRIBUTION" = "python" ]; then
+    echo "calling"
     source ./travis/python_run.sh;
 fi
 
