@@ -1,8 +1,12 @@
 #!/bin/sh
 
+
 # required packages for building horizon
 FOREST_ARGS="--default-build-type Release --clone-protocol https --verbose -j2"
 cd $FOREST_DIR
+
+# required!
+source setup.bash
 forest casadi $FOREST_ARGS
 forest pybind11 $FOREST_ARGS
 
