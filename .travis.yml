@@ -46,16 +46,16 @@ script:
   - cd $FOREST_DIR
 
 # required!
-  - source setup.bash
+  # - source setup.bash
 
-  - forest casadi $FOREST_ARGS
-  - forest pybind11 $FOREST_ARGS
+  # - forest casadi $FOREST_ARGS
+  # - forest pybind11 $FOREST_ARGS
 
-  - echo $CMAKE_PREFIX_PATH
+  # - echo $CMAKE_PREFIX_PATH
 
-  - cd $HORIZON_DIR
-  - pip3 install -v .
+  # - cd $HORIZON_DIR
+  # - pip3 install -v .
 
   # - cd $FOREST_DIR && source setup.bash
-  # - ./travis/python_run.sh;
+  - ./travis/python_run.sh;
   # - ./travis/run.sh
