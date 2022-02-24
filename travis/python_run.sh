@@ -7,7 +7,7 @@ forest casadi $FOREST_ARGS
 forest pybind11 $FOREST_ARGS
 
 cd src/horizon 
-pip3 install -v .
+pip3 install --no-cache-dir -v .
 
 # run tests
 ./travis/test.sh
