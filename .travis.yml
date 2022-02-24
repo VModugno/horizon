@@ -41,4 +41,21 @@ before_script:
 
 script:
 
-  - ./travis/run.sh
+# required packages for building horizon
+  - FOREST_ARGS="--default-build-type Release --clone-protocol https --verbose -j2"
+  - cd $FOREST_DIR
+
+# required!
+  - source setup.bash
+
+  - forest casadi $FOREST_ARGS
+  - forest pybind11 $FOREST_ARGS
+
+  - echo $CMAKE_PREFIX_PATH
+
+  - cd $HORIZON_DIR
+  - pip3 install -v .
+
+  # - cd $FOREST_DIR && source setup.bash
+  # - ./travis/python_run.sh;
+  # - ./travis/run.sh
