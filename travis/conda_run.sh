@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # DOES NOT WORK (cannot activate a conda environment from here)
 # A simple script to initialize the conda environment
