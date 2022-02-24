@@ -1,5 +1,4 @@
 os: linux
-dist: focal
 language: cpp
 compiler: g++
 
@@ -12,10 +11,14 @@ env:
   - DISTRIBUTION=python
   - DISTRIBUTION=conda
 
-jobs:
-  include:
-    - dist: focal
-    - dist: bionic
+dist:
+  - focal
+  - bionic
+
+# jobs:
+#   include:
+#     - dist: focal
+#     - dist: bionic
 
 services:
   - docker
