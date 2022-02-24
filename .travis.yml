@@ -37,8 +37,8 @@ before_script:
   - export FOREST_DIR=$PWD/../forest_ws 
   - export HORIZON_DIR=$FOREST_DIR/src/horizon
 
-  - ./travis/init.sh
+  - source ./travis/init.sh
 
 script:
 
-  - ./travis/run.sh
+  - source ./travis/run.sh
