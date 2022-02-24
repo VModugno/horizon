@@ -57,5 +57,5 @@ script:
   # - pip3 install -v .
 
   # - cd $FOREST_DIR && source setup.bash
-  - ./travis/python_run.sh
+  - source ./travis/python_run.sh
   # - ./travis/run.sh
