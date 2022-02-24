@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 # required packages for building horizon
