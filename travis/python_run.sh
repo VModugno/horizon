@@ -6,7 +6,10 @@ cd $FOREST_DIR
 forest casadi $FOREST_ARGS
 forest pybind11 $FOREST_ARGS
 
-cd src/horizon 
+echo $CMAKE_PREFIX_PATH
+
+cd src/horizon
+echo $PWD
 pip3 install --no-cache-dir -v .
 
 # run tests
