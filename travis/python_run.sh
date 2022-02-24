@@ -7,13 +7,14 @@ cd $FOREST_DIR
 
 # required!
 source setup.bash
+
 forest casadi $FOREST_ARGS
 forest pybind11 $FOREST_ARGS
 
 echo $CMAKE_PREFIX_PATH
 
 cd $HORIZON_DIR
-pip3 install --no-cache-dir -v .
+pip3 install -v .
 
 # run tests
 ./travis/test.sh
