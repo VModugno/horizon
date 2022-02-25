@@ -1,5 +1,4 @@
 os: linux
-dist: focal
 language: cpp
 compiler: g++
 
@@ -8,13 +7,20 @@ branches:
     - devel
     - /^v\d+\.\d+\.\d+.*$/
 
-env:
-  - DISTRIBUTION="python"
-  - DISTRIBUTION="conda"
+# env:
+#   - DISTRIBUTION="python"
+#   - DISTRIBUTION="conda"
 
 jobs:
-  - dist: focal
-  - dist: bionic
+  include:
+    - dist: focal
+      env: DISTRIBUTION="python"
+    - dist: focal
+      env: DISTRIBUTION="conda"
+    - dist: bionic
+      env: DISTRIBUTION="python"
+    - dist: bionic
+      env: DISTRIBUTION="conda"
 
 services:
   - docker
