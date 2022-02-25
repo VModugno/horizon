@@ -8,7 +8,7 @@ sudo apt update && sudo apt install libgtest-dev libyaml-cpp-dev python3-pip pyt
 
 if [ "$DISTRIBUTION" = "python" ]; then
     # prepare environment for python install
-    ./travis/forest_init.sh;
+    ./travis/forest_init.sh
 elif [ "$DISTRIBUTION" = "conda" ]; then
     # prepare environment for python install
     ./travis/conda_init.sh
