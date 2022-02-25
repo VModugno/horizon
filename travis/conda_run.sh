@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -ev
 # DOES NOT WORK (cannot activate a conda environment from here)
 # A simple script to initialize the conda environment
 ENVIRONMENT_NAME=hori

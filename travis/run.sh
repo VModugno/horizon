@@ -1,4 +1,5 @@
 #!/bin/bash
+set -ev
 
 # run python or conda distribution
 if [ "$DISTRIBUTION" = "python" ]; then

@@ -9,13 +9,12 @@ branches:
     - /^v\d+\.\d+\.\d+.*$/
 
 env:
-  - DISTRIBUTION=python
-  - DISTRIBUTION=conda
+  - DISTRIBUTION="python"
+  - DISTRIBUTION="conda"
 
 jobs:
-  include:
-    - dist: focal
-    - dist: bionic
+  - dist: focal
+  - dist: bionic
 
 services:
   - docker
