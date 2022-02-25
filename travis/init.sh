@@ -12,7 +12,6 @@ if [ "$DISTRIBUTION" = "python" ]; then
 elif [ "$DISTRIBUTION" = "conda" ]; then
     # prepare environment for python install
     ./travis/conda_init.sh
-    ./travis/conda_env.sh
 else
     echo "type of distribution not supported: $DISTRIBUTION"
 fi
