@@ -14,5 +14,5 @@ fi
 
 if [ "$DISTRIBUTION" = "conda" ]; then
     # prepare environment for python install
-    ./travis/conda_init.sh;
+    source ./travis/conda_init.sh;
 fi
