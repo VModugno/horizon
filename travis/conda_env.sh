@@ -1,3 +1,6 @@
+#!/bin/bash
+set -ev
+
 echo "before sourcing: $PATH"
 # re-activate shell
 export PATH=$PWD/mambaforge/bin:$PATH
