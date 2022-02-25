@@ -7,7 +7,10 @@ printf '\nyes\n\nyes\n' | bash Mambaforge-$(uname)-$(uname -m).sh
 
 
 # re-activate shell
-export PATH=$PWD/mambaforge/bin:$PATH
-source ~/.bashrc && yes Y | mamba env create -f environment.yml
+echo "PATH=$PWD/mambaforge/bin:$PATH" >> ~/.bashrc
+# export PATH=$PWD/mambaforge/bin:$PATH
+# source ~/.bashrc 
+
+yes Y | mamba env create -f environment.yml
 
 # create environment for conda

@@ -5,7 +5,7 @@ set -ev
 FOREST_ARGS="--default-build-type Release --clone-protocol https --verbose -j2"
 cd $FOREST_DIR
 
-# required due to source and sh processes!
+# required due to shell processes (that spawn independently every .sh file)!
 source setup.bash
 
 forest casadi $FOREST_ARGS
