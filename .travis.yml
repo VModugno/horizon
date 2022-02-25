@@ -11,14 +11,10 @@ env:
   - DISTRIBUTION=python
   - DISTRIBUTION=conda
 
-dist:
-  - focal
-  - bionic
-
-# jobs:
-#   include:
-#     - dist: focal
-#     - dist: bionic
+matrix:
+  include:
+    - dist: focal
+    - dist: bionic
 
 services:
   - docker
