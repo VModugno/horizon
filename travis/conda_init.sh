@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -i
 # -i stands for interactive mode: required to make effective source ~/.bashrc
 set -v
 
@@ -7,10 +7,10 @@ printf '\nyes\n\nyes\n' | bash Mambaforge-$(uname)-$(uname -m).sh
 
 
 # re-activate shell
-echo "PATH=$PWD/mambaforge/bin:$PATH" >> ~/.bashrc
-# export PATH=$PWD/mambaforge/bin:$PATH
+export PATH=$PWD/mambaforge/bin:$PATH
 # source ~/.bashrc 
 
+# create environment for conda
 yes Y | mamba env create -f environment.yml
 
-# create environment for conda
+
