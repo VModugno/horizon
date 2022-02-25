@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -ev
 
 # required packages for building horizon
 FOREST_ARGS="--default-build-type Release --clone-protocol https --verbose -j2"
