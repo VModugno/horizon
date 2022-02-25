@@ -15,3 +15,4 @@ elif [ "$DISTRIBUTION" = "conda" ]; then
     ./travis/conda_env.sh
 else
     echo "type of distribution not supported: $DISTRIBUTION"
+fi
