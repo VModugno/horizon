@@ -52,7 +52,7 @@ class TestSolvers(unittest.TestCase):
 
     #
     def testIPOPT(self):
-        
+
         th = Transcriptor.make_method('multiple_shooting', self.prb)
         slvr = Solver.make_solver('ipopt', self.prb)
         sol = slvr.solve()

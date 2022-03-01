@@ -35,16 +35,16 @@ class Solver(ABC):
         """
 
         if type == 'blocksqp':
-            from . import blocksqp
+            from horizon.solvers import blocksqp
             return blocksqp.BlockSqpSolver(prb, opts)
         elif type == 'ipopt':
-            from . import ipopt
+            from horizon.solvers import ipopt
             return ipopt.IpoptSolver(prb, opts)
         elif type == 'ilqr':
-            from . import ilqr
+            from horizon.solvers import ilqr
             return ilqr.SolverILQR(prb, opts)
         elif type == 'gnsqp':
-            from . import sqp
+            from horizon.solvers import sqp
             qp_solver = 'qpoases'
             if opts is not None:
                 if 'gnsqp.qp_solver' in opts:
