@@ -62,9 +62,6 @@ class EqualityConstrained(unittest.TestCase):
         self.solver.set_iteration_callback()
         ret = self.solver.solve()
         self.assertTrue(ret)
-        
-    
-  
 
 
 if __name__ == '__main__':
