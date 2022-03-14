@@ -9,11 +9,14 @@ from horizon.solvers import solver
 from horizon.ros.replay_trajectory import *
 import matplotlib.pyplot as plt
 from horizon.ros import utils as horizon_ros_utils
+import rospkg
 
 horizon_ros_utils.roslaunch("horizon_examples", "roped_template.launch")
 time.sleep(3.)
 
-urdffile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'urdf', 'roped_template.urdf')
+r = rospkg.RosPack()
+path_to_examples = r.get_path('horizon_examples')
+urdffile = os.path.join(path_to_examples, 'urdf', 'roped_template.urdf')
 urdf = open(urdffile, 'r').read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
 FKRope = cs.Function.deserialize(kindyn.fk('rope_anchor2'))

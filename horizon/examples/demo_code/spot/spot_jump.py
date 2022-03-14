@@ -44,7 +44,7 @@ transcription_method = 'multiple_shooting' # can choose between 'multiple_shooti
 transcription_opts = dict(integrator='RK4') # integrator used by the multiple_shooting
 
 
-# Create CasADi interface to Pinocchio
+# Create CasADi interface to Pinocchio with casadi_kin_dyn
 urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
 urdf = open(urdffile, 'r').read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
@@ -70,6 +70,7 @@ n_v = kindyn.nv()
 # Dimension of the forces (x,y,z) [no torques]
 n_f = 3
 
+stance_orientation = [0, 0, 0.8509035, 0.525322] # equivalent to 2/3 * pi
 # Contact links name
 contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
 
@@ -201,7 +202,7 @@ prb.createFinalConstraint('final_velocity', q_dot)
 # set a final pose of the floating base and robot configuration:
 # rotate the robot orientation on the z-axis
 q_final = q_init.copy()
-q_final[3:7] = [0, 0, 0.8509035, 0.525322] # equivalent to 2/3 * pi
+q_final[3:7] = stance_orientation
 prb.createFinalConstraint(f"final_nominal_pos", q - q_final)
 
 
