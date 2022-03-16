@@ -162,6 +162,8 @@ void IterativeLQR::backward_pass_iter(int i)
     S.noalias() = tmp.Hxx + Lu.transpose()*(tmp.Huu*Lu + tmp.Hux) + tmp.Hux.transpose()*Lu;
     S = 0.5*(S + S.transpose());  // note: symmetrize
     s.noalias() = tmp.hx + tmp.Hux.transpose()*lu + Lu.transpose()*(tmp.hu + tmp.Huu*lu);
+    THROW_NAN(S);
+    THROW_NAN(s);
     TOC(upd_value_fn_inner);
 
 }
@@ -223,15 +225,20 @@ void IterativeLQR::increase_regularization()
 
     _hxx_reg *= _hxx_reg_growth_factor;
 
-    if(_hxx_reg > 1e12)
+    if(_hxx_reg < _hxx_reg_base)
     {
-//        throw std::runtime_error("maximum regularization exceeded");
+        _hxx_reg = _hxx_reg_base;
     }
 }
 
 void IterativeLQR::reduce_regularization()
 {
     _hxx_reg /= std::pow(_hxx_reg_growth_factor, 1./3.);
+
+    if(_hxx_reg < _hxx_reg_base)
+    {
+        _hxx_reg = _hxx_reg_base;
+    }
 }
 
 IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)

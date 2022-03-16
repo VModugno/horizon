@@ -79,12 +79,14 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _constraint_to_go(std::make_unique<ConstraintToGo>(_nx, _nu)),
     _fp_res(std::make_unique<ForwardPassResult>(_nx, _nu, _N)),
     _lam_g(_N+1),
-    _tmp(_N)
+    _tmp(_N),
+    _fp_accepted(0)
 {
-    // set options
+    // set options _hxx_reg_base
     _verbose = value_or(opt, "ilqr.verbose", 0);
     _step_length = value_or(opt, "ilqr.step_length", 1.0);
     _hxx_reg = value_or(opt, "ilqr.hxx_reg", 0.0);
+    _hxx_reg_base = value_or(opt, "ilqr.hxx_reg_base", 0.0);
     _huu_reg = value_or(opt, "ilqr.huu_reg", 0.0);
     _kkt_reg = value_or(opt, "ilqr.kkt_reg", 0.0);
     _hxx_reg_growth_factor = value_or(opt, "ilqr.hxx_reg_growth_factor", 1e3);
@@ -98,12 +100,20 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _closed_loop_forward_pass = value_or(opt, "ilqr.closed_loop_forward_pass", 1);
     _codegen_workdir = value_or<std::string>(opt, "ilqr.codegen_workdir", "/tmp");
     _codegen_enabled = value_or(opt, "ilqr.codegen_enabled", 0);
+    _enable_line_search = value_or(opt, "ilqr.enable_line_search", 1);
+
+    _it_filt.beta = value_or(opt, "ilqr.filter_beta", 0.99);
+    _it_filt.gamma = value_or(opt, "ilqr.filter_gamma", 0.20);
+    _use_it_filter = value_or(opt, "ilqr.use_filter", 0);
 
     auto decomp_type_str = value_or<std::string>(opt, "ilqr.constr_decomp_type", "qr");
     _constr_decomp_type = str_to_decomp_type(decomp_type_str);
 
     decomp_type_str = value_or<std::string>(opt, "ilqr.kkt_decomp_type", "lu");
     _kkt_decomp_type = str_to_decomp_type(decomp_type_str);
+
+    // initialize hxx from base value
+    _hxx_reg = std::max(_hxx_reg_base, _hxx_reg);
 
     // set timer callback
     on_timer_toc = [this](const char * name, double usec)
@@ -354,7 +364,8 @@ void IterativeLQR::setParameterValue(const std::string& pname, const Eigen::Matr
 
     if(it == _param_map->end())
     {
-        throw std::invalid_argument("undefined parameter name '" + pname + "'");
+        std::cout << "undefined parameter name '" << pname << "' \n";
+        return;
     }
 
     if(it->second.rows() != value.rows() ||
@@ -434,6 +445,12 @@ bool IterativeLQR::solve(int max_iter)
     _fp_res->constraint_violation = compute_constr(_xtrj, _utrj);
     _fp_res->defect_norm = compute_defect(_xtrj, _utrj);
 
+    // clear filter
+    _it_filt.clear();
+
+    // reset counters
+    _fp_accepted = 0;
+
     // solve
     for(int i = 0; i < max_iter; i++)
     {
@@ -450,6 +467,8 @@ bool IterativeLQR::solve(int max_iter)
             return true;
         }
     }
+
+    std::cout << "max iteration reached \n";
 
     return false;
 }

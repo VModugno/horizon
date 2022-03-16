@@ -72,7 +72,10 @@ class replay_trajectory:
                 #         A[0:3, 0:3] = A[3:6, 3:6] = w_R_f.T
                 #         self.frame_force_mapping[frame][:, k] = np.dot(A,  w).T
 
-        rospy.init_node('joint_state_publisher')
+        try:
+            rospy.init_node('joint_state_publisher')
+        except rospy.exceptions.ROSException as e:
+            pass
         self.pub = rospy.Publisher('joint_states', JointState, queue_size=10)
         self.br = ros_tf.TransformBroadcaster()
 
