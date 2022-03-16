@@ -338,8 +338,10 @@ plot_sol = True
 plt.rcParams['text.usetex'] = True
 plt.rcParams["mathtext.fontset"] = 'cm'
 plt.rcParams["legend.fontsize"] = 14
-plt.rcParams["axes.titlesize"] = 15
-plt.rcParams["axes.labelsize"] = 15
+plt.rcParams["axes.titlesize"] = 20
+plt.rcParams["axes.labelsize"] = 20
+plt.rcParams["xtick.labelsize"] = 15
+plt.rcParams["ytick.labelsize"] = 15
 plt.rcParams['font.family'] = 'Arial'
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
@@ -376,8 +378,8 @@ if plot_sol:
         for i in range(elem.shape[0]):  # get i-th dimension
             ax.step(cumulative_dt, numpy.append(elem[i, :], elem[i, -1]), where='post')
 
-        ax.axvline(cumulative_dt[node_start_step], linestyle='dashed', color='k', linewidth=vline_width)
-        ax.axvline(cumulative_dt[node_end_step], linestyle='dashed', color='k', linewidth=vline_width)
+        # ax.axvline(cumulative_dt[node_start_step], linestyle='dashed', color='k', linewidth=vline_width)
+        # ax.axvline(cumulative_dt[node_end_step], linestyle='dashed', color='k', linewidth=vline_width)
 
         # #### stuff for tickz and labels #####
         # y
@@ -441,8 +443,8 @@ if plot_sol:
         for dim in range(n_f):
             ax.plot(cumulative_dt, pos[dim, :].toarray().flatten(), linestyle='-')
 
-        ax.axvline(cumulative_dt[node_start_step], linestyle='dashed', color='k', linewidth=vline_width)
-        ax.axvline(cumulative_dt[node_end_step], linestyle='dashed', color='k', linewidth=vline_width)
+        # ax.axvline(cumulative_dt[node_start_step], linestyle='dashed', color='k', linewidth=vline_width)
+        # ax.axvline(cumulative_dt[node_end_step], linestyle='dashed', color='k', linewidth=vline_width)
 
         # #### stuff for tickz and labels #####
         # y
