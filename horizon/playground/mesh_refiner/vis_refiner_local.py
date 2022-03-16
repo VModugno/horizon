@@ -2,12 +2,15 @@ from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter, mat_sto
 import matplotlib.pyplot as plt
 import numpy as np
 from horizon.ros.replay_trajectory import *
+import os
+
+current_path = os.path.abspath(__file__ + '/..')
 
 # ms = mat_storer.matStorer('../playground/spot/spot_jump_refined_local.mat')
-ms = mat_storer.matStorer('refiner_spot_jump.mat')
+ms = mat_storer.matStorer(current_path + '/refiner_spot_jump.mat')
 solution_refined = ms.load()
 nodes_vec_refined = solution_refined['times'][0]
-ms = mat_storer.matStorer('../playground/spot/spot_jump.mat')
+ms = mat_storer.matStorer(current_path + '/spot_jump.mat')
 solution = ms.load()
 dt = solution['dt'].flatten()
 n_nodes = 50

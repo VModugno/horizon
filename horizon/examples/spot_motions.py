@@ -49,7 +49,7 @@ def main(args):
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
 
-        ms = mat_storer.matStorer(path_to_examples + f'/mat_files/{file_name}.mat')
+        ms = mat_storer.matStorer(save_file)
 
         if os.path.isfile(save_file):
             print(f'{file_name}.mat file found. Using previous solution as initial guess.')
