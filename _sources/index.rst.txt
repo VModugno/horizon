@@ -19,9 +19,7 @@ Features
 - support **state-of-the-art** non linear solvers + two custom solvers: ILQR and GNSQP
 
 .. image:: spot_leap_traj.jpg
-   :width: 200px
-   :height: 100px
-   :scale: 100 %
+   :scale: 200 %
    :alt: the quadruped robot Spot from BostonDynamics perfoming a leap
    :align: center
    
