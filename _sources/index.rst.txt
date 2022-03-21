@@ -54,10 +54,11 @@ A collection of clips demonstrating the capabilities of Horizon is gathered in t
 The full playlist of videos is found `here <https://www.youtube.com/playlist?list=PL7c1ZKncPan72ef2Sof8Ky_TrlSK9qYYP>`_.
  
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
    
-   modules
+   horizon
+   scheme
 
 Indices and tables
 ==================
