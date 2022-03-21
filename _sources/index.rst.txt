@@ -28,6 +28,7 @@ Features
 Install
 =======
 Two distributions are supported:
+
 - *pip* package: ``pip install casadi_horizon``
 - *conda* package: ``conda install horizon -c francesco_ruscelli``
 
@@ -43,9 +44,12 @@ Videos
 =======
 A collection of clips demonstrating the capabilities of Horizon is gathered in the video below, where are gathered trajectory optimization demos with several robots: 
 *Centauro*, *Spot* |reg|, *Kangaroo*, *TALOS*, a 7-DoF industrial manipulator and a prototype 2-DoF leg.
-<p align="center">
-<iframe width="560" height="315" src="https://www.youtube.com/embed/wHJh3bvV-ns" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</p>
+
+.. raw:: html
+   <p align="center">
+   <iframe width="560" height="315" src="https://www.youtube.com/embed/wHJh3bvV-ns" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+   </p>
+
 The full playlist of videos is found `here <https://www.youtube.com/playlist?list=PL7c1ZKncPan72ef2Sof8Ky_TrlSK9qYYP>`_.
  
 .. toctree::
