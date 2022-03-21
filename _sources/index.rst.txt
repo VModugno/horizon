@@ -21,7 +21,7 @@ Features
 .. image:: spot_leap_traj.jpg
    :width: 200px
    :height: 100px
-   :scale: 50 %
+   :scale: 100 %
    :alt: the quadruped robot Spot from BostonDynamics perfoming a leap
    :align: center
    
