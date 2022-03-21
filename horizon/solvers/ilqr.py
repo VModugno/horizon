@@ -140,6 +140,9 @@ class SolverILQR(Solver):
             off, dim = self.prb.getInput().getVarIndex(vname)
             self.solution_dict[vname] = self.u_opt[off:off+dim, :]
 
+        self.solution_dict['x_opt'] = self.x_opt
+        self.solution_dict['u_opt'] = self.u_opt
+
         return ret
     
     def getSolutionDict(self):
@@ -251,26 +254,9 @@ class SolverILQR(Solver):
 
         if self.plot_iter:
 
-            if self.xax is None:
-                _, ((self.xax, self.uax), (self.dax, self.hax)) = plt.subplots(2, 2)
+            if self.dax is None:
+                _, (self.dax, self.hax) = plt.subplots(2)
             
-            plt.sca(self.xax)
-            plt.cla()
-            plt.plot(fpres.xtrj.T)
-            plt.grid()
-            plt.title(f'State trajectory (iter {fpres.iter})')
-            plt.xlabel('Node [-]')
-            plt.ylabel('State')
-            plt.legend([f'x{i}' for i in range(self.nx)])
-
-            plt.sca(self.uax)
-            plt.cla()
-            plt.plot(fpres.utrj.T)
-            plt.grid()
-            plt.title(f'Input trajectory (iter {fpres.iter})')
-            plt.xlabel('Node [-]')
-            plt.ylabel('Input')
-            plt.legend([f'u{i}' for i in range(self.nu)])
 
             plt.sca(self.dax)
             plt.cla()
