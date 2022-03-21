@@ -16,12 +16,19 @@ Features
 - complete **pipeline** from model aquisition to robot deployment 
 - **intuitive** API allowing a quick setup of the optimization problem
 - ease of configuration and highly *customizable*: integrators, transcription methods, solvers..
-- support **state-of-the-art** non linear solvers
+- support **state-of-the-art** non linear solvers + two custom solvers: ILQR and GNSQP
 
+.. image:: spot_leap_traj.jpg
+   :width: 200px
+   :height: 100px
+   :scale: 50 %
+   :alt: the quadruped robot Spot from BostonDynamics perfoming a leap
+   :align: center
+   
 Install
 =======
 A *pip* package is available: ``pip install casadi_horizon``
-..or, alternatively, a *conda* package is supported: ``conda install horizon -c francesco_ruscelli``
+| ..or, alternatively, a *conda* package is supported: ``conda install horizon -c francesco_ruscelli``
 
 Getting started
 =======
