@@ -22,7 +22,6 @@ test:
     - horizon
   requires:
     # - scipy
-    - horizon.solvers.ilqr
     - casadi
     - numpy
     # - rospkg
