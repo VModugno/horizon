@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "profiling.h"
+#include "iterate_filter.h"
 
 namespace horizon
 {
@@ -219,6 +220,7 @@ private:
 
     double _step_length;
     double _hxx_reg;
+    double _hxx_reg_base;
     double _hxx_reg_growth_factor;
     double _huu_reg;
     double _kkt_reg;
@@ -229,6 +231,7 @@ private:
     double _defect_norm_threshold;
     double _merit_der_threshold;
     double _step_length_threshold;
+    bool _enable_line_search;
 
     bool _closed_loop_forward_pass;
     std::string _codegen_workdir;
@@ -250,7 +253,10 @@ private:
     std::vector<BackwardPassResult> _bp_res;
     std::unique_ptr<ConstraintToGo> _constraint_to_go;
     std::unique_ptr<ForwardPassResult> _fp_res;
+    int _fp_accepted;
 
+    IterateFilter _it_filt;
+    bool _use_it_filter;
     Eigen::MatrixXd _xtrj;
     Eigen::MatrixXd _utrj;
     std::vector<Eigen::VectorXd> _lam_g;

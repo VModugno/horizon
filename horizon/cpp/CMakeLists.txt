@@ -28,6 +28,7 @@ add_library(ilqr STATIC
     src/wrapped_function.cpp
     src/profiling.cpp
     src/codegen_function.cpp
+    src/iterate_filter.cpp
 )
 
 # sqp library

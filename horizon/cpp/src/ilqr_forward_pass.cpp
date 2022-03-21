@@ -100,9 +100,10 @@ double IterativeLQR::compute_merit_slope(double mu_f, double mu_c,
     for(int i = 0; i < _N; i++)
     {
         auto& hu = _tmp[i].hu;
-        auto& lu = _bp_res[i].lu;
+        auto& du = _bp_res[i].lu;
+        auto dx = _dyn[i].B()*du + _dyn[i].d;
 
-        der += lu.dot(hu);
+        der += _cost[i].r().dot(du) + _cost[i].q().dot(dx);
     }
 
     return der - mu_f*defect_norm - mu_c*constr_viol;
@@ -158,8 +159,8 @@ std::pair<double, double> IterativeLQR::compute_merit_weights()
 
 
     const double merit_safety_factor = 2.0;
-    double mu_f = 1;  // lam_x_max * merit_safety_factor;
-    double mu_c = 1e6;  // lam_g_max * merit_safety_factor;
+    double mu_f = lam_x_max * merit_safety_factor;
+    double mu_c = std::max(lam_g_max * merit_safety_factor, 0.0);
 
     return {mu_f, mu_c};
 
@@ -278,14 +279,16 @@ void IterativeLQR::line_search(int iter)
 
     if(iter == 0)
     {
+        IterateFilter::Pair test_pair;
+        test_pair.f = std::numeric_limits<double>::lowest();
+        test_pair.h = _fp_res->defect_norm + _fp_res->constraint_violation;
+        _fp_res->accepted = _it_filt.add(test_pair);
+
         _fp_res->alpha = 0;
         _fp_res->accepted = true;
         _fp_res->merit = merit;
         report_result(*_fp_res);
     }
-
-    // cache last forward pass outcome
-    bool last_fp_accepted = _fp_res->accepted;
 
     // run line search
     while(alpha >= alpha_min)
@@ -299,8 +302,37 @@ void IterativeLQR::line_search(int iter)
                                              _fp_res->defect_norm,
                                              _fp_res->constraint_violation);
 
-        // evaluate Armijo's condition
-        _fp_res->accepted = _fp_res->merit <= merit + eta*alpha*merit_der;
+        if(_use_it_filter)
+        {
+            // evaluate filter
+            IterateFilter::Pair test_pair;
+            test_pair.f = _fp_res->cost;
+            test_pair.h = _fp_res->defect_norm + _fp_res->constraint_violation;
+            _fp_res->accepted = _it_filt.add(test_pair);
+            if(_fp_res->accepted && _verbose) _it_filt.print();
+        }
+        else
+        {
+            // evaluate Armijo's condition
+            _fp_res->accepted = _fp_res->merit <= merit + eta*alpha*merit_der;
+        }
+
+        // if full step ok, we can reduce regularization
+        if(_fp_res->accepted && alpha == _step_length)
+        {
+            ++_fp_accepted;
+        }
+        else 
+        {
+            _fp_accepted = 0;
+        }
+
+        // if line search disabled, we accept
+        if(!_enable_line_search)
+        {
+            _fp_res->accepted = true;
+        }
+        
 
         // invoke user defined callback
         report_result(*_fp_res);
@@ -319,12 +351,15 @@ void IterativeLQR::line_search(int iter)
         report_result(*_fp_res);
         if(_verbose) std::cout << "[ilqr] line search failed, increasing regularization..\n";
         increase_regularization();
+        _fp_accepted = 0;
         return;
     }
 
-    if(last_fp_accepted)
+    
+    if(_fp_accepted > 5 && _enable_line_search)
     {
         reduce_regularization();
+        _fp_accepted = 0;
     }
 
     _xtrj = _fp_res->xtrj;
@@ -352,6 +387,7 @@ bool IterativeLQR::should_stop()
         return false;
     }
 
+
     // here we're feasible
 
     // exit if merit function directional derivative (normalized)
@@ -359,12 +395,14 @@ bool IterativeLQR::should_stop()
     if(_fp_res->merit_der < 0 &&
             _fp_res->merit_der/_fp_res->merit > - merit_der_threshold)
     {
+        std::cout << "exiting due to small merit derivative \n";
         return true;
     }
 
     // exit if step size (normalized) is too short
     if(_fp_res->step_length/_utrj.norm() < step_length_threshold)
     {
+        std::cout << "exiting due to small control increment \n";
         return true;
     }
 
