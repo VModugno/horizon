@@ -23,7 +23,8 @@ import matplotlib.pyplot as plt
 transcription_method = 'multiple_shooting'  # direct_collocation
 transcription_opts = dict(integrator='RK4')
 
-urdffile = '../urdf/spot.urdf'
+path_to_examples = '../../examples/'
+urdffile = path_to_examples + 'urdf/spot.urdf'
 urdf = open(urdffile, 'r').read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
 
@@ -32,7 +33,7 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer('../spot/spot_jump.mat')
+ms = mat_storer.matStorer('spot_jump.mat')
 prev_solution = ms.load()
 
 n_nodes = prev_solution['n_nodes'][0][0]
@@ -92,56 +93,95 @@ nodes_vec_res = np.zeros([num_samples + 1])
 for i in range(1, num_samples + 1):
     nodes_vec_res[i] = nodes_vec_res[i - 1] + dt_res
 
-plot_flag = False
+plot_flag = True
 
 if plot_flag:
+    import matplotlib.pyplot as plt
+    from matplotlib import gridspec
+    from matplotlib.ticker import FormatStrFormatter
+    w = 7195
+    h = 3841
+    fig_size = [19.20, 10.80]
 
-    for i_f in range(len(f_res_list)):
-        plt.figure()
-        for dim in range(f_res_list[i_f].shape[0]):
-            plt.plot(nodes_vec_res[:-1], np.array(f_res_list[i_f][dim, :]))
+    plt.rcParams['text.usetex'] = True
+    plt.rcParams["mathtext.fontset"] = 'cm'
+    plt.rcParams["legend.fontsize"] = 14
+    plt.rcParams["axes.titlesize"] = 15
+    plt.rcParams["axes.labelsize"] = 15
+    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
 
-        for dim in range(prev_f_list[i_f].shape[0]):
-            plt.scatter(nodes_vec[:-1], np.array(prev_f_list[i_f][dim, :]))
+    # for i_f in range(len(f_res_list)):
+    #     plt.figure()
+    #     for dim in range(f_res_list[i_f].shape[0]):
+    #         plt.plot(nodes_vec_res[:-1], np.array(f_res_list[i_f][dim, :]))
+    #
+    #     for dim in range(prev_f_list[i_f].shape[0]):
+    #         plt.scatter(nodes_vec[:-1], np.array(prev_f_list[i_f][dim, :]))
+    #
+    # plt.figure()
+    # for dim in range(q_res.shape[0]):
+    #     plt.plot(nodes_vec_res, np.array(q_res[dim, :]))
+    #
+    # for dim in range(prev_q.shape[0]):
+    #     plt.scatter(nodes_vec, np.array(prev_q[dim, :]))
+    # plt.title('q')
+    #
+    # plt.figure()
+    # for dim in range(qdot_res.shape[0]):
+    #     plt.plot(nodes_vec_res, np.array(qdot_res[dim, :]))
+    #
+    # for dim in range(prev_q_dot.shape[0]):
+    #     plt.scatter(nodes_vec, np.array(prev_q_dot[dim, :]))
+    # plt.title('qdot')
+    #
+    # plt.figure()
+    # for dim in range(qddot_res.shape[0]):
+    #     plt.plot(nodes_vec_res[:-1], np.array(qddot_res[dim, :]))
+    #
+    # for dim in range(prev_q_ddot.shape[0]):
+    #     plt.scatter(nodes_vec[:-1], np.array(prev_q_ddot[dim, :]))
+    # plt.title('q_ddot')
 
-    plt.figure()
-    for dim in range(q_res.shape[0]):
-        plt.plot(nodes_vec_res, np.array(q_res[dim, :]))
 
-    for dim in range(prev_q.shape[0]):
-        plt.scatter(nodes_vec, np.array(prev_q[dim, :]))
-    plt.title('q')
-
-    plt.figure()
-    for dim in range(qdot_res.shape[0]):
-        plt.plot(nodes_vec_res, np.array(qdot_res[dim, :]))
-
-    for dim in range(prev_q_dot.shape[0]):
-        plt.scatter(nodes_vec, np.array(prev_q_dot[dim, :]))
-    plt.title('qdot')
-
-    plt.figure()
-    for dim in range(qddot_res.shape[0]):
-        plt.plot(nodes_vec_res[:-1], np.array(qddot_res[dim, :]))
-
-    for dim in range(prev_q_ddot.shape[0]):
-        plt.scatter(nodes_vec[:-1], np.array(prev_q_ddot[dim, :]))
-    plt.title('q_ddot')
-
-    plt.figure()
+    fig, ax = plt.subplots()
+    fig.set_size_inches(fig_size[0], fig_size[1])
     for dim in range(6):
-        plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[dim, :]))
-    for dim in range(6):
-        plt.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]))
-    plt.title('tau on base')
+        ax.plot(nodes_vec_res[:-1], np.array(tau_sol_res[dim, :]), linewidth=1)
+        ax.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]), s=30, facecolors='none', edgecolors='#d62728', zorder=3)
 
-    plt.figure()
-    for dim in range(tau_sol_res.shape[0] - 6):
-        plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[6 + dim, :]))
-    for dim in range(prev_tau.shape[0] - 6):
-        plt.scatter(nodes_vec[:-1], np.array(prev_tau[6 + dim, :]))
-    plt.title('tau')
+    ax.set_xticks(nodes_vec[:-1])
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    ax.grid(alpha=0.4)
+
+    ax.yaxis.set_major_locator(plt.MultipleLocator(4))
+
+    wanted_time_label = {0, 20, 40, 49}
+    label_list = list(range(nodes_vec[:-1].shape[0]))
+    label_list = [e for e in label_list if e not in wanted_time_label]
+    xticks = ax.xaxis.get_major_ticks()
+    for i_hide in label_list:
+        xticks[i_hide].label1.set_visible(False)
+
+    plt.xlim([0, nodes_vec[-1]])
+
+    # for dim in range(6):
+    #     ax.plot(nodes_vec[:-1], np.array(prev_tau[dim, :]))
+    # plt.title('tau on base')
+
+    # ax.yaxis.set_major_locator(plt.MultipleLocator(0.25))
+    # x
+
+
+    # plt.figure()
+    # for dim in range(tau_sol_res.shape[0] - 6):
+    #     plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[6 + dim, :]))
+    # for dim in range(prev_tau.shape[0] - 6):
+    #     plt.scatter(nodes_vec[:-1], np.array(prev_tau[6 + dim, :]))
+    # plt.title('tau')
     plt.show()
+
 
 tau_sol_base = tau_sol_res[:6, :]
 
@@ -240,7 +280,7 @@ ms = mat_storer.matStorer(f'{os.path.splitext(os.path.basename(__file__))[0]}.ma
 
 n_nodes = new_n_nodes - 1  # in new_n_nodes the last node is there already
 
-plot_nodes = False
+plot_nodes = True
 if plot_nodes:
     plt.figure()
     # nodes old
@@ -265,6 +305,7 @@ if plot_nodes:
     #     plt.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]))
     # plt.title('tau on base')
     plt.show()
+
 
 print('old_node_start_step', old_node_start_step)
 print('old_node_end_step', old_node_end_step)

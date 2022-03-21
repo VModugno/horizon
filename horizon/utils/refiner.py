@@ -1,14 +1,10 @@
-import time
-
 from horizon import problem
 from horizon.variables import Variable, SingleVariable, Parameter, SingleParameter
-from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter, mat_storer
-from horizon.transcriptions import integrators
+from horizon.utils import utils, kin_dyn, resampler_trajectory, mat_storer
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.ros.replay_trajectory import *
 from horizon.solvers import solver
 import matplotlib.pyplot as plt
-import os
 from horizon.solvers import Solver
 from itertools import groupby
 from operator import itemgetter
@@ -519,7 +515,7 @@ if __name__ == '__main__':
     load_initial_guess = True
     # import initial guess if present
     if load_initial_guess:
-        ms = mat_storer.matStorer('../playground/spot/spot_jump.mat')
+        ms = mat_storer.matStorer('../playground/mesh_refiner/spot_jump.mat')
         prev_solution = ms.load()
         q_ig = prev_solution['q']
         q_dot_ig = prev_solution['q_dot']
@@ -786,13 +782,13 @@ if __name__ == '__main__':
 
     ref = Refiner(prb, nodes_vec_augmented, solver)
 
-    nodes_aug = ref.findExceedingValues(tau_sol_base, threshold)
-
-    if nodes_vec_augmented == nodes_aug:
-        print('yes')
-    else:
-        print('not')
-    exit()
+    # nodes_aug = ref.findExceedingValues(tau_sol_base, threshold)
+    #
+    # if nodes_vec_augmented == nodes_aug:
+    #     print('yes')
+    # else:
+    #     print('not')
+    # exit()
 
     plot_nodes = False
     if plot_nodes:
@@ -826,11 +822,6 @@ if __name__ == '__main__':
 
     info_dict = dict(n_nodes=new_prb.getNNodes(), times=nodes_vec_augmented, dt=sol_dt)
     ms.store({**sol_var, **sol_cnsrt_dict, **info_dict})
-
-
-    import vis_refiner_local
-
-
 
 # refine_solution = True
 # if refine_solution:

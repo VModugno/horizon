@@ -37,7 +37,7 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer('../spot/spot_jump.mat')
+ms = mat_storer.matStorer('../mesh_refiner/spot_jump.mat')
 prev_solution = ms.load()
 
 prev_q = prev_solution['q']
