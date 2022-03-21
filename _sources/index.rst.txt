@@ -3,6 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. include:: isonum.txt
+
 Welcome to horizon's documentation!
 ===================================
 A framework for trajectory optimization and optimal control tailored to robotic systems.
@@ -25,8 +27,9 @@ Features
    
 Install
 =======
-A *pip* package is available: ``pip install casadi_horizon``
-| ..or, alternatively, a *conda* package is supported: ``conda install horizon -c francesco_ruscelli``
+Two distributions are supported:
+- *pip* package: ``pip install casadi_horizon``
+- *conda* package: ``conda install horizon -c francesco_ruscelli``
 
 Getting started
 =======
@@ -36,7 +39,10 @@ Besides installing Horizon on your machine and running the examples, you can try
 - on your browser, through JupyterLab: `Horizon-web <https://mybinder.org/v2/gh/FrancescoRuscelli/horizon-live/main?urlpath=lab/tree/index.ipynb>`_
 - on your machine, through Docker: `Horizon-docker` (tbd)
 
-
+Videos
+=======
+A collection of clips demonstrating the capabilities of Horizon is gathered `here <https://www.youtube.com/playlist?list=PL7c1ZKncPan72ef2Sof8Ky_TrlSK9qYYP>`_.
+In the video you will find trajectory optimization demos with several robots: Centauro, Spot|trade|, 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
