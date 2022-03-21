@@ -56,8 +56,8 @@ class PlotterHorizon:
 
                 for j in range(val.shape[1]-1):
                     # ax.plot(np.array(range(val.shape[1])), val[i, :], linewidth=0.1, color=color)
-                    ax.plot(range(val.shape[1])[j:j + 2], [val[i, j]] * 2, color=color)
-                    ax.plot(np.array(range(val.shape[1])), val[i, :], linewidth=0.1, color=color, label='_nolegend_')
+                    # ax.plot(range(val.shape[1])[j:j + 2], [val[i, j]] * 2, color=color)
+                    ax.step(np.array(range(val.shape[1])), val[i, :], linewidth=0.1, color=color, label='_nolegend_')
 
                     if show_bounds:
                         lb, ub = abstract_var.getBounds()
