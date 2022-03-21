@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. include:: isonum.txt
+.. include:: <isonum.txt>
 
 Welcome to horizon's documentation!
 ===================================
@@ -42,7 +42,8 @@ Besides installing Horizon on your machine and running the examples, you can try
 Videos
 =======
 A collection of clips demonstrating the capabilities of Horizon is gathered `here <https://www.youtube.com/playlist?list=PL7c1ZKncPan72ef2Sof8Ky_TrlSK9qYYP>`_.
-In the video you will find trajectory optimization demos with several robots: Centauro, Spot|trade|, 
+In the video you will find trajectory optimization demos with several robots: *Centauro*, *Spot*|trade|, *Kangaroo*, *TALOS*, a 7-DoF industrial manipulator and a prototype 2-DoF leg.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
