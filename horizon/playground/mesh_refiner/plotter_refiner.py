@@ -83,10 +83,24 @@ for i in range(1, num_samples + 1):
 
 current_path = os.path.abspath(__file__ + '/..')
 
-ms = mat_storer.matStorer(current_path + '/refiner_spot_jump.mat')
+ms = mat_storer.matStorer(current_path + '/spot_jump_refined_local.mat')
 solution_refined = ms.load()
 nodes_vec_refined = solution_refined['times'][0]
 
+
+tau_sol_base = tau_sol_res[:6, :]
+threshold = 5
+## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
+indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
+# these indices corresponds to some nodes ..
+values_exceed = nodes_vec_res[indices_exceed]
+
+## search for duplicates and remove them, both in indices_exceed and values_exceed
+indices_duplicates = np.where(np.in1d(values_exceed, nodes_vec))
+value_duplicates = values_exceed[indices_duplicates]
+
+values_exceed = np.delete(values_exceed, np.where(np.in1d(values_exceed, value_duplicates)))
+indices_exceed = np.delete(indices_exceed, indices_duplicates)
 # ======================================================================================================================
 # ======================================================================================================================
 
@@ -111,8 +125,8 @@ plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['ps.fonttype'] = 42
 
 aspect_ratio = 0.15
-gs = gridspec.GridSpec(2, 1)
-gs.hspace = -0.6
+gs = gridspec.GridSpec(3, 1)
+# gs.hspace = -0.6
 
 fig = plt.figure(frameon=True)
 fig.set_size_inches(fig_size[0], fig_size[1])
@@ -137,19 +151,36 @@ plt.xlim([0, nodes_vec[-1]])
 plt.ylim([-8, 8])
 
 # ax.set_xlabel(r'time [s]')
-ax.set_ylabel(r'$\tau$ [N/m]')
+ax.set_ylabel(r'effort [N]')
 x_left, x_right = ax.get_xlim()
 y_low, y_high = ax.get_ylim()
 ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*aspect_ratio)
 # =============================================================
 # =============== after mesh refinement =======================
 # =============================================================
+
+ax = fig.add_subplot(gs[2])
+tau_ref = solution_refined['inverse_dynamics']['val'][0][0]
+for dim in range(6):
+    ax.plot(nodes_vec_refined[:-1], np.array(tau_ref[dim, :]), linewidth=3)
+for dim in range(6):
+    ax.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]), s=30, facecolors='none', edgecolors='#d62728', zorder=3)
+    plt.scatter(values_exceed, np.zeros([values_exceed.shape[0]]), marker='|', zorder=4, c='blue')
+plt.xlim([0.9, 1.05])
+plt.ylim([-8, 8])
+x_left, x_right = ax.get_xlim()
+y_low, y_high = ax.get_ylim()
+ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*0.08)
+ax.set_xlabel(r'time [s]')
 ax = fig.add_subplot(gs[1])
 tau_ref = solution_refined['inverse_dynamics']['val'][0][0]
 for dim in range(6):
     ax.plot(nodes_vec_refined[:-1], np.array(tau_ref[dim, :]), linewidth=3)
 for dim in range(6):
     ax.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]), s=30, facecolors='none', edgecolors='#d62728', zorder=3)
+    plt.scatter(values_exceed, np.zeros([values_exceed.shape[0]]), marker='|', zorder=4, c='blue')
+
+
 
 ax.set_xticks(nodes_vec[:-1])
 ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
@@ -168,7 +199,7 @@ plt.xlim([0, nodes_vec[-1]])
 plt.ylim([-8, 8])
 
 ax.set_xlabel(r'time [s]')
-ax.set_ylabel(r'$\tau$ [N/m]')
+ax.set_ylabel(r'effort [N]')
 x_left, x_right = ax.get_xlim()
 y_low, y_high = ax.get_ylim()
 ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*aspect_ratio)
@@ -197,7 +228,7 @@ fig.set_size_inches(fig_size[0], fig_size[1])
 # fig.tight_layout()
 
 ax.set_xlabel(r'time [s]')
-ax.set_ylabel(r'q [rad/s]')
+ax.set_ylabel(r'q [rad]')
 
 
 for dim in range(solution_refined['q'].shape[0]):
