@@ -5,3 +5,4 @@ horizon
    :maxdepth: 4
 
    horizon
+   scheme
