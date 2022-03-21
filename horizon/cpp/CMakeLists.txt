@@ -79,7 +79,6 @@ ELSE()
     add_custom_target(generate_python_package
         COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pyilqr> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
         COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pysqp> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
-        COMMAND ./copy_external_dependencies.py libcasadi_conic_osqp.so -c -f -d horizon/external_libs
         DEPENDS pysqp pyilqr
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../..
         COMMENT "Generating package ${MODULE_NAME}"
