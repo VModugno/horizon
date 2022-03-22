@@ -5,9 +5,9 @@
 
 .. include:: <isonum.txt>
 
-Welcome to horizon's documentation!
+Welcome to Horizon's documentation!
 ===================================
-A framework for trajectory optimization and optimal control tailored to robotic systems.
+Horizon is a framework for trajectory optimization and optimal control tailored to robotic systems.
 It relies on direct methods to reduce an optimization problem into a NLP that can be solved using many state-of-the-art solvers.
 
 Horizon is based on `CasADi <https://web.casadi.org/>`_, a tool for nonlinear optimization and algorithmic differentiation.
