@@ -20,10 +20,10 @@ requirements:
 test:
   import:
     - horizon
-  requires:
+  # requires:
     # - scipy
-    - casadi
-    - numpy
+    # - casadi
+    # - numpy
     # - rospkg
     # - pybind11
     # - urdfdom
@@ -31,14 +31,14 @@ test:
     # - ros-noetic-pinocchio
     # - francesco_ruscelli::casadi_kin_dyn
     # - matplotlib
-    - pytest
+    # - pytest
 
-  source_files:
+  # source_files:
     # - horizon/tests/test_examples.py
-    - horizon/tests/test_solvers.py
-  commands:
+    # - horizon/tests/test_solvers.py
+  # commands:
     # - python3 -m pytest horizon/tests/test_examples.py
-    - python3 -m pytest horizon/tests/test_solvers.py
+    # - python3 -m pytest horizon/tests/test_solvers.py
 
 about:
   home: https://github.com/ADVRHumanoids/horizon.git
