@@ -156,28 +156,31 @@
             
   <div class="section" id="horizon-docker">
 <span id="id1"></span><h1>Horizon docker<a class="headerlink" href="#horizon-docker" title="Permalink to this headline">¶</a></h1>
-<p>Try Horizon on Docker!</p>
+<p>Try Horizon on <a class="reference external" href="https://docs.docker.com">Docker</a>!.</p>
 <div class="toggle docutils container">
 <div class="header docutils container">
-Docker</div>
+I don’t have Docker.</div>
 <p>if you don’t have Docker installed in your system, follow the steps in the official Docker <a class="reference external" href="https://docs.docker.com/engine/install/ubuntu/">webpage</a>.</p>
 </div>
-<ul class="simple">
-<li>download the Horizon <a class="reference external" href="https://github.com/ADVRHumanoids/horizon">repo</a></li>
-<li>download the docker: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">pull</span> <span class="pre">francescoruscelli/horizon</span></code></li>
-<li>run the docker from your machine: <code class="docutils literal notranslate"><span class="pre">./horizon/docker/run.sh</span></code></li>
-<li><dl class="first docutils">
-<dt>you are now inside the Horizon docker. You can play around with the examples available. A list of possible commands:</dt>
-<dd><ol class="first last arabic">
-<li><a href="#id2"><span class="problematic" id="id3">``</span></a>python3 -m horizon.examples.spot –r –action walk</li>
-<li><a href="#id4"><span class="problematic" id="id5">``</span></a>python3 -m horizon.examples.spot –r –action leap</li>
-<li><a href="#id6"><span class="problematic" id="id7">``</span></a>python3 -m horizon.examples.cart_pole –r</li>
-<li>…</li>
-</ol>
-</dd>
-</dl>
+<ul>
+<li><p class="first">download the Horizon <a class="reference external" href="https://github.com/ADVRHumanoids/horizon">repo</a></p>
 </li>
-<li>visualize the robot on your browser on this static <a href="#id8"><span class="problematic" id="id9">``</span></a>webpage &lt;<a class="reference external" href="http://localhost:8001/rvizweb/www/index.html">http://localhost:8001/rvizweb/www/index.html</a>&gt;`_</li>
+<li><p class="first">download the docker: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">pull</span> <span class="pre">francescoruscelli/horizon</span></code></p>
+</li>
+<li><p class="first">run the docker from your machine: <code class="docutils literal notranslate"><span class="pre">./horizon/docker/run.sh</span></code></p>
+</li>
+<li><p class="first">you are now inside the Horizon docker.
+You can play around with the examples available. A list of possible commands:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">horizon.examples.spot</span> <span class="pre">--r</span> <span class="pre">--action</span> <span class="pre">walk</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">horizon.examples.spot</span> <span class="pre">--r</span> <span class="pre">--action</span> <span class="pre">leap</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">horizon.examples.cart_pole</span> <span class="pre">--r</span></code></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p class="first">visualize the robot on your browser on this static <a class="reference external" href="http://localhost:8001/rvizweb/www/index.html">webpage</a></p>
+</li>
 </ul>
 </div>
 
