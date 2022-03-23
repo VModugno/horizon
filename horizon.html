@@ -1,13 +1,3118 @@
 
- <script type="text/javascript">
-    $(document).ready(function() {
-        //
-        //
-        $(".toggle > *").hide();
-        $(".toggle .admonition-title").show();
-        $(".toggle .admonition-title").click(function() {
-            $(this).parent().children().not(".admonition-title").toggle(400);
-            $(this).parent().children(".admonition-title").toggleClass("open");
-        })
-    });
-</script>
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>horizon package &mdash; horizon 0.4.5 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="horizon 0.4.5 documentation" href="index.html"/>
+        <link rel="next" title="horizon.ros package" href="horizon.ros.html"/>
+        <link rel="prev" title="Welcome to Horizon’s documentation!" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> horizon
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.5
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">horizon package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="horizon.ros.html">horizon.ros package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.solvers.html">horizon.solvers package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.transcriptions.html">horizon.transcriptions package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="horizon.utils.html">horizon.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-horizon.functions">horizon.functions module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-horizon.misc_function">horizon.misc_function module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-horizon.problem">horizon.problem module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-horizon.type_doc">horizon.type_doc module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-horizon.variables">horizon.variables module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-horizon">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scheme.html">Horizon scheme</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">horizon</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>horizon package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/horizon.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="horizon-package">
+<h1>horizon package<a class="headerlink" href="#horizon-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="horizon.ros.html">horizon.ros package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="horizon.ros.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.ros.html#module-horizon.ros.replay_trajectory">horizon.ros.replay_trajectory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.ros.html#module-horizon.ros.tf_broadcaster_simple">horizon.ros.tf_broadcaster_simple module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.ros.html#module-horizon.ros.utils">horizon.ros.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.ros.html#module-horizon.ros">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="horizon.solvers.html">horizon.solvers package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.blocksqp">horizon.solvers.blocksqp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.ilqr">horizon.solvers.ilqr module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.ipopt">horizon.solvers.ipopt module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.nlpsol">horizon.solvers.nlpsol module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.solver">horizon.solvers.solver module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers.sqp">horizon.solvers.sqp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.solvers.html#module-horizon.solvers">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="horizon.transcriptions.html">horizon.transcriptions package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="horizon.transcriptions.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.integrators">horizon.transcriptions.integrators module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.methods">horizon.transcriptions.methods module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.transcriptor">horizon.transcriptions.transcriptor module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions.trial_integrator">horizon.transcriptions.trial_integrator module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.transcriptions.html#module-horizon.transcriptions">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="horizon.utils.html">horizon.utils package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.collision">horizon.utils.collision module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.kin_dyn">horizon.utils.kin_dyn module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.mat_storer">horizon.utils.mat_storer module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.plotter">horizon.utils.plotter module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.refiner">horizon.utils.refiner module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-module">horizon.utils.replayer module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-fd-module">horizon.utils.replayer_fd module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-fd-mx-module">horizon.utils.replayer_fd_mx module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#horizon-utils-replayer-mx-module">horizon.utils.replayer_mx module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.resampler_trajectory">horizon.utils.resampler_trajectory module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.rti">horizon.utils.rti module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#horizon-utils-send-to-gazebo-module">horizon.utils.send_to_gazebo module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils.utils">horizon.utils.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#horizon-utils-vis-refiner-global-module">horizon.utils.vis_refiner_global module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="horizon.utils.html#module-horizon.utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-horizon.functions">
+<span id="horizon-functions-module"></span><h2>horizon.functions module<a class="headerlink" href="#module-horizon.functions" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.functions.Constraint">
+<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">Constraint</code><span class="sig-paren">(</span><em>name: str, f: &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7fbceba18d90&gt;, used_vars: list, used_pars: list, nodes: Union[int, Iterable[T_co]], bounds=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.functions.Function" title="horizon.functions.Function"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.functions.Function</span></code></a></p>
+<p>Constraint Function of Horizon.</p>
+<dl class="method">
+<dt id="horizon.functions.Constraint.getBounds">
+<code class="descname">getBounds</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint.getBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the bounds of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node at which the bounds are retrieved. If not specified, this returns the bounds at all nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the upper bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Constraint.getLowerBounds">
+<code class="descname">getLowerBounds</code><span class="sig-paren">(</span><em>node: int = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint.getLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the lower bounds of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node at which the lower bounds are retrieved. If not specified, this returns the lower bounds at all nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the lower bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Constraint.getType">
+<code class="descname">getType</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="headerlink" href="#horizon.functions.Constraint.getType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the type of the Constraint.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a string describing the type of the function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Constraint.getUpperBounds">
+<code class="descname">getUpperBounds</code><span class="sig-paren">(</span><em>node: int = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint.getUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the upper bounds of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node at which the upper bounds are retrieved. If not specified, this returns the upper bounds at all nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the upper bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Constraint.setBounds">
+<code class="descname">setBounds</code><span class="sig-paren">(</span><em>lb</em>, <em>ub</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint.setBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the bounds of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lb</strong> – desired lower bounds of the function</li>
+<li><strong>ub</strong> – desired upper bounds of the function</li>
+<li><strong>nodes</strong> – nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Constraint.setLowerBounds">
+<code class="descname">setLowerBounds</code><span class="sig-paren">(</span><em>bounds</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint.setLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the lower bounds of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – desired bounds of the function</li>
+<li><strong>nodes</strong> – nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Constraint.setNodes">
+<code class="descname">setNodes</code><span class="sig-paren">(</span><em>nodes</em>, <em>erasing=False</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint.setNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the active nodes of the constraint function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>nodes</strong> – list of desired active nodes.</li>
+<li><strong>erasing</strong> – choose if the inserted nodes overrides the previous active nodes of the function. ‘False’ if not specified.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Constraint.setUpperBounds">
+<code class="descname">setUpperBounds</code><span class="sig-paren">(</span><em>bounds</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Constraint.setUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the upper bounds of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – desired bounds of the function</li>
+<li><strong>nodes</strong> – nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.functions.CostFunction">
+<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">CostFunction</code><span class="sig-paren">(</span><em>name</em>, <em>f</em>, <em>used_vars</em>, <em>used_pars</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.CostFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.functions.Function" title="horizon.functions.Function"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.functions.Function</span></code></a></p>
+<p>Cost Function of Horizon.</p>
+<dl class="method">
+<dt id="horizon.functions.CostFunction.getType">
+<code class="descname">getType</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.CostFunction.getType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the type of the Cost Function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a string describing the type of the function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.functions.Function">
+<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">Function</code><span class="sig-paren">(</span><em>name: str, f: &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7fbceb7a6040&gt;, used_vars: list, used_pars: list, nodes: Union[int, Iterable[T_co]]</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Function of Horizon: generic function of SX values from CASADI.</p>
+<p class="rubric">Notes</p>
+<p>This function is an abstract representation of its projection over the nodes of the optimization problem.
+An abstract function gets internally implemented at each node, using the variables at that node.</p>
+<dl class="method">
+<dt id="horizon.functions.Function.deserialize">
+<code class="descname">deserialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Function.deserialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deserialize the Function. Used to load it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">deserialized instance of Function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getDim">
+<code class="descname">getDim</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#horizon.functions.Function.getDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the dimension of the function</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dimension of the function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getFunction">
+<code class="descname">getFunction</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7fbceb7a60a0&gt;<a class="headerlink" href="#horizon.functions.Function.getFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the CASADI function</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of the CASADI function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getImpl">
+<code class="descname">getImpl</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Function.getImpl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the CASADI function implemented at the desired node
+:param node: the desired node of the implemented function to retrieve</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of the CASADI function at the desired node</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="headerlink" href="#horizon.functions.Function.getName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the name of the function</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getNodes">
+<code class="descname">getNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#horizon.functions.Function.getNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the active nodes of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a list of the nodes where the function is active</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getParameters">
+<code class="descname">getParameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#horizon.functions.Function.getParameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the parameters used in the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">cs.SX}</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">a dictionary of all the used parameters. {name</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getType">
+<code class="descname">getType</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="headerlink" href="#horizon.functions.Function.getType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the type of the Variable.</p>
+<p class="rubric">Notes</p>
+<p>Is it useful?</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a string describing the type of the function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.getVariables">
+<code class="descname">getVariables</code><span class="sig-paren">(</span><em>offset=True</em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#horizon.functions.Function.getVariables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the variables used in the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">cs.SX}</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">a dictionary of all the used variable. {name</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.serialize">
+<code class="descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Function.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the Function. Used to save it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">serialized instance of Function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.Function.setNodes">
+<code class="descname">setNodes</code><span class="sig-paren">(</span><em>nodes</em>, <em>erasing=False</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.Function.setNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the active nodes of the function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>nodes</strong> – list of desired active nodes.</li>
+<li><strong>erasing</strong> – choose if the inserted nodes overrides the previous active nodes of the function. ‘False’ if not specified.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.functions.FunctionsContainer">
+<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">FunctionsContainer</code><span class="sig-paren">(</span><em>logger=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Container of all the function of Horizon.
+It is used internally by the Problem to get the abstract and implemented function.</p>
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.build">
+<code class="descname">build</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>builds the container with the updated functions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.addFunction">
+<code class="descname">addFunction</code><span class="sig-paren">(</span><em>fun: horizon.functions.Function</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer.addFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a function to the Function Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fun</strong> – a Function (can be Constraint or Cost Function) o add</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.deserialize">
+<code class="descname">deserialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer.deserialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deerialize the Function Container. Used to load it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of deserialized Function Container</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.getCnstr">
+<code class="descname">getCnstr</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span> &#x2192; collections.OrderedDict<a class="headerlink" href="#horizon.functions.FunctionsContainer.getCnstr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the dictionary of all the abstract constraint functions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>of constraint. If not specified</strong><strong>, </strong><strong>returns all of them</strong> (<em>name</em>) – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">fun}</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">ordered dict of the functions {name</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.getCnstrDim">
+<code class="descname">getCnstrDim</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#horizon.functions.FunctionsContainer.getCnstrDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the dimension of all the constraints
+:returns: the total dimension of the constraint</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.getCost">
+<code class="descname">getCost</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span> &#x2192; collections.OrderedDict<a class="headerlink" href="#horizon.functions.FunctionsContainer.getCost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the dictionary of all the abstract cost functions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>of constraint. If not specified</strong><strong>, </strong><strong>returns all of them</strong> (<em>name</em>) – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">fun}</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">ordered dict of the functions {name</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.getFunction">
+<code class="descname">getFunction</code><span class="sig-paren">(</span><em>fun_name: str</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer.getFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for a Function inside the Function Container.
+:param fun_name: name of the function to retrieve</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.removeFunction">
+<code class="descname">removeFunction</code><span class="sig-paren">(</span><em>fun_name: str</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer.removeFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a function from the Function Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fun_name</strong> – name of the function to be removed</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.serialize">
+<code class="descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the Function Container. Used to save it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of serialized Function Container</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.functions.FunctionsContainer.setNNodes">
+<code class="descname">setNNodes</code><span class="sig-paren">(</span><em>n_nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.FunctionsContainer.setNNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>set a desired number of nodes to Function Container.
+:param n_nodes: the desired number of nodes to be set</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.functions.ResidualFunction">
+<em class="property">class </em><code class="descclassname">horizon.functions.</code><code class="descname">ResidualFunction</code><span class="sig-paren">(</span><em>name</em>, <em>f</em>, <em>used_vars</em>, <em>used_pars</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.ResidualFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.functions.Function" title="horizon.functions.Function"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.functions.Function</span></code></a></p>
+<p>Residual Function of Horizon.</p>
+<dl class="method">
+<dt id="horizon.functions.ResidualFunction.getType">
+<code class="descname">getType</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.functions.ResidualFunction.getType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the type of the Cost Function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a string describing the type of the function</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.misc_function">
+<span id="horizon-misc-function-module"></span><h2>horizon.misc_function module<a class="headerlink" href="#module-horizon.misc_function" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="horizon.misc_function.checkNodes">
+<code class="descclassname">horizon.misc_function.</code><code class="descname">checkNodes</code><span class="sig-paren">(</span><em>nodes</em>, <em>nodes_self=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.misc_function.checkNodes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.misc_function.checkValueEntry">
+<code class="descclassname">horizon.misc_function.</code><code class="descname">checkValueEntry</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.misc_function.checkValueEntry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.misc_function.listOfListFLOATtoINT">
+<code class="descclassname">horizon.misc_function.</code><code class="descname">listOfListFLOATtoINT</code><span class="sig-paren">(</span><em>listOfList</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.misc_function.listOfListFLOATtoINT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="horizon.misc_function.unravelElements">
+<code class="descclassname">horizon.misc_function.</code><code class="descname">unravelElements</code><span class="sig-paren">(</span><em>elements</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.misc_function.unravelElements" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-horizon.problem">
+<span id="horizon-problem-module"></span><h2>horizon.problem module<a class="headerlink" href="#module-horizon.problem" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.problem.Problem">
+<em class="property">class </em><code class="descclassname">horizon.problem.</code><code class="descname">Problem</code><span class="sig-paren">(</span><em>N: int</em>, <em>crash_if_suboptimal: bool = False</em>, <em>logging_level=20</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Main class of Horizon, a tool for dynamic optimization using the symbolic framework CASADI. It is a useful tool
+to describe and solve parametric non-linear problems for trajectory planning. It follows the structure of a
+generic shooting method, dividing the interval of planning [ta, tb] into a given number of shooting nodes,
+where each nodes contains decision variables (state, input ..) of the problem.</p>
+<p>Horizon greatly simplifies the description of the problem, allowing the user to work only with abstract definitions
+of variables and functions, which are internally managed, evaluated and projected along the optimization horizon
+by the framework.</p>
+<dl class="method">
+<dt id="horizon.problem.Problem.createConstraint">
+<code class="descname">createConstraint</code><span class="sig-paren">(</span><em>name: str</em>, <em>g</em>, <em>nodes: Union[int</em>, <em>collections.abc.Iterable] = None</em>, <em>bounds=None</em><span class="sig-paren">)</span> &#x2192; horizon.functions.Constraint<a class="headerlink" href="#horizon.problem.Problem.createConstraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Constraint Function of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the constraint</li>
+<li><strong>g</strong> – constraint function</li>
+<li><strong>nodes</strong> – nodes the constraint is active on. If not specified, the Constraint is active on ALL the nodes.</li>
+<li><strong>bounds</strong> – bounds of the constraint. If not specified, the bounds are set to zero.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Constraint</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createCost">
+<code class="descname">createCost</code><span class="sig-paren">(</span><em>name: str</em>, <em>j</em>, <em>nodes: Union[int</em>, <em>collections.abc.Iterable] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createCost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Cost Function of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the cost function</li>
+<li><strong>j</strong> – cost function</li>
+<li><strong>nodes</strong> – nodes the cost function is active on. If not specified, the cost function is active on ALL the nodes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Cost Function</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createFinalConstraint">
+<code class="descname">createFinalConstraint</code><span class="sig-paren">(</span><em>name: str</em>, <em>g</em>, <em>bounds=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createFinalConstraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Constraint Function only active on the last node of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the constraint</li>
+<li><strong>g</strong> – constraint function</li>
+<li><strong>bounds</strong> – bounds of the constraint. If not specified, the bounds are set to zero.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Constraint</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createFinalCost">
+<code class="descname">createFinalCost</code><span class="sig-paren">(</span><em>name: str</em>, <em>j</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createFinalCost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Cost Function only active on the last node of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the cost function</li>
+<li><strong>j</strong> – cost function</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Cost Function</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createFinalResidual">
+<code class="descname">createFinalResidual</code><span class="sig-paren">(</span><em>name: str</em>, <em>j</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createFinalResidual" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Residual Function only active on the last node of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the residual function</li>
+<li><strong>j</strong> – function</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Residual Function</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createInputVariable">
+<code class="descname">createInputVariable</code><span class="sig-paren">(</span><em>name: str</em>, <em>dim: int</em><span class="sig-paren">)</span> &#x2192; horizon.variables.InputVariable<a class="headerlink" href="#horizon.problem.Problem.createInputVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Input Variable active on all the nodes of the optimization problem except the final one. (Input is not defined on the last node)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Input Variable</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createIntermediateConstraint">
+<code class="descname">createIntermediateConstraint</code><span class="sig-paren">(</span><em>name: str</em>, <em>g</em>, <em>nodes: Union[int</em>, <em>collections.abc.Iterable] = None</em>, <em>bounds=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createIntermediateConstraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Constraint Function that can be active on all the nodes except the last one</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the constraint</li>
+<li><strong>g</strong> – constraint function</li>
+<li><strong>nodes</strong> – nodes the constraint is active on. If not specified, the constraint is active on all the nodes except the last one</li>
+<li><strong>bounds</strong> – bounds of the constraint. If not specified, the bounds are set to zero.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Constraint</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createIntermediateCost">
+<code class="descname">createIntermediateCost</code><span class="sig-paren">(</span><em>name: str</em>, <em>j</em>, <em>nodes: Union[int</em>, <em>collections.abc.Iterable] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createIntermediateCost" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Cost Function that can be active on all the nodes except the last one.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the function</li>
+<li><strong>j</strong> – function</li>
+<li><strong>nodes</strong> – nodes the function is active on. If not specified, the cost function is active on all the nodes except the last one</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Function</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createIntermediateResidual">
+<code class="descname">createIntermediateResidual</code><span class="sig-paren">(</span><em>name: str</em>, <em>j</em>, <em>nodes: Union[int</em>, <em>collections.abc.Iterable] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createIntermediateResidual" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Residual Function that can be active on all the nodes except the last one.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the function</li>
+<li><strong>j</strong> – function</li>
+<li><strong>nodes</strong> – nodes the function is active on. If not specified, the function is active on all the nodes except the last one</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Function</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createParameter">
+<code class="descname">createParameter</code><span class="sig-paren">(</span><em>name: str</em>, <em>dim: int</em>, <em>nodes: collections.abc.Iterable = None</em><span class="sig-paren">)</span> &#x2192; Union[horizon.variables.Parameter, horizon.variables.SingleParameter]<a class="headerlink" href="#horizon.problem.Problem.createParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Parameter used in the optimization problem. Can be specified over a desired portion of the horizon nodes.
+Parameters are specified before building the problem and can be ‘assigned’ afterwards, before solving the problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the parameter</li>
+<li><strong>dim</strong> – dimension of the parameter</li>
+<li><strong>nodes</strong> – nodes the parameter is defined on. If not specified, the variable is created on all the nodes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Parameter</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createResidual">
+<code class="descname">createResidual</code><span class="sig-paren">(</span><em>name: str</em>, <em>j</em>, <em>nodes: Union[int</em>, <em>collections.abc.Iterable] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.createResidual" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Residual Function of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the function</li>
+<li><strong>j</strong> – function</li>
+<li><strong>nodes</strong> – nodes the function is active on. If not specified, it is active on ALL the nodes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Residual Function</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createSingleParameter">
+<code class="descname">createSingleParameter</code><span class="sig-paren">(</span><em>name: str</em>, <em>dim: int</em><span class="sig-paren">)</span> &#x2192; horizon.variables.SingleParameter<a class="headerlink" href="#horizon.problem.Problem.createSingleParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a node-independent Single Parameter used to solve the optimization problem. It is a single parameter which is not projected over the horizon.
+Parameters are specified before building the problem and can be ‘assigned’ afterwards, before solving the problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the parameter</li>
+<li><strong>dim</strong> – dimension of the parameter</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Single Parameter</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createSingleVariable">
+<code class="descname">createSingleVariable</code><span class="sig-paren">(</span><em>name: str</em>, <em>dim: int</em><span class="sig-paren">)</span> &#x2192; horizon.variables.SingleVariable<a class="headerlink" href="#horizon.problem.Problem.createSingleVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a node-independent Single Variable of the optimization problem. It is a single decision variable which is not projected over the horizon.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Single Variable</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createStateVariable">
+<code class="descname">createStateVariable</code><span class="sig-paren">(</span><em>name: str</em>, <em>dim: int</em><span class="sig-paren">)</span> &#x2192; horizon.variables.StateVariable<a class="headerlink" href="#horizon.problem.Problem.createStateVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a State Variable active on ALL the N+1 nodes of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of the State Variable</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.createVariable">
+<code class="descname">createVariable</code><span class="sig-paren">(</span><em>name: str</em>, <em>dim: int</em>, <em>nodes: collections.abc.Iterable = None</em><span class="sig-paren">)</span> &#x2192; Union[horizon.variables.StateVariable, horizon.variables.SingleVariable]<a class="headerlink" href="#horizon.problem.Problem.createVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a generic Variable of the optimization problem. Can be specified over a desired portion of the horizon nodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+<li><strong>nodes</strong> – nodes the variables is defined on. If not specified, the variable created is a Single Variable.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">instance of Variable</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.deserialize">
+<code class="descname">deserialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.deserialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deserialize this class. Used for loading it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of the deserialized class “Problem”</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.evalFun">
+<code class="descname">evalFun</code><span class="sig-paren">(</span><em>fun: horizon.functions.Function</em>, <em>solution</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.evalFun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluates a given function over the solution found.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fun</strong> – function to evaluate</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">fun evaluated at all nodes using the solution of horizon problem</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getConstraints">
+<code class="descname">getConstraints</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.getConstraints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for a desired constraint of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the desired constraint. If not specified, a dict with all the constraint is returned</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the desired constraint/s</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getCosts">
+<code class="descname">getCosts</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.getCosts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for a desired constraint of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the desired constraint. If not specified, a dict with all the constraint is returned</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the desired constraint/s</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getDt">
+<code class="descname">getDt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.getDt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter of the system dt used in the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of the dt</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getDynamics">
+<code class="descname">getDynamics</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7fbceb817b80&gt;<a class="headerlink" href="#horizon.problem.Problem.getDynamics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter of the system Dynamics used in the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of the derivative of the state</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getInitialState">
+<code class="descname">getInitialState</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; numpy.array<a class="headerlink" href="#horizon.problem.Problem.getInitialState" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getInput">
+<code class="descname">getInput</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; horizon.variables.InputAggregate<a class="headerlink" href="#horizon.problem.Problem.getInput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the aggregate Input defined for the problem. The Input contains, in order, all the Input Variables created.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of Input</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getNNodes">
+<code class="descname">getNNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#horizon.problem.Problem.getNNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the number of nodes of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the number of optimization nodes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getParameters">
+<code class="descname">getParameters</code><span class="sig-paren">(</span><em>name: str = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.getParameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for a desired parameter of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the desired parameter. If not specified, a dict with all the parameters is returned</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the desired parameter/s</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getState">
+<code class="descname">getState</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; horizon.variables.StateAggregate<a class="headerlink" href="#horizon.problem.Problem.getState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the aggregate State defined for the problem. The State contains, in order, all the State Variables created.
+:returns: instance of State</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.getVariables">
+<code class="descname">getVariables</code><span class="sig-paren">(</span><em>name: str = None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.getVariables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for a desired variable of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the desired variable. If not specified, a dict with all the variables is returned</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">the desired variable/s</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.removeConstraint">
+<code class="descname">removeConstraint</code><span class="sig-paren">(</span><em>name: str</em><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.problem.Problem.removeConstraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove the desired constraint.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the constraint function to be removed</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: False if function name is not found.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.removeCostFunction">
+<code class="descname">removeCostFunction</code><span class="sig-paren">(</span><em>name: str</em><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.problem.Problem.removeCostFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove the desired cost function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the cost function to be removed</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: False if function name is not found.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.removeVariable">
+<code class="descname">removeVariable</code><span class="sig-paren">(</span><em>name: str</em><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#horizon.problem.Problem.removeVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove the desired variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the cost function to be removed</td>
+</tr>
+</tbody>
+</table>
+<p>Returns: False if function name is not found.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.resetDynamics">
+<code class="descname">resetDynamics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.resetDynamics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.save">
+<code class="descname">save</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.scopeNodeConstraints">
+<code class="descname">scopeNodeConstraints</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.scopeNodeConstraints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scope the constraints active at the desired node of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node to scope</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">all the active constraint at the desired node</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.scopeNodeCostFunctions">
+<code class="descname">scopeNodeCostFunctions</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.scopeNodeCostFunctions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scope the cost functions active at the desired node of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node to scope</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">all the active cost functions at the desired node</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.scopeNodeVars">
+<code class="descname">scopeNodeVars</code><span class="sig-paren">(</span><em>node: int</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.scopeNodeVars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scope the variables active at the desired node of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node to scope</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">all the active variables at the desired node</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.serialize">
+<code class="descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize this class. Used for saving it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of the serialized class “Problem”</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.setDt">
+<code class="descname">setDt</code><span class="sig-paren">(</span><em>dt</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.setDt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter of the system dt used in the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dt</strong> – dt of the system</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.setDynamics">
+<code class="descname">setDynamics</code><span class="sig-paren">(</span><em>xdot</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.setDynamics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter of the system Dynamics used in the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>xdot</strong> – derivative of the State describing the dynamics of the system</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.setInitialState">
+<code class="descname">setInitialState</code><span class="sig-paren">(</span><em>x0: collections.abc.Iterable</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.setInitialState" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.setNNodes">
+<code class="descname">setNNodes</code><span class="sig-paren">(</span><em>n_nodes: int</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.setNNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>set a desired number of nodes of the optimization problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n_nodes</strong> – new number of nodes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.problem.Problem.toParameter">
+<code class="descname">toParameter</code><span class="sig-paren">(</span><em>var_name</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.Problem.toParameter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="horizon.problem.pickleable">
+<code class="descclassname">horizon.problem.</code><code class="descname">pickleable</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.problem.pickleable" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-horizon.type_doc">
+<span id="horizon-type-doc-module"></span><h2>horizon.type_doc module<a class="headerlink" href="#module-horizon.type_doc" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.type_doc.BoundsDict">
+<em class="property">class </em><code class="descclassname">horizon.type_doc.</code><code class="descname">BoundsDict</code><a class="headerlink" href="#horizon.type_doc.BoundsDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
+<p>nodes, lb, ub</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon.variables">
+<span id="horizon-variables-module"></span><h2>horizon.variables module<a class="headerlink" href="#module-horizon.variables" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="horizon.variables.AbstractAggregate">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">AbstractAggregate</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.AbstractAggregate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>Abstract Aggregate of the Horizon Problem.
+Used to store more variables of the same nature.</p>
+<dl class="method">
+<dt id="horizon.variables.AbstractAggregate.getVars">
+<code class="descname">getVars</code><span class="sig-paren">(</span><em>abstr=False</em><span class="sig-paren">)</span> &#x2192; &lt;sphinx.ext.autodoc.importer._MockObject object at 0x7fbceb8fd6a0&gt;<a class="headerlink" href="#horizon.variables.AbstractAggregate.getVars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the variable stored in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a SX vector of all the variables stored</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.AbstractVariable">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">AbstractVariable</code><span class="sig-paren">(</span><em>tag: str</em>, <em>dim: int</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.AbstractVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">sphinx.ext.autodoc.importer._MockObject</span></code></p>
+<p>Abstract Variable of Horizon Problem.</p>
+<p class="rubric">Notes</p>
+<p>Horizon allows the user to work only with abstract variables. Internally, these variables are projected over the horizon nodes.</p>
+<dl class="method">
+<dt id="horizon.variables.AbstractVariable.getDim">
+<code class="descname">getDim</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#horizon.variables.AbstractVariable.getDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the dimension of the abstract variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dimension of the variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.AbstractVariable.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.AbstractVariable.getName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.AbstractVariable.getOffset">
+<code class="descname">getOffset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.AbstractVariable.getOffset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.AbstractVariableView">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">AbstractVariableView</code><span class="sig-paren">(</span><em>parent: horizon.variables.AbstractVariable</em>, <em>var_slice</em>, <em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.AbstractVariableView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sphinx.ext.autodoc.importer._MockObject</span></code></p>
+<dl class="method">
+<dt id="horizon.variables.AbstractVariableView.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.AbstractVariableView.getName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.Aggregate">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">Aggregate</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractAggregate" title="horizon.variables.AbstractAggregate"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractAggregate</span></code></a></p>
+<p>Aggregate of the Horizon Problem.
+Used to store more variables of the same nature.</p>
+<dl class="method">
+<dt id="horizon.variables.Aggregate.addVariable">
+<code class="descname">addVariable</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.addVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a Variable to the Aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>var</strong> – variable to be added to the aggregate</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.getBounds">
+<code class="descname">getBounds</code><span class="sig-paren">(</span><em>node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.getBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the bounds of the variables in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">array of bound values of each variable in the aggregate</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.getInitialGuess">
+<code class="descname">getInitialGuess</code><span class="sig-paren">(</span><em>node=None</em><span class="sig-paren">)</span> &#x2192; numpy.array<a class="headerlink" href="#horizon.variables.Aggregate.getInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><p>[summary]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> (<em>[</em><em>type</em><em>]</em>) – [description]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">[description]</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">[type]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.getLowerBounds">
+<code class="descname">getLowerBounds</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.getLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the lower bounds of the variables in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – which nodes the lower bounds are applied on. If not specified, the variable is bounded along ALL the nodes</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">array of lower bound values of each variable in the aggregate</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.getUpperBounds">
+<code class="descname">getUpperBounds</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.getUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the upper bounds of the variables in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – which nodes the upper bounds are applied on. If not specified, the variable is bounded along ALL the nodes</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">array of upper bound values of each variable in the aggregate</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.getVarIndex">
+<code class="descname">getVarIndex</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.getVarIndex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return offset and dimension for the variable with given name,
+that must belong to this aggregate. The resulting pair is such
+that the following code returns the variable’s SX value</p>
+<blockquote>
+<div>off, dim = self.getVarIndex(name=’myvar’)
+v = self.getVars()[off:off+dim]</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>[</em><em>type</em><em>]</em>) – [description]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.getVarOffset">
+<code class="descname">getVarOffset</code><span class="sig-paren">(</span><em>offset</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.getVarOffset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset variables contained in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">an abstract aggregate with all the offset variables referring to the relative abstract variables</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.removeVariable">
+<code class="descname">removeVariable</code><span class="sig-paren">(</span><em>var_name</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.removeVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a Variable from the Aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>var</strong> – variable to be removed from the aggregate</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.setBounds">
+<code class="descname">setBounds</code><span class="sig-paren">(</span><em>lb</em>, <em>ub</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.setBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the bounds of the variables in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lb</strong> – desired lower bounds of the variable</li>
+<li><strong>ub</strong> – desired upper bounds of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.setInitialGuess">
+<code class="descname">setInitialGuess</code><span class="sig-paren">(</span><em>v0</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.setInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>v0</strong> (<em>[</em><em>type</em><em>]</em>) – [description]</li>
+<li><strong>nodes</strong> (<em>[</em><em>type</em><em>]</em><em>, </em><em>optional</em>) – [description]. Defaults to None.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.setLowerBounds">
+<code class="descname">setLowerBounds</code><span class="sig-paren">(</span><em>lb</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.setLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the lower bounds of the variables in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – list of desired bounds of the all the variables in the aggregate</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Aggregate.setUpperBounds">
+<code class="descname">setUpperBounds</code><span class="sig-paren">(</span><em>ub</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Aggregate.setUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the upper bounds of the variables in the aggregate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – list of desired bounds of the all the variables in the aggregate</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.InputAggregate">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">InputAggregate</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.InputAggregate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.Aggregate" title="horizon.variables.Aggregate"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.Aggregate</span></code></a></p>
+<p>Input (Control) Aggregate of the Horizon Problem.
+Used to store all the control variables.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.InputVariable">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">InputVariable</code><span class="sig-paren">(</span><em>tag</em>, <em>dim</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.InputVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.Variable" title="horizon.variables.Variable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.Variable</span></code></a></p>
+<p>Input (Control) Variable of Horizon Problem.
+The variable is abstract, and gets implemented automatically over the horizon nodes except the last one.</p>
+<p class="rubric">Examples</p>
+<p>Abstract variable “x”. Horizon nodes are N.</p>
+<p>Implemented variable “x” –&gt; x_0, x_1, … x_N-1</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.OffsetAggregate">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">OffsetAggregate</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetAggregate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractAggregate" title="horizon.variables.AbstractAggregate"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractAggregate</span></code></a></p>
+<p>Offset Aggregate of the Horizon Problem.
+Used to store more offset variables of the same nature.</p>
+<dl class="method">
+<dt id="horizon.variables.OffsetAggregate.getVarIndex">
+<code class="descname">getVarIndex</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetAggregate.getVarIndex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return offset and dimension for the variable with given name,
+that must belong to this aggregate. The resulting pair is such
+that the following code returns the variable’s SX value</p>
+<blockquote>
+<div>off, dim = self.getVarIndex(name=’myvar’)
+v = self.getVars()[off:off+dim]</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>[</em><em>type</em><em>]</em>) – [description]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.OffsetParameter">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">OffsetParameter</code><span class="sig-paren">(</span><em>parent_name</em>, <em>tag</em>, <em>dim</em>, <em>offset</em>, <em>par_impl</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariable" title="horizon.variables.AbstractVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariable</span></code></a></p>
+<dl class="method">
+<dt id="horizon.variables.OffsetParameter.getImpl">
+<code class="descname">getImpl</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetParameter.getImpl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the implemented offset parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – node at which the parameter is retrieved</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">implemented instances of the abstract offsetted parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.OffsetParameter.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetParameter.getName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get name of the parameter. Warning: not always same as the tag</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.OffsetParameter.getNodes">
+<code class="descname">getNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetParameter.getNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the active nodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">list of active nodes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.OffsetVariable">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">OffsetVariable</code><span class="sig-paren">(</span><em>parent_name</em>, <em>tag</em>, <em>dim</em>, <em>offset</em>, <em>var_impl</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariable" title="horizon.variables.AbstractVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariable</span></code></a></p>
+<dl class="method">
+<dt id="horizon.variables.OffsetVariable.getImpl">
+<code class="descname">getImpl</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetVariable.getImpl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the implemented offset variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – node at which the variable is retrieved</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">implemented instances of the abstract offsetted variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.OffsetVariable.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetVariable.getName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get name of the variable. Warning: not always same as the tag</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.OffsetVariable.getNodes">
+<code class="descname">getNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.OffsetVariable.getNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the active nodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">list of active nodes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.Parameter">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">Parameter</code><span class="sig-paren">(</span><em>tag</em>, <em>dim</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariable" title="horizon.variables.AbstractVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariable</span></code></a></p>
+<p>Parameter of Horizon Problem.
+It is used for parametric problems: it is a symbolic variable in the optimization problem but it is not optimized. Rather, it is kept parametric and can be assigned before solving the problem.</p>
+<dl class="method">
+<dt id="horizon.variables.Parameter.assign">
+<code class="descname">assign</code><span class="sig-paren">(</span><em>val</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter.assign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign a value to the parameter at a desired node. Can be assigned also after the problem is built, before solving the problem.
+If not assigned, its default value is zero.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>val</strong> – value of the parameter</li>
+<li><strong>nodes</strong> – nodes at which the parameter is assigned</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Parameter.getImpl">
+<code class="descname">getImpl</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter.getImpl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the implemented parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – node at which the parameter is retrieved. If not specified, this function returns an SX array with all the implemented parameters along the nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">implemented instances of the abstract parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Parameter.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter.getName" title="Permalink to this definition">¶</a></dt>
+<dd><p>getter for the name of the parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Parameter.getNodes">
+<code class="descname">getNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter.getNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the nodes of the parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">list of nodes the parameter is active on.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Parameter.getParOffset">
+<code class="descname">getParOffset</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter.getParOffset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset parameter. An offset parameter is used to point to the desired implemented instance of the abstract parameter.</p>
+<p class="rubric">Examples</p>
+<p>Abstract parameter “p”. Horizon nodes are N.</p>
+<p>Implemented parameter “p” –&gt; p_0, p_1, … p_N-1, p_N</p>
+<p>Offset parameter “p-1” points FOR EACH NODE at variable “p” implemented at the PREVIOUS NODE.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nodes</strong> – offset of the node (shift to n node before or after)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Parameter.getParOffsetDict">
+<code class="descname">getParOffsetDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter.getParOffsetDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset variables.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dict with all the offset variables referring to this abstract variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Parameter.getValues">
+<code class="descname">getValues</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Parameter.getValues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the value of the parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – node at which the value of the parameter is retrieved. If not specified, this function returns a matrix with all the values of the parameter along the nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.ParameterView">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">ParameterView</code><span class="sig-paren">(</span><em>parent: horizon.variables.SingleParameter</em>, <em>var_slice</em>, <em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.ParameterView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariableView" title="horizon.variables.AbstractVariableView"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariableView</span></code></a></p>
+<dl class="method">
+<dt id="horizon.variables.ParameterView.assign">
+<code class="descname">assign</code><span class="sig-paren">(</span><em>vals</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.ParameterView.assign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign a value to the parameter at a desired node. Can be assigned also after the problem is built, before solving the problem.
+If not assigned, its default value is zero.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>vals</strong> – value of the parameter</li>
+<li><strong>nodes</strong> – nodes at which the parameter is assigned</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.ParameterView.getValues">
+<code class="descname">getValues</code><span class="sig-paren">(</span><em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.ParameterView.getValues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the value of the parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – node at which the value of the parameter is retrieved. If not specified, this function returns a matrix with all the values of the parameter along the nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.SingleParameter">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">SingleParameter</code><span class="sig-paren">(</span><em>tag</em>, <em>dim</em>, <em>dummy_nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariable" title="horizon.variables.AbstractVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariable</span></code></a></p>
+<p>Single Parameter of Horizon Problem.
+It is used for parametric problems: it is a symbolic variable in the optimization problem but it is not optimized. Rather, it is kept parametric and can be assigned before solving the problem.
+Parameters are specified before building the problem and can be ‘assigned’ afterwards, before solving the problem.
+The assigned value is the same along the horizon, since this parameter is node-independent.
+The Parameter is abstract, and gets implemented automatically.</p>
+<dl class="method">
+<dt id="horizon.variables.SingleParameter.assign">
+<code class="descname">assign</code><span class="sig-paren">(</span><em>vals</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter.assign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign a value to the parameter. Can be assigned also after the problem is built, before solving the problem.
+If not assigned, its default value is zero.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vals</strong> – value of the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleParameter.getImpl">
+<code class="descname">getImpl</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter.getImpl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the implemented parameter. Node is useless, since this parameter is node-independent.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – useless input, used to simplify the framework mechanics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">instance of the implemented parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleParameter.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter.getName" title="Permalink to this definition">¶</a></dt>
+<dd><p>getter for the name of the parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleParameter.getNodes">
+<code class="descname">getNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter.getNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the active nodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">-1 since this parameter is node-independent</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleParameter.getParOffset">
+<code class="descname">getParOffset</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter.getParOffset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset parameter. Since the parameter is the same along the horizon, it will point to itself.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nodes</strong> – offset of the node (shift to n node before or after)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleParameter.getParOffsetDict">
+<code class="descname">getParOffsetDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter.getParOffsetDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset parameter. Useless, since this parameter is node-independent.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">empty dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleParameter.getValues">
+<code class="descname">getValues</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameter.getValues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the value assigned to the parameter. It is the same throughout all the nodes, since this parameter is node-independent.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dummy_node</strong> – useless input, used to simplify the framework mechanics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value assigned to the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.SingleParameterView">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">SingleParameterView</code><span class="sig-paren">(</span><em>parent: horizon.variables.SingleParameter</em>, <em>var_slice</em>, <em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameterView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariableView" title="horizon.variables.AbstractVariableView"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariableView</span></code></a></p>
+<dl class="method">
+<dt id="horizon.variables.SingleParameterView.assign">
+<code class="descname">assign</code><span class="sig-paren">(</span><em>vals</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleParameterView.assign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign a value to the parameter. Can be assigned also after the problem is built, before solving the problem.
+If not assigned, its default value is zero.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vals</strong> – value of the parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.SingleVariable">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">SingleVariable</code><span class="sig-paren">(</span><em>tag</em>, <em>dim</em>, <em>dummy_nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariable" title="horizon.variables.AbstractVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariable</span></code></a></p>
+<p>Single Variable of Horizon Problem: generic variable of the optimization problem.
+The single variable is the same along the horizon, since it is node-independent.
+The Variable is abstract, and gets implemented automatically.</p>
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getBounds">
+<code class="descname">getBounds</code><span class="sig-paren">(</span><em>dummy_node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – useless input, used to simplify the framework mechanics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">values of the bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getImpl">
+<code class="descname">getImpl</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getImpl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the implemented variable. Node is useless, since this variable is node-independent.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dummy_node</strong> – useless input, used to simplify the framework mechanics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">implemented instances of the abstract variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getImplDim">
+<code class="descname">getImplDim</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getImplDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the dimension of the implemented variables.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dimension of the variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getInitialGuess">
+<code class="descname">getInitialGuess</code><span class="sig-paren">(</span><em>dummy_node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the initial guess of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – useless input, used to simplify the framework mechanics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">values of the initial guess</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getLowerBounds">
+<code class="descname">getLowerBounds</code><span class="sig-paren">(</span><em>dummy_node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the lower bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – useless input, used to simplify the framework mechanics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">values of the lower bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getName" title="Permalink to this definition">¶</a></dt>
+<dd><p>getter for the name of the variable</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getNodes">
+<code class="descname">getNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the active nodes of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">-1 since this parameter is node-independent</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getUpperBounds">
+<code class="descname">getUpperBounds</code><span class="sig-paren">(</span><em>dummy_node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the upper bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – useless input, used to simplify the framework mechanics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">values of the upper bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getVarOffset">
+<code class="descname">getVarOffset</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getVarOffset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset variable. Since the variable is the same along the horizon, it will point to itself.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nodes</strong> – offset of the node (shift to n node before or after)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.getVarOffsetDict">
+<code class="descname">getVarOffsetDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.getVarOffsetDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset variables. Useless, since this variable is node-independent.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">empty dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.setBounds">
+<code class="descname">setBounds</code><span class="sig-paren">(</span><em>lb</em>, <em>ub</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.setBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lb</strong> – value of the lower bounds</li>
+<li><strong>ub</strong> – value of the upper bounds</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.setInitialGuess">
+<code class="descname">setInitialGuess</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.setInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the initial guess of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>val</strong> – value of the initial guess</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.setLowerBounds">
+<code class="descname">setLowerBounds</code><span class="sig-paren">(</span><em>bounds</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.setLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the lower bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bounds</strong> – value of the lower bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariable.setUpperBounds">
+<code class="descname">setUpperBounds</code><span class="sig-paren">(</span><em>bounds</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariable.setUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the upper bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bounds</strong> – value of the upper bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.SingleVariableView">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">SingleVariableView</code><span class="sig-paren">(</span><em>parent: horizon.variables.SingleVariable</em>, <em>var_slice</em>, <em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariableView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariableView" title="horizon.variables.AbstractVariableView"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariableView</span></code></a></p>
+<dl class="method">
+<dt id="horizon.variables.SingleVariableView.setBounds">
+<code class="descname">setBounds</code><span class="sig-paren">(</span><em>lb</em>, <em>ub</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariableView.setBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lb</strong> – value of the lower bounds</li>
+<li><strong>ub</strong> – value of the upper bounds</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariableView.setInitialGuess">
+<code class="descname">setInitialGuess</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariableView.setInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the initial guess of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>val</strong> – value of the initial guess</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariableView.setLowerBounds">
+<code class="descname">setLowerBounds</code><span class="sig-paren">(</span><em>bounds</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariableView.setLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the lower bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bounds</strong> – value of the lower bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.SingleVariableView.setUpperBounds">
+<code class="descname">setUpperBounds</code><span class="sig-paren">(</span><em>bounds</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.SingleVariableView.setUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the upper bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bounds</strong> – value of the upper bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.StateAggregate">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">StateAggregate</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.StateAggregate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.Aggregate" title="horizon.variables.Aggregate"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.Aggregate</span></code></a></p>
+<p>State Aggregate of the Horizon Problem.
+Used to store all the state variables.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.StateVariable">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">StateVariable</code><span class="sig-paren">(</span><em>tag</em>, <em>dim</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.StateVariable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.Variable" title="horizon.variables.Variable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.Variable</span></code></a></p>
+<p>State Variable of Horizon Problem.
+The variable is abstract, and gets implemented automatically over all the horizon nodes.</p>
+<p class="rubric">Examples</p>
+<p>Abstract variable “x”. Horizon nodes are N.</p>
+<p>Implemented variable “x” –&gt; x_0, x_1, … x_N-1, x_N</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.Variable">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">Variable</code><span class="sig-paren">(</span><em>tag</em>, <em>dim</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariable" title="horizon.variables.AbstractVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariable</span></code></a></p>
+<p>Variable of Horizon Problem: generic variable of the optimization problem.
+The Variable is abstract, and gets implemented automatically over the horizon nodes.</p>
+<p class="rubric">Examples</p>
+<p>Abstract variable “x”. Horizon nodes are N.</p>
+<p>Implemented variable “x” –&gt; x_0, x_1, … x_N-1, x_N</p>
+<dl class="method">
+<dt id="horizon.variables.Variable.getBounds">
+<code class="descname">getBounds</code><span class="sig-paren">(</span><em>node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node at which the bounds are retrieved. If not specified, this returns the bounds at all nodes</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getImpl">
+<code class="descname">getImpl</code><span class="sig-paren">(</span><em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getImpl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the implemented variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – node at which the variable is retrieved</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">implemented instances of the abstract variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getImplDim">
+<code class="descname">getImplDim</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getImplDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the dimension of the implemented variables, considering all the nodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dimension of the variable multiplied by number of nodes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getInitialGuess">
+<code class="descname">getInitialGuess</code><span class="sig-paren">(</span><em>node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the initial guess of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node at which the initial guess is retrieved. If not specified, this returns the lower bounds at all nodes</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getLowerBounds">
+<code class="descname">getLowerBounds</code><span class="sig-paren">(</span><em>node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the lower bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node at which the lower bounds are retrieved. If not specified, this returns the lower bounds at all nodes</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the lower bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getName">
+<code class="descname">getName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getName" title="Permalink to this definition">¶</a></dt>
+<dd><p>getter for the name of the variable</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name of the variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getNodes">
+<code class="descname">getNodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the active nodes of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the nodes the variable is defined on</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getUpperBounds">
+<code class="descname">getUpperBounds</code><span class="sig-paren">(</span><em>node=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the upper bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>node</strong> – desired node at which the upper bounds are retrieved. If not specified, this returns the upper bounds at all nodes</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">value/s of the upper bounds</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getVarOffset">
+<code class="descname">getVarOffset</code><span class="sig-paren">(</span><em>node</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getVarOffset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset variable. An offset variable is used to point to the desired implemented instance of the abstract variable.</p>
+<p class="rubric">Examples</p>
+<p>Abstract variable “x”. Horizon nodes are N.</p>
+<p>Implemented variable “x” –&gt; x_0, x_1, … x_N-1, x_N</p>
+<p>Offset variable “x-1” points FOR EACH NODE at variable “x” implemented at the PREVIOUS NODE.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nodes</strong> – offset of the node (shift to n node before or after)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.getVarOffsetDict">
+<code class="descname">getVarOffsetDict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.getVarOffsetDict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the offset variables.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dict with all the offset variables referring to this abstract variable</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.setBounds">
+<code class="descname">setBounds</code><span class="sig-paren">(</span><em>lb</em>, <em>ub</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.setBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lb</strong> – desired lower bounds of the variable</li>
+<li><strong>ub</strong> – desired upper bounds of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.setInitialGuess">
+<code class="descname">setInitialGuess</code><span class="sig-paren">(</span><em>val</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.setInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the initial guess of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>val</strong> – desired initial guess of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.setLowerBounds">
+<code class="descname">setLowerBounds</code><span class="sig-paren">(</span><em>bounds</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.setLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the lower bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – desired bounds of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.Variable.setUpperBounds">
+<code class="descname">setUpperBounds</code><span class="sig-paren">(</span><em>bounds</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.Variable.setUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the upper bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – desired bounds of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.VariableView">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">VariableView</code><span class="sig-paren">(</span><em>parent: horizon.variables.Variable</em>, <em>var_slice</em>, <em>indices</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariableView" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#horizon.variables.AbstractVariableView" title="horizon.variables.AbstractVariableView"><code class="xref py py-class docutils literal notranslate"><span class="pre">horizon.variables.AbstractVariableView</span></code></a></p>
+<dl class="method">
+<dt id="horizon.variables.VariableView.setBounds">
+<code class="descname">setBounds</code><span class="sig-paren">(</span><em>lb</em>, <em>ub</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariableView.setBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lb</strong> – desired lower bounds of the variable</li>
+<li><strong>ub</strong> – desired upper bounds of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariableView.setInitialGuess">
+<code class="descname">setInitialGuess</code><span class="sig-paren">(</span><em>val</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariableView.setInitialGuess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the initial guess of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>val</strong> – desired initial guess of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariableView.setLowerBounds">
+<code class="descname">setLowerBounds</code><span class="sig-paren">(</span><em>bounds</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariableView.setLowerBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the lower bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – desired bounds of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariableView.setUpperBounds">
+<code class="descname">setUpperBounds</code><span class="sig-paren">(</span><em>bounds</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariableView.setUpperBounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setter for the upper bounds of the variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bounds</strong> – desired bounds of the variable</li>
+<li><strong>nodes</strong> – which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="horizon.variables.VariablesContainer">
+<em class="property">class </em><code class="descclassname">horizon.variables.</code><code class="descname">VariablesContainer</code><span class="sig-paren">(</span><em>logger=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Container of all the variables of Horizon.
+It is used internally by the Problem to get the abstract and implemented variables.</p>
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.createVar">
+<code class="descname">createVar</code><span class="sig-paren">(</span><em>var_type</em>, <em>name</em>, <em>dim</em>, <em>active_nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.createVar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a variable and adds it to the Variable Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>var_type</strong> – type of variable</li>
+<li><strong>name</strong> – name of variable</li>
+<li><strong>dim</strong> – dimension of variable</li>
+<li><strong>active_nodes</strong> – nodes the variable is defined on</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.deserialize">
+<code class="descname">deserialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.deserialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deserialize the Variable Container. Used to load it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of deserialized Variable Container</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.getInputVars">
+<code class="descname">getInputVars</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.getInputVars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the input (control) variables in the Variable Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a dict with all the input (control) variables</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.getPar">
+<code class="descname">getPar</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.getPar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the abstract parameters in the Variable Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a dict with all the abstract parameters</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.getParList">
+<code class="descname">getParList</code><span class="sig-paren">(</span><em>offset=True</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.getParList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the abstract parameters in the Variable Container. Used by the Horizon Problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a list with all the abstract parameters</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.getStateVars">
+<code class="descname">getStateVars</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.getStateVars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the state variables in the Variable Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">a dict with all the state variables</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.getVar">
+<code class="descname">getVar</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.getVar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the abstract variables in the Variable Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> – name of the variable to be retrieve</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a dict with all the abstract variables</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.getVarList">
+<code class="descname">getVarList</code><span class="sig-paren">(</span><em>offset=True</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.getVarList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the abstract variables in the Variable Container. Used by the Horizon Problem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>offset</strong> – if True, get also the offset_variable</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a list with all the abstract variables</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.removeVar">
+<code class="descname">removeVar</code><span class="sig-paren">(</span><em>var_name</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.removeVar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.serialize">
+<code class="descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the Variable Container. Used to save it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">instance of serialized Variable Container</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.setInputVar">
+<code class="descname">setInputVar</code><span class="sig-paren">(</span><em>name</em>, <em>dim</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.setInputVar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Input (Control) variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.setNNodes">
+<code class="descname">setNNodes</code><span class="sig-paren">(</span><em>n_nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.setNNodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>set a desired number of nodes to the Variable Container.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n_nodes</strong> – the desired number of nodes to be set</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.setParameter">
+<code class="descname">setParameter</code><span class="sig-paren">(</span><em>name</em>, <em>dim</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.setParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+<li><strong>nodes</strong> – nodes the parameter is defined on. If not specified, all the horizon nodes are considered</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.setSingleParameter">
+<code class="descname">setSingleParameter</code><span class="sig-paren">(</span><em>name</em>, <em>dim</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.setSingleParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Single Variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.setSingleVar">
+<code class="descname">setSingleVar</code><span class="sig-paren">(</span><em>name</em>, <em>dim</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.setSingleVar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a Single variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.setStateVar">
+<code class="descname">setStateVar</code><span class="sig-paren">(</span><em>name</em>, <em>dim</em>, <em>nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.setStateVar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a State variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="horizon.variables.VariablesContainer.setVar">
+<code class="descname">setVar</code><span class="sig-paren">(</span><em>name</em>, <em>dim</em>, <em>active_nodes=None</em><span class="sig-paren">)</span><a class="headerlink" href="#horizon.variables.VariablesContainer.setVar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a generic variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> – name of the variable</li>
+<li><strong>dim</strong> – dimension of the variable</li>
+<li><strong>active_nodes</strong> – nodes the variable is defined on. If not specified, a Single Variable is generated</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-horizon">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-horizon" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="horizon.ros.html" class="btn btn-neutral float-right" title="horizon.ros package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Welcome to Horizon’s documentation!" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2021, Francesco Ruscelli.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> and ❤️  using a custom <a href="https://github.com/LinxiFan/Stanford-theme">theme</a> based on <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.5',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/language_data.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
