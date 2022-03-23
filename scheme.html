@@ -36,6 +36,7 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="horizon 0.4.5 documentation" href="index.html"/>
+        <link rel="next" title="Horizon docker" href="docker.html"/>
         <link rel="prev" title="horizon.utils package" href="horizon.utils.html"/> 
 
   
@@ -90,6 +91,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="horizon.html">horizon package</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Horizon scheme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker.html">Horizon docker</a></li>
 </ul>
 
             
@@ -154,7 +156,7 @@
            <div itemprop="articleBody">
             
   <div class="section" id="horizon-scheme">
-<h1>Horizon scheme<a class="headerlink" href="#horizon-scheme" title="Permalink to this headline">¶</a></h1>
+<span id="id1"></span><h1>Horizon scheme<a class="headerlink" href="#horizon-scheme" title="Permalink to this headline">¶</a></h1>
 <p>A pseudo-UML representation of the structure of Horizon.</p>
 <p>The core component is the <em>Problem</em> component, acting as a manager for optimization variables, parameter, costs and constraints.
 Variables can be combined thanks to CasADi’s symbolic engine to produce expressions for costs, and constraints.
@@ -170,6 +172,8 @@ Finally, a <em>Solver</em> component translates the abstract representation of P
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="docker.html" class="btn btn-neutral float-right" title="Horizon docker" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="horizon.utils.html" class="btn btn-neutral" title="horizon.utils package" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

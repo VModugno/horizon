@@ -1,7 +1,10 @@
+.. _horizon_docker:
+
 Horizon docker
 =====================
 
-Try Horizon on Docker! 
+Try Horizon on Docker!
+
 .. container:: toggle
 
       .. container:: header
