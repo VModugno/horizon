@@ -51,9 +51,9 @@ Besides installing Horizon on your machine and running the examples, you can try
 
        from plone import api
        ...
-       
-      * ``docker pull francescoruscelli/horizon``
-      * from `here <https://github.com/ADVRHumanoids/horizon/tree/devel/docker>`_, execute ``run.sh``
+
+* ``docker pull francescoruscelli/horizon``
+* from `here <https://github.com/ADVRHumanoids/horizon/tree/devel/docker>`_, execute ``run.sh``
 
 Videos
 =======
