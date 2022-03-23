@@ -10,6 +10,7 @@ Try Horizon on `Docker <https://docs.docker.com>`_!
 
 You will find hands-on demonstrative code detailing the steps to generate an optimization problem (including the commented code of the case-study described in this article), 
 and interactive examples to better appreciate the capabilities of Horizon, (visualizing the robot motions, plotting the optimized trajectories..):
+
 #. clone the Horizon `repo <https://github.com/ADVRHumanoids/horizon>`_ in your workspace.
 #. download the docker: ``docker pull francescoruscelli/horizon``
 #. run the docker from your machine: ``./horizon/docker/run.sh``
@@ -30,6 +31,8 @@ and interactive examples to better appreciate the capabilities of Horizon, (visu
 .. container:: toggle
 
     .. container:: header
+
+        Spoiler:
       
 
 
