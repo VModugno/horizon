@@ -1,23 +1,12 @@
-.admonition {
-    border-radius: 0;
-    border: none;
-    border-left: .2rem solid;
-    border-left-color: rgba(var(--pst-color-admonition-default),1);
-  }
-  .admonition .admonition-title {
-    margin-bottom: 1.5rem !important;
-  }
-  .admonition.toggle .admonition-title {
-    cursor: pointer;
-    display: flex;
-  }
-  .admonition.toggle .admonition-title::after {
-    content: "\f105";
-    font-weight: 900;
-    font-family: "Font Awesome 5 Free";
-    margin-left: auto;
-  }
-  .admonition.toggle .admonition-title.open::after {
-    content: "\f107";
-  }
-  
+.toggle .header {
+  display: block;
+  clear: both;
+}
+
+.toggle .header:after {
+  content: " ▶";
+}
+
+.toggle .header.open:after {
+  content: " ▼";
+}
