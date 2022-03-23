@@ -3,12 +3,11 @@
 Horizon docker
 =====================
 
-Try Horizon on `Docker <https://docs.docker.com>`_! :toggle:
-
 .. container:: toggle
+
       .. container:: header
       
-         I don't have Docker.
+      Try Horizon on `Docker <https://docs.docker.com>`_!
     
       if you don't have Docker installed in your system, follow the steps in the official Docker `webpage <https://docs.docker.com/engine/install/ubuntu/>`_.
 
