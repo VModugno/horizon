@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to Horizon’s documentation! &mdash; horizon 0.4.4 documentation</title>
+  <title>horizon &mdash; horizon 0.4.4 documentation</title>
   
 
   
@@ -33,8 +33,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="horizon 0.4.4 documentation" href="#"/>
-        <link rel="next" title="horizon package" href="horizon.html"/> 
+    <link rel="top" title="horizon 0.4.4 documentation" href="index.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -53,7 +52,7 @@
           
 
           
-            <a href="#" class="icon icon-home"> horizon
+            <a href="index.html" class="icon icon-home"> horizon
           
 
           
@@ -102,7 +101,7 @@
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">horizon</a>
+          <a href="index.html">horizon</a>
         
       </nav>
 
@@ -130,15 +129,15 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="#">Docs</a> &raquo;</li>
+      <li><a href="index.html">Docs</a> &raquo;</li>
         
-      <li>Welcome to Horizon’s documentation!</li>
+      <li>horizon</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/modules.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -151,49 +150,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="welcome-to-horizon-s-documentation">
-<h1>Welcome to Horizon’s documentation!<a class="headerlink" href="#welcome-to-horizon-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>Horizon is a framework for trajectory optimization and optimal control tailored to robotic systems.
-It relies on direct methods to reduce an optimization problem into a NLP that can be solved using many state-of-the-art solvers.</p>
-<p>Horizon is based on <a class="reference external" href="https://web.casadi.org/">CasADi</a>, a tool for nonlinear optimization and algorithmic differentiation.
-It uses <a class="reference external" href="https://github.com/stack-of-tasks/pinocchio">Pinocchio</a> to smoothly integrate the robot model into the optimization problem.</p>
-</div>
-<div class="section" id="features">
-<h1>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li>complete <strong>pipeline</strong> from model aquisition to robot deployment</li>
-<li><strong>intuitive</strong> API allowing a quick setup of the optimization problem</li>
-<li>ease of configuration and highly <em>customizable</em>: integrators, transcription methods, solvers..</li>
-<li>support <strong>state-of-the-art</strong> non linear solvers + two custom solvers: ILQR and GNSQP</li>
-</ul>
-<a class="reference internal image-reference" href="_images/spot_leap.png"><img alt="the quadruped robot Spot from BostonDynamics perfoming a leap" class="align-center" src="_images/spot_leap.png" style="width: 5430.0px; height: 1478.0px;" /></a>
-</div>
-<div class="section" id="install">
-<h1>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h1>
-<p>Two distributions are supported:</p>
-<ul class="simple">
-<li><em>pip</em> package: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">casadi_horizon</span></code></li>
-<li><em>conda</em> package: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">horizon</span> <span class="pre">-c</span> <span class="pre">francesco_ruscelli</span></code></li>
-</ul>
-</div>
-<div class="section" id="getting-started">
-<h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
-<p>Some examples demonstrating trajectory optimization for different robots are available.
-Besides installing Horizon on your machine and running the examples, you can try out the framework in independent evinronments:</p>
-<ul class="simple">
-<li>on your browser, through JupyterLab: <a class="reference external" href="https://mybinder.org/v2/gh/FrancescoRuscelli/horizon-live/main?urlpath=lab/tree/index.ipynb">Horizon-web</a></li>
-<li>on your machine, through Docker: <cite>Horizon-docker</cite> (tbd)</li>
-</ul>
-</div>
-<div class="section" id="videos">
-<h1>Videos<a class="headerlink" href="#videos" title="Permalink to this headline">¶</a></h1>
-<p>A collection of clips demonstrating the capabilities of Horizon is gathered in the video below, where are gathered trajectory optimization demos with several robots:
-<em>Centauro</em>, <em>Spot</em> ®, <em>Kangaroo</em>, <em>TALOS</em>, a 7-DoF industrial manipulator and a prototype 2-DoF leg.</p>
-<p align="center">
-<iframe width="560" height="315" src="https://www.youtube.com/embed/wHJh3bvV-ns" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</p><p>The full playlist of videos is found <a class="reference external" href="https://www.youtube.com/playlist?list=PL7c1ZKncPan72ef2Sof8Ky_TrlSK9qYYP">here</a>.</p>
+  <div class="section" id="horizon">
+<h1>horizon<a class="headerlink" href="#horizon" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="horizon.html">horizon package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="horizon.html#subpackages">Subpackages</a><ul>
@@ -255,30 +214,14 @@ Besides installing Horizon on your machine and running the examples, you can try
 <li class="toctree-l2"><a class="reference internal" href="horizon.html#module-horizon">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="scheme.html">Horizon scheme</a></li>
 </ul>
 </div>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
-</ul>
 </div>
 
 
            </div>
           </div>
           <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="horizon.html" class="btn btn-neutral float-right" title="horizon package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-    </div>
   
 
   <hr/>
