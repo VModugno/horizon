@@ -4,14 +4,7 @@ set -ev
 # A simple script to initialize the conda environment
 ENVIRONMENT_NAME=hori
 PACKAGE_NAME=horizon
-
-# if push is not a tag, do not upload
-if [ -z $TRAVIS_TAG ]; then
-    echo "Not a tag build, will not upload to conda";
-else
-    conda config --set anaconda_upload yes;
-fi
-
+USER=francesco_ruscelli
 # sourcing base conda path to activate environment
 source $(conda info --base)/etc/profile.d/conda.sh
 
@@ -21,11 +14,20 @@ echo -e "done."
 
 echo -e "building package $PACKAGE_NAME .." 
 
-# building the casadi_kin_dyn package
-# using the following command instead of "conda-build" because of error "DependencyNeedsBuildingError: Unsatisfiable dependencies for platform linux-64"
+mkdir ~/conda-bld
+conda config --set anaconda_upload no
+export CONDA_BLD_PATH=~/conda-bld
 conda build -c conda-forge -c francesco_ruscelli -c robostack .
 
 echo -e "done."
 
-
-#conda install $CONDA_PREFIX/conda-bld/noarch/horizon...
+# if push is not a tag, do not upload
+if [ -z $TRAVIS_TAG ]; then
+    echo "Not a tag build, will not upload to conda";
+else
+    find $CONDA_BLD_PATH/ -name *.tar.bz2 | while read file
+    do
+        echo -e "file uploaded: $file"
+        anaconda -t $ANACONDA_TOKEN upload -u $USER $file
+    done
+fi
