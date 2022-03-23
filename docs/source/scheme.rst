@@ -1,3 +1,5 @@
+.. _horizon_scheme:
+
 Horizon scheme
 =====================
 
