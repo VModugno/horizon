@@ -6,7 +6,6 @@ Horizon docker
 Try Horizon on `Docker <https://docs.docker.com>`_! :toggle:
 
 .. container:: toggle
-
       .. container:: header
       
          I don't have Docker.
