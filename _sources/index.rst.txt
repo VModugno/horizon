@@ -44,7 +44,11 @@ Besides installing Horizon on your machine and running the examples, you can try
 
          on your machine, through *Docker*.
 
-         hello
+      .. code-block:: xml
+       :linenos:
+
+       from plone import api
+       ...
    
 
 * ``docker pull francescoruscelli/horizon``
