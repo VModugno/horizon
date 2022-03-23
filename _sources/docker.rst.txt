@@ -3,7 +3,7 @@
 Horizon docker
 =====================
 
-Try Horizon on `Docker <https://docs.docker.com>`_!.
+Try Horizon on `Docker <https://docs.docker.com>`_! :toggle:
 
 .. container:: toggle
 
@@ -14,14 +14,14 @@ Try Horizon on `Docker <https://docs.docker.com>`_!.
       if you don't have Docker installed in your system, follow the steps in the official Docker `webpage <https://docs.docker.com/engine/install/ubuntu/>`_.
 
 
-* download the Horizon `repo <https://github.com/ADVRHumanoids/horizon>`_
-* download the docker: ``docker pull francescoruscelli/horizon``
-* run the docker from your machine: ``./horizon/docker/run.sh``
-* you are now inside the Horizon docker.
+#. download the Horizon `repo <https://github.com/ADVRHumanoids/horizon>`_
+#. download the docker: ``docker pull francescoruscelli/horizon``
+#. run the docker from your machine: ``./horizon/docker/run.sh``
+#. you are now inside the Horizon docker.
   You can play around with the examples available. A list of possible commands:
-   #. ``python3 -m horizon.examples.spot --r --action walk``
-   #. ``python3 -m horizon.examples.spot --r --action leap``
-   #. ``python3 -m horizon.examples.cart_pole --r``
+   - ``python3 -m horizon.examples.spot --r --action walk``
+   - ``python3 -m horizon.examples.spot --r --action leap``
+   - ``python3 -m horizon.examples.cart_pole --r``
 * visualize the robot on your browser on this static `webpage <http://localhost:8001/rvizweb/www/index.html>`_
 
 
