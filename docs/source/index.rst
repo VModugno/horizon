@@ -12,6 +12,7 @@ It relies on direct methods to reduce an optimization problem into a NLP that ca
 
 Horizon is based on `CasADi <https://web.casadi.org/>`_, a tool for nonlinear optimization and algorithmic differentiation.
 It uses `Pinocchio <https://github.com/stack-of-tasks/pinocchio>`_ to smoothly integrate the robot model into the optimization problem.
+The structure of Horizon is described :ref:`here <horizon_scheme>`.
 
 Features
 ========
@@ -37,8 +38,10 @@ Getting started
 Some examples demonstrating trajectory optimization for different robots are available.
 Besides installing Horizon on your machine and running the examples, you can try out the framework in independent evinronments:
 
-- on your browser, through JupyterLab: `Horizon-web <https://mybinder.org/v2/gh/FrancescoRuscelli/horizon-live/main?urlpath=lab/tree/index.ipynb>`_
-- on your machine, through Docker: `Horizon-docker` (tbd)
+- on your browser, through **JupyterLab**: `horizon-web <https://mybinder.org/v2/gh/FrancescoRuscelli/horizon-live/main?urlpath=lab/tree/index.ipynb>`_
+- on your machine, through **Docker**: :ref:`horizon-docker <horizon_docker>`
+
+
 
 Videos
 =======
@@ -59,6 +62,7 @@ The full playlist of videos is found `here <https://www.youtube.com/playlist?lis
    
    horizon
    scheme
+   docker
 
 Indices and tables
 ==================
