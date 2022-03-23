@@ -61,6 +61,7 @@ The full playlist of videos is found `here <https://www.youtube.com/playlist?lis
    
    horizon
    scheme
+   docker
 
 Indices and tables
 ==================
