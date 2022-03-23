@@ -159,13 +159,26 @@
 <div class="toggle docutils container">
 <div class="header docutils container">
 Try Horizon on <a class="reference external" href="https://docs.docker.com">Docker</a>!</div>
-<p>if you don’t have Docker installed in your system, follow the steps in the official Docker <a class="reference external" href="https://docs.docker.com/engine/install/ubuntu/">webpage</a>.</p>
+<p>if you don’t have Docker installed in your system, follow the steps in the official Docker <a class="reference external" href="https://docs.docker.com/engine/install/ubuntu/">installation page</a>.</p>
 </div>
-<ol class="arabic simple">
-<li>download the Horizon <a class="reference external" href="https://github.com/ADVRHumanoids/horizon">repo</a></li>
-<li>download the docker: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">pull</span> <span class="pre">francescoruscelli/horizon</span></code></li>
-<li>run the docker from your machine: <code class="docutils literal notranslate"><span class="pre">./horizon/docker/run.sh</span></code></li>
-<li>you are now inside the Horizon docker. From here, you can play around with the examples available. A list of possible commands:<ul>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<ol class="arabic">
+<li><p class="first">download the Horizon <a class="reference external" href="https://github.com/ADVRHumanoids/horizon">repo</a></p>
+</li>
+<li><p class="first">download the docker: <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">pull</span> <span class="pre">francescoruscelli/horizon</span></code></p>
+</li>
+<li><p class="first">run the docker from your machine: <code class="docutils literal notranslate"><span class="pre">./horizon/docker/run.sh</span></code></p>
+</li>
+<li><div class="first line-block">
+<div class="line"><em>you are now inside the Horizon docker</em>.</div>
+</div>
+</li>
+<li><div class="first line-block">
+<div class="line">From here, you can play around with the examples available. A list of possible commands:</div>
+</div>
+<ul class="simple">
 <li><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">horizon.examples.spot</span> <span class="pre">--r</span> <span class="pre">--action</span> <span class="pre">walk</span></code></li>
 <li><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">horizon.examples.spot</span> <span class="pre">--r</span> <span class="pre">--action</span> <span class="pre">leap</span></code></li>
 <li><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">horizon.examples.cart_pole</span> <span class="pre">--r</span></code></li>

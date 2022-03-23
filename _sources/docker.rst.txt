@@ -7,16 +7,17 @@ Horizon docker
 
     .. container:: header
       
-        Try Horizon on `Docker <https://docs.docker.com>`_!
+        Try Horizon on `Docker <https://docs.docker.com>`_! 
     
-    if you don't have Docker installed in your system, follow the steps in the official Docker `webpage <https://docs.docker.com/engine/install/ubuntu/>`_.
+    if you don't have Docker installed in your system, follow the steps in the official Docker `installation page <https://docs.docker.com/engine/install/ubuntu/>`_.
 
+|
 
 #. download the Horizon `repo <https://github.com/ADVRHumanoids/horizon>`_
 #. download the docker: ``docker pull francescoruscelli/horizon``
 #. run the docker from your machine: ``./horizon/docker/run.sh``
-#. you are now inside the Horizon docker. From here, you can play around with the examples available. A list of possible commands:
-  
+#. | *you are now inside the Horizon docker*.
+#. | From here, you can play around with the examples available. A list of possible commands:
    - ``python3 -m horizon.examples.spot --r --action walk``
    - ``python3 -m horizon.examples.spot --r --action leap``
    - ``python3 -m horizon.examples.cart_pole --r``

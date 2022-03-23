@@ -39,7 +39,7 @@ Some examples demonstrating trajectory optimization for different robots are ava
 Besides installing Horizon on your machine and running the examples, you can try out the framework in independent evinronments:
 
 - on your browser, through **JupyterLab**: `horizon-web <https://mybinder.org/v2/gh/FrancescoRuscelli/horizon-live/main?urlpath=lab/tree/index.ipynb>`_
-- on your machine, through **Docker**: :ref:`horizon-docker <horizon_docker>`.
+- on your machine, through **Docker**: :ref:`horizon-docker <horizon_docker>`
 
 
 
