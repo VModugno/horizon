@@ -41,6 +41,7 @@ Besides installing Horizon on your machine and running the examples, you can try
 - .. container:: toggle
 
       .. container:: header
+      
          on your machine, through *Docker*.
 
       * ``docker pull francescoruscelli/horizon``
