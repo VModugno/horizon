@@ -2,7 +2,8 @@
 A framework for trajectory optimization and optimal control for robotics based on CasADi
 
 ## Install
-```pip install casadi-horizon```
+pip package: ```pip install casadi-horizon```  
+conda package: ```conda install horizon -c francesco_ruscelli```
 
 ## Documentations
 Don't forget to check the [**documentation**](https://advrhumanoids.github.io/horizon/)! 
