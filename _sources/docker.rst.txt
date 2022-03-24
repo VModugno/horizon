@@ -19,6 +19,7 @@ and interactive examples to better appreciate the capabilities of Horizon, (visu
    - ``python3 -m horizon.examples.spot --r --action walk``
    - ``python3 -m horizon.examples.spot --r --action leap``
    - ``python3 -m horizon.examples.cart_pole --r``
+   - ``python3 -m horizon.examples.roped_robot --r --action rappel``
 #. visualize the robot on your browser on this static `webpage <http://localhost:8001/rvizweb/www/index.html>`_
 
   .. warning::
