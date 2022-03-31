@@ -32,8 +32,7 @@ void IterativeLQR::backward_pass()
         catch(HessianIndefinite&)
         {
             increase_regularization();
-            if(_verbose) std::cout << "increasing reg at k = " << i << ", hxx_reg = " << _hxx_reg << "\n";
-            // retry with increased reg
+            std::cout << "[ilqr] kkt solve failed at i = " << i << ": increasing regularization \n";
             return backward_pass();
         }
     }
@@ -66,6 +65,9 @@ void IterativeLQR::backward_pass_iter(int i)
     const auto& A = dyn.A();
     const auto& B = dyn.B();
     const auto& d = dyn.d;
+    auto Fxx = dyn.Fxx();
+    auto Fuu = dyn.Fuu();
+    auto Fux = dyn.Fux();
 
     // ..value function
     const auto& value_next = _value[i+1];
@@ -83,6 +85,7 @@ void IterativeLQR::backward_pass_iter(int i)
 
     // components of next node's value function
     TIC(form_value_fn_inner);
+
     tmp.s_plus_S_d.noalias() = snext + Snext*d;
     tmp.S_A.noalias() = Snext*A;
 
@@ -95,6 +98,15 @@ void IterativeLQR::backward_pass_iter(int i)
     tmp.Huu.noalias() = R + B.transpose()*Snext*B;
     tmp.Hux.noalias() = P + B.transpose()*tmp.S_A;
     tmp.Huu.diagonal().array() += _huu_reg;
+
+    // quadratic components w.r.t. dynamics
+    if(_enable_2nd_order_dyn)
+    {
+        tensor::s_transpose_H(snext, Fxx, tmp.Hxx);
+        tensor::s_transpose_H(snext, Fuu, tmp.Huu);
+        tensor::s_transpose_H(snext, Fux, tmp.Hux);
+    }
+
     TOC(form_value_fn_inner);
 
     // todo: second-order terms from dynamics
@@ -115,9 +127,10 @@ void IterativeLQR::backward_pass_iter(int i)
     TOC(form_kkt_inner);
 
     // solve kkt equation
-    TIC(solve_kkt_inner);
     THROW_NAN(K);
     THROW_NAN(kx0);
+    TIC(solve_kkt_inner);
+    u_lam.resize(_nu + nc, _nx + 1);
     switch(_kkt_decomp_type)
     {
         case Lu:
@@ -131,17 +144,52 @@ void IterativeLQR::backward_pass_iter(int i)
             break;
 
         case Ldlt:
-            tmp.ldlt.compute(K);
-            u_lam = tmp.ldlt.solve(kx0);
-            break;
+        {
+            auto A = K.bottomLeftCorner(nc, _nu);
+            auto H = K.topLeftCorner(_nu, _nu);
 
+            // cholesiky for Huu
+            tmp.llt_hess.compute(H);
+            if(tmp.llt_hess.info() != Eigen::ComputationInfo::Success)
+            {
+                std::cout << "eig(H) = " << H.eigenvalues().transpose() << "\n";
+                throw HessianIndefinite("");
+            }
+
+            // constraint inertia
+            tmp.M = A*tmp.llt_hess.solve(A.transpose());  // M = A H^-1 A' + rho*I
+            tmp.M.diagonal().array() += _kkt_reg;
+
+            // choleski for inertia
+            tmp.llt_constr.compute(tmp.M);
+            if(tmp.llt_constr.info() != Eigen::ComputationInfo::Success)
+            {
+                std::cout << "eig(M) = " << tmp.M.eigenvalues().transpose() << "\n";
+                throw HessianIndefinite("");
+            }
+
+            // solve for lambda = M^-1 * (A*H^-1*h - b)
+            u_lam.bottomRows(nc) = tmp.llt_constr.solve(A*tmp.llt_hess.solve(kx0.topRows(_nu)) - kx0.bottomRows(nc));
+
+            // solve for u
+            u_lam.topRows(_nu) = tmp.llt_hess.solve(kx0.topRows(_nu) - A.transpose()*u_lam.bottomRows(nc));
+
+            double sol_err = (K*u_lam - kx0).norm();
+            if(sol_err > 1e-3)
+                std::cout << "sol err: " << sol_err << std::endl;
+
+            break;
+        }
         default:
              throw std::invalid_argument("kkt decomposition supports only qr, lu, or ldlt");
 
     }
-
-    THROW_NAN(u_lam);
     TOC(solve_kkt_inner);
+
+    if(u_lam.hasNaN() || !u_lam.allFinite())
+    {
+        throw HessianIndefinite("");
+    }
 
 
     // save solution
@@ -239,6 +287,7 @@ void IterativeLQR::reduce_regularization()
     {
         _hxx_reg = _hxx_reg_base;
     }
+
 }
 
 IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
