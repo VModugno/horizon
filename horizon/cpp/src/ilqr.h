@@ -83,13 +83,10 @@ public:
      * as specificed by a vector of indices
      * @param indices: the nodes that the cost refers to
      * @param inter_constraint: a function with required signature (x, u, p) -> (h),
-     * where the constraint is h(x, u) = 0
-     * @param target_values: if specified, the i-th entry is used as target value
-     * for the constraint function at the indices[i]
+     * where the constraint is h(x, u; p) = 0
      */
     void setConstraint(std::vector<int> indices,
-                       const casadi::Function& inter_constraint,
-                       std::vector<Eigen::VectorXd> target_values = std::vector<Eigen::VectorXd>());
+                       const casadi::Function& inter_constraint);
 
     void setFinalConstraint(const casadi::Function& final_constraint);
 
@@ -218,6 +215,7 @@ private:
     const int _nu;
     const int _N;
 
+    bool _rti;
     double _step_length;
     double _hxx_reg;
     double _hxx_reg_base;
@@ -225,6 +223,7 @@ private:
     double _huu_reg;
     double _kkt_reg;
     double _line_search_accept_ratio;
+    int _line_search_memory;
     double _alpha_min;
     double _svd_threshold;
     double _constraint_violation_threshold;
@@ -233,6 +232,10 @@ private:
     double _step_length_threshold;
     bool _enable_line_search;
 
+    bool _enable_2nd_order_dyn;
+    bool _enable_2nd_order_constr;
+
+    bool _gn_approx;
     bool _closed_loop_forward_pass;
     std::string _codegen_workdir;
     bool _codegen_enabled;

@@ -94,6 +94,7 @@ class SolverILQR(Solver):
         if cb is None:
             self.ilqr.setIterationCallback(self._iter_callback)
         else:
+            print('setting custom iteration callback')
             self.ilqr.setIterationCallback(cb)
 
 
@@ -111,7 +112,7 @@ class SolverILQR(Solver):
         # update initial guess
         self.ilqr.setStateInitialGuess(xinit)
         self.ilqr.setInputInitialGuess(uinit)
-        self.ilqr.setIterationCallback(self._iter_callback)
+        # self.ilqr.setIterationCallback(self._iter_callback)
         
         # update parameters
         self._set_param_values()
@@ -249,33 +250,43 @@ class SolverILQR(Solver):
         
         if not fpres.accepted:
             return
-
+        else:
+            print('*', end='', flush=True)
+            
         fpres.print()
 
         if self.plot_iter:
 
             if self.dax is None:
                 _, (self.dax, self.hax) = plt.subplots(2)
+                self.dax.set_yscale('log')
+                self.hax.set_yscale('log')
+                
+                plt.sca(self.dax)
+                self.dline = plt.plot(np.linalg.norm(fpres.defect_values, axis=1))[0]
+                plt.grid()
+                plt.title(f'Dynamics gaps (iter {fpres.iter})')
+                plt.xlabel('Node [-]')
+                plt.ylabel('Gap')
+                plt.legend([f'd{i}' for i in range(self.nx)])
+                
+                plt.sca(self.hax)
+                self.hline = plt.plot(fpres.constraint_values)[0]
+                plt.grid()
+                plt.title(f'Constraint violation (iter {fpres.iter})')
+                plt.xlabel('Node [-]')
+                plt.ylabel('Constraint 1-norm')
+                
+                plt.ion()
+                plt.show()
+
             
-
-            plt.sca(self.dax)
-            plt.cla()
-            plt.plot(np.linalg.norm(fpres.defect_values, axis=1))
-            plt.grid()
-            plt.title(f'Dynamics gaps (iter {fpres.iter})')
-            plt.xlabel('Node [-]')
-            plt.ylabel('Gap')
-            plt.legend([f'd{i}' for i in range(self.nx)])
-
-            plt.sca(self.hax)
-            plt.cla()
-            plt.plot(fpres.constraint_values)
-            plt.grid()
-            plt.title(f'Constraint violation (iter {fpres.iter})')
-            plt.xlabel('Node [-]')
-            plt.ylabel('Constraint 1-norm')
-
-            plt.draw()
-            print("Press a button!")
-            plt.waitforbuttonpress()
+            self.dline.set_ydata(np.linalg.norm(fpres.defect_values, axis=1))
+            self.hline.set_ydata(fpres.constraint_values)
+            self.dax.relim()
+            self.hax.relim()
+            self.dax.autoscale_view()
+            self.hax.autoscale_view()
+            plt.pause(0.01)
+            # plt.waitforbuttonpress()
 
