@@ -29,7 +29,7 @@ class Problem:
     """
 
     # todo probably better to set logger, not logging_level
-    def __init__(self, N: int, crash_if_suboptimal: bool = False, logging_level=logging.INFO):
+    def __init__(self, N: int, casadi_type=cs.SX, crash_if_suboptimal: bool = False, logging_level=logging.INFO):
         """
         Initialize the optimization problem.
 
@@ -39,6 +39,8 @@ class Problem:
             logging_level: accepts the level of logging from package logging (INFO, DEBUG, ...)
         """
         self.opts = None
+
+        self.default_casadi_type = casadi_type
         self.default_solver = cs.nlpsol
         self.default_solver_plugin = 'ipopt'
 
@@ -60,7 +62,7 @@ class Problem:
         self.state_der: cs.SX = None
         self.dt = None
 
-    def createStateVariable(self, name: str, dim: int) -> sv.StateVariable:
+    def createStateVariable(self, name: str, dim: int, casadi_type=cs.SX) -> sv.StateVariable:
         """
         Create a State Variable active on ALL the N+1 nodes of the optimization problem.
 
@@ -74,11 +76,15 @@ class Problem:
         """
         if self.state_der is not None:
             raise RuntimeError('createStateVariable must be called *before* setDynamics')
-        var = self.var_container.setStateVar(name, dim, range(self.nodes))
+
+        # binary array to select which nodes are "active" for the variable. In this case, all of them
+        nodes_array = np.ones(self.nodes)
+
+        var = self.var_container.setStateVar(name, dim, nodes_array, casadi_type)
         self.state_aggr.addVariable(var)
         return var
 
-    def createInputVariable(self, name: str, dim: int) -> sv.InputVariable:
+    def createInputVariable(self, name: str, dim: int, casadi_type=cs.SX) -> sv.InputVariable:
         """
         Create an Input Variable active on all the nodes of the optimization problem except the final one. (Input is not defined on the last node)
 
@@ -89,11 +95,15 @@ class Problem:
         Returns:
             instance of Input Variable
         """
-        var = self.var_container.setInputVar(name, dim, range(self.nodes-1))
+        # binary array to select which nodes are "active" for the variable. In this case, all of them
+        nodes_array = np.ones(self.nodes)
+        nodes_array[-1] = 0
+
+        var = self.var_container.setInputVar(name, dim, nodes_array, casadi_type)
         self.input_aggr.addVariable(var)
         return var
 
-    def createSingleVariable(self, name: str, dim: int) -> sv.SingleVariable:
+    def createSingleVariable(self, name: str, dim: int, casadi_type=cs.SX) -> sv.SingleVariable:
         """
         Create a node-independent Single Variable of the optimization problem. It is a single decision variable which is not projected over the horizon.
 
@@ -104,29 +114,30 @@ class Problem:
         Returns:
             instance of Single Variable
         """
-        var = self.var_container.setSingleVar(name, dim)
+        nodes_array = None
+
+        var = self.var_container.setSingleVar(name, dim, nodes_array, casadi_type)
         return var
 
-    def createVariable(self, name: str, dim: int, nodes: Iterable = None) -> Union[sv.StateVariable, sv.SingleVariable]:
+    def createVariable(self, name: str, dim: int, nodes: Iterable = None, casadi_type=cs.SX) -> Union[sv.StateVariable, sv.SingleVariable]:
         """
         Create a generic Variable of the optimization problem. Can be specified over a desired portion of the horizon nodes.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
-            nodes: nodes the variables is defined on. If not specified, the variable created is a Single Variable.
+            nodes: nodes the variables is defined on. If not specified, the variable is created on all the nodes.
 
         Returns:
             instance of Variable
 
         """
-        if nodes is not None:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+        nodes_array = self._convertNodes(nodes)
 
-        var = self.var_container.setVar(name, dim, nodes)
+        var = self.var_container.setVar(name, dim, nodes_array, casadi_type)
         return var
 
-    def createParameter(self, name: str, dim: int, nodes: Iterable = None) -> Union[
+    def createParameter(self, name: str, dim: int, nodes: Iterable = None, casadi_type=cs.SX) -> Union[
         sv.Parameter, sv.SingleParameter]:
         """
         Create a Parameter used in the optimization problem. Can be specified over a desired portion of the horizon nodes.
@@ -135,19 +146,19 @@ class Problem:
         Args:
             name: name of the parameter
             dim: dimension of the parameter
-            nodes: nodes the parameter is defined on. If not specified, the variable is created on all the nodes.
+            nodes: nodes the parameter is defined on. If not specified, the parameter is created on all the nodes.
 
         Returns:
             instance of Parameter
 
         """
-        if nodes is None:
-            nodes = range(self.nodes)
+        nodes_array = np.zeros(self.nodes)
+        nodes_array[nodes] = 1
 
-        par = self.var_container.setParameter(name, dim, nodes)
+        par = self.var_container.setParameter(name, dim, nodes_array, casadi_type)
         return par
 
-    def createSingleParameter(self, name: str, dim: int) -> sv.SingleParameter:
+    def createSingleParameter(self, name: str, dim: int, casadi_type=cs.SX) -> sv.SingleParameter:
         """
         Create a node-independent Single Parameter used to solve the optimization problem. It is a single parameter which is not projected over the horizon.
         Parameters are specified before building the problem and can be 'assigned' afterwards, before solving the problem.
@@ -160,21 +171,8 @@ class Problem:
             instance of Single Parameter
 
         """
-        par = self.var_container.setSingleParameter(name, dim)
+        par = self.var_container.setSingleParameter(name, dim, casadi_type)
         return par
-
-    # def setVariable(self, name, var):
-
-    # assert (isinstance(var, (cs.casadi.SX, cs.casadi.MX)))
-    # setattr(Problem, name, var)
-    # self.var_container.append(name)
-
-    # def getStateVariable(self, name):
-    #
-    #     for var in self.var_container:
-    #         if var.getName() == name:
-    #             return var
-    #     return None
 
     def getState(self) -> sv.StateAggregate:
         """
@@ -298,6 +296,23 @@ class Problem:
 
         return used_par
 
+    # def _autoNodes(self, type, nodes=None):
+    #
+    #     active_nodes_array = np.ones(self.nodes)
+    #     if type == 'generic' or type == 'intermediate':
+    #         if nodes is None:
+    #             if type == 'intermediate':
+    #                 active_nodes_array[-1] = 0
+    #         else:
+    #             active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+    #     elif type == 'final':
+    #         # FINAL
+    #         active_nodes_array[:-1] = 0
+    #     else:
+    #         raise Exception('type in autoNodes not recognized')
+    #
+    #     return active_nodes_array
+
     def createConstraint(self, name: str,
                          g,
                          nodes: Union[int, Iterable] = None,
@@ -315,20 +330,26 @@ class Problem:
             instance of Constraint
 
         """
+        # todo add guards
+        # todo create private function to handle the conversion from nodes to binary array of nodes:
+        #   createConstraint(nodes) calls _createFun(nodes) that insides calls fc.Constraint or fc.Cost with array nodes
         if nodes is None:
-            nodes = range(self.nodes)
+            # all the nodes
+            active_nodes_array = np.ones(self.nodes)
         else:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+            active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+
+            # nodes = misc.checkNodes(nodes, range(self.nodes))
 
         # get vars that constraint depends upon
-        used_var = self._getUsedVar(g)  # these now are fucking lists!
+        used_var = self._getUsedVar(g)  # these now are lists!
         used_par = self._getUsedPar(g)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Constraint Function "{name}": active in nodes: {nodes} using vars {used_var}')
+            self.logger.debug(f'Creating Constraint Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)} using vars {used_var}')
 
         # create internal representation of a constraint
-        fun = fc.Constraint(name, g, used_var, used_par, nodes, bounds)
+        fun = fc.Constraint(name, g, used_var, used_par, active_nodes_array, bounds)
 
         self.function_container.addFunction(fun)
 
@@ -373,6 +394,7 @@ class Problem:
         """
         if nodes is None:
             nodes = range(self.nodes - 1)
+
         return self.createConstraint(name, g, nodes=nodes, bounds=bounds)
 
     def createCost(self, name: str,
@@ -390,18 +412,21 @@ class Problem:
             instance of Cost Function
 
         """
+        # todo add guards
         if nodes is None:
-            nodes = range(self.nodes)
+            # all the nodes besides the last
+            active_nodes_array = np.ones(self.nodes)
         else:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+            active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+            # nodes = misc.checkNodes(nodes, range(self.nodes))
 
         used_var = self._getUsedVar(j)
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {nodes}')
+            self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)}')
 
-        fun = fc.CostFunction(name, j, used_var, used_par, nodes)
+        fun = fc.CostFunction(name, j, used_var, used_par, active_nodes_array)
 
         self.function_container.addFunction(fun)
 
@@ -440,7 +465,6 @@ class Problem:
             instance of Function
 
         """
-
         if nodes is None:
             nodes = range(self.nodes - 1)
 
@@ -461,18 +485,19 @@ class Problem:
             instance of Residual Function
 
         """
+        # todo add guards
         if nodes is None:
-            nodes = list(range(self.nodes))
+            active_nodes_array = np.ones(self.nodes)
         else:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+            active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
 
         used_var = self._getUsedVar(j)
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {nodes}')
+            self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)}')
 
-        fun = fc.ResidualFunction(name, j, used_var, used_par, nodes)
+        fun = fc.ResidualFunction(name, j, used_var, used_par, active_nodes_array)
 
         self.function_container.addFunction(fun)
 
@@ -511,7 +536,6 @@ class Problem:
             instance of Function
 
         """
-
         if nodes is None:
             nodes = range(self.nodes - 1)
 
@@ -912,20 +936,32 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
-
-    N = 2
+    N = 10
     dt = 0.01
     prob = Problem(N)
-    x = prob.createStateVariable('x', 2)
-    y = prob.createInputVariable('y', 2)
+
+    x = prob.createStateVariable('x', 5)
+
+    print(x[0:3])
+    x[0:3].setLowerBounds([1,2,3])
+    print(x.getLowerBounds())
+
+    y = prob.createInputVariable('y', 5)
     x_prev = x.getVarOffset(-1)
 
     xdot = cs.vertcat(x)
     prob.setDynamics(xdot)
+    cnsrt = prob.createConstraint('cnsrt', x_prev + y, nodes=range(5, 9), bounds=dict(lb=[0, 0, 0, 0, 0], ub=[10, 10, 10, 10, 10]))
 
-    cnsrt = prob.createConstraint('cnsrt', x_prev + y, nodes=range(5, 11), bounds=dict(lb=[0, 0], ub=[10, 10]))
+    print(cnsrt.getBounds())
+
+    cnsrt.setNodes([1], erasing=True)
+    print(cnsrt.getImpl([1]))
+
     cost = prob.createIntermediateCost('cost', x*y)
 
+
+    exit()
     # print('before', prob.var_container._vars)
     # print('before', prob.var_container._pars)
     # print('before:', [elem.getFunction() for elem in prob.function_container._cnstr_container.values()])
