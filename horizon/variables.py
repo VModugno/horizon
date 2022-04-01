@@ -1,4 +1,5 @@
 import copy
+import time
 from typing import List
 import casadi as cs
 from collections import OrderedDict
@@ -30,7 +31,7 @@ class AbstractVariable(ABC, cs.SX):
             tag: name of the variable
             dim: dimension of the variable
         """
-        super(AbstractVariable, self).__init__(cs.SX.sym(tag, dim))
+        super().__init__( cs.SX.sym(tag, dim))
 
         self._tag = tag
         self._dim = dim
@@ -81,30 +82,9 @@ class AbstractVariableView(cs.SX):
         view = self.__class__(self._parent, var_slice, item)
         return view
 
-    # todo old stuff
-# class AbstractVariableView(cs.SX):
-#     def __init__(self, parent: AbstractVariable, indices):
-#         elems = parent.elements()
-#         sx = cs.vertcat(*elems[indices]) if isinstance(indices, slice) else elems[indices]
-#         super().__init__(sx)
-#         self._parent = parent
-#         self._indices = indices
-#         self._dim = len(range(*self._indices.indices(self._parent.shape[0]))) if isinstance(self._indices, slice) else 1
-#
-#     def getName(self):
-#         return self._parent.getName()
-#
-#     def __getitem__(self, item):
-#         print(f'getitem of {type(self)} called with indices {item}')
-        # todo this is wrong, since getitem will return an AbstractVariableView initialized with the whole parent.
-        #  basically, if if I do x_slice = x[0:2] (where x is 6-dimensional), with this formulation I could get x_slice[3], since
-        #  i am plucking the values from the original parent. I should only be able to do x_slice[0] and x_slice[1]!!!
-        #  IMPORTANT: also it was fucking up the ipopt solver
-#         view = self.__class__(self._parent, item)
-#         return view
 
-class OffsetVariable(AbstractVariable):
-    def __init__(self, parent_name, tag, dim, offset, var_impl):
+class OffsetTemplate(AbstractVariable):
+    def __init__(self, parent_name, tag, dim, offset, nodes_array, impl):
         """
         Initialize the Offset Variable.
 
@@ -113,19 +93,16 @@ class OffsetVariable(AbstractVariable):
             dim: dimension of the variable
             nodes: nodes the variable is defined on
             offset: offset of the variable (which (previous/next) node it refers to
-            var_impl: implemented variables it refers to (of base class Variable)
+            impl: implemented variables it refers to (of base class Variable)
         """
         self._tag = tag
         self._dim = dim
-        super(OffsetVariable, self).__init__(tag, dim)
+        super().__init__(tag, dim)
 
         self.parent_name = parent_name
-        self._nodes = list()
         self._offset = offset
-        self._var_impl = var_impl
-
-        for node in self._var_impl.keys():
-            self._nodes.append(int(node.split("n", 1)[1]))
+        self._impl = impl
+        self._nodes_array = nodes_array
 
     def getImpl(self, nodes=None):
         """
@@ -137,21 +114,19 @@ class OffsetVariable(AbstractVariable):
         Returns:
             implemented instances of the abstract offsetted variable
         """
-
-        # todo is this nice? to update nodes given the _var_impl
-        #   another possibility is sharing also the _nodes
-        self._nodes.clear()
-        for node in self._var_impl.keys():
-            self._nodes.append(int(node.split("n", 1)[1]))
-
+        # todo why update nodes given the _var_impl?
         if nodes is None:
-            nodes = list(self._nodes)
+            nodes = np.where(self._nodes_array == 1)
 
         # offset the node of self.offset
-        offset_nodes = [node + self._offset for node in nodes]
-        offset_nodes = misc.checkNodes(offset_nodes, self._nodes)
+        offset_nodes = nodes + self._offset
 
-        var_impl = cs.vertcat(*[self._var_impl['n' + str(i)]['var'] for i in offset_nodes])
+        if np.any(offset_nodes < 0):
+            raise Exception(f'Variable not defined on requested nodes: "{offset_nodes}"')
+
+        offset_nodes = misc.checkNodes(offset_nodes, self._nodes_array)
+
+        var_impl = cs.vertcat(*[self._impl['var'][:, offset_nodes]])
 
         return var_impl
 
@@ -176,98 +151,24 @@ class OffsetVariable(AbstractVariable):
 
     def __reduce__(self):
 
-        for node in self._var_impl.keys():
-            self._var_impl[node]['var'] = self._var_impl[node]['var'].serialize()
+        for node in self._impl.keys():
+            self._impl[node]['var'] = self._impl[node]['var'].serialize()
 
-        return (self.__class__, (self.parent_name, self._tag, self._dim, self._offset, self._var_impl, ))
+        return (self.__class__, (self.parent_name, self._tag, self._dim, self._offset, self._impl,))
 
-class OffsetParameter(AbstractVariable):
-    def __init__(self, parent_name, tag, dim, offset, par_impl):
-        """
-        Initialize the Offset Parameter.
-
-        Args:
-            tag: name of the parameter
-            dim: dimension of the parameter
-            nodes: nodes the parameter is defined on
-            offset: offset of the parameter (which (previous/next) node it refers to
-            par_impl: implemented parameters it refers to (of base class Parameter)
-        """
-        self._tag = tag
-        self._dim = dim
-        super().__init__(tag, dim)
-
-        self.parent_name = parent_name
-        self._nodes = list()
-        self._offset = offset
-        self._par_impl = par_impl
-
-        for node in self._par_impl.keys():
-            self._nodes.append(int(node.split("n", 1)[1]))
-
-    def getImpl(self, nodes=None):
-        """
-        Getter for the implemented offset parameter.
-
-        Args:
-            node: node at which the parameter is retrieved
-
-        Returns:
-            implemented instances of the abstract offsetted parameter
-        """
-
-        # todo is this nice? to update nodes given the _par_impl
-        #   another possibility is sharing also the _nodes
-        self._nodes.clear()
-        for node in self._par_impl.keys():
-            self._nodes.append(int(node.split("n", 1)[1]))
-
-        if nodes is None:
-            nodes = list(self._nodes)
-
-        # offset the node of self.offset
-        offset_nodes = [node + self._offset for node in nodes]
-        offset_nodes = misc.checkNodes(offset_nodes, self._nodes)
-
-        par_impl = cs.vertcat(*[self._par_impl['n' + str(i)]['par'] for i in offset_nodes])
-
-        return par_impl
-
-    def getName(self):
-        """
-        Get name of the parameter. Warning: not always same as the tag
-
-        Returns:
-            name of the parameter
-
-        """
-        return self.parent_name
-
-    def getNodes(self):
-        """
-        Getter for the active nodes.
-
-        Returns:
-            list of active nodes
-        """
-        return self._nodes
-
-    # def __reduce__(self):
-    #
-    #     for node in self._var_impl.keys():
-    #         self._par_impl[node]['par'] = self._par_impl[node]['par'].serialize()
-    #
-    #     return (self.__class__, (self.parent_name, self._tag, self._dim, self._offset, self._var_impl, ))
+# todo add also absolute position of variable
+#   not only relative position (offseted to the present one)
 
 class SingleParameter(AbstractVariable):
     """
     Single Parameter of Horizon Problem.
-    It is used for parametric problems: it is a symbolic variable in the optimization problem but it is not optimized. Rather, it is kept parametric and can be assigned before solving the problem.
+    It is used for parametric problems: it is a symbolic variable in the optimization problem but it is not optimized.
+    Rather, it is kept parametric and can be assigned before solving the problem.
     Parameters are specified before building the problem and can be 'assigned' afterwards, before solving the problem.
     The assigned value is the same along the horizon, since this parameter is node-independent.
     The Parameter is abstract, and gets implemented automatically.
     """
-    def __init__(self, tag, dim, dummy_nodes):
+    def __init__(self, tag, dim, dummy_nodes, casadi_type=cs.SX):
         """
         Initialize the Single Parameter: a node-independent parameter which is not projected over the horizon.
 
@@ -278,9 +179,9 @@ class SingleParameter(AbstractVariable):
         """
         super(SingleParameter, self).__init__(tag, dim)
 
-        self._par_impl = dict()
-        self._par_impl['par'] = cs.SX.sym(self._tag + '_impl', self._dim)
-        self._par_impl['val'] = np.zeros(self._dim)
+        self._impl = dict()
+        self._impl['par'] = casadi_type.sym(self._tag + '_impl', self._dim)
+        self._impl['val'] = np.zeros(self._dim)
 
     def assign(self, vals):
         """
@@ -296,7 +197,7 @@ class SingleParameter(AbstractVariable):
         if vals.shape[0] != self._dim:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._par_impl['val'] = vals
+        self._impl['val'] = vals
 
     def getImpl(self, nodes=None):
         """
@@ -309,10 +210,10 @@ class SingleParameter(AbstractVariable):
             instance of the implemented parameter
         """
         if nodes is None:
-            par_impl = self._par_impl['par']
+            par_impl = self._impl['par']
         else:
             nodes = misc.checkNodes(nodes)
-            par_impl = cs.vertcat(*[self._par_impl['par'] for i in nodes])
+            par_impl = cs.vertcat(*[self._impl['par'] for i in nodes])
         return par_impl
 
     def getNodes(self):
@@ -336,10 +237,10 @@ class SingleParameter(AbstractVariable):
             value assigned to the parameter
         """
         if nodes is None:
-            par_impl = self._par_impl['val']
+            par_impl = self._impl['val']
         else:
             nodes = misc.checkNodes(nodes)
-            par_impl = cs.vertcat(*[self._par_impl['val'] for i in nodes]).toarray()
+            par_impl = cs.vertcat(*[self._impl['val'] for i in nodes]).toarray()
 
         return par_impl
 
@@ -401,7 +302,7 @@ class Parameter(AbstractVariable):
     Parameter of Horizon Problem.
     It is used for parametric problems: it is a symbolic variable in the optimization problem but it is not optimized. Rather, it is kept parametric and can be assigned before solving the problem.
     """
-    def __init__(self, tag, dim, nodes):
+    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
         """
         Initialize the Parameter: an abstract parameter projected over the horizon.
         Parameters are specified before building the problem and can be 'assigned' afterwards, before solving the problem.
@@ -415,8 +316,10 @@ class Parameter(AbstractVariable):
         """
         super(Parameter, self).__init__(tag, dim)
 
+        self._casadi_type = casadi_type
+
         self._par_offset = dict()
-        self._par_impl = dict()
+        self._impl = dict()
 
         self._nodes = list(nodes)
         self._project()
@@ -429,15 +332,15 @@ class Parameter(AbstractVariable):
         new_par_impl = OrderedDict()
 
         for n in self._nodes:
-            if 'n' + str(n) in self._par_impl:
-                new_par_impl['n' + str(n)] = self._par_impl['n' + str(n)]
+            if 'n' + str(n) in self._impl:
+                new_par_impl['n' + str(n)] = self._impl['n' + str(n)]
             else:
-                par_impl = cs.SX.sym(self._tag + '_' + str(n), self._dim)
+                par_impl = self._casadi_type.sym(self._tag + '_' + str(n), self._dim)
                 new_par_impl['n' + str(n)] = dict()
                 new_par_impl['n' + str(n)]['par'] = par_impl
                 new_par_impl['n' + str(n)]['val'] = np.zeros(self._dim)
 
-        self._par_impl = new_par_impl
+        self._impl = new_par_impl
 
     def getNodes(self):
         """
@@ -481,7 +384,7 @@ class Parameter(AbstractVariable):
         multiple_vals = val.ndim == 2 and val.shape[1] != 1
 
         if multiple_vals and val.shape[1] != len(nodes):
-            raise Exception(f'Wrong dimension of {val_type} inserted.')
+            raise Exception(f'Wrong dimension of parameter inserted.')
 
         for i, node in enumerate(nodes):
 
@@ -490,7 +393,7 @@ class Parameter(AbstractVariable):
             else:
                 v = val
 
-            self._par_impl['n' + str(node)]['val'] = v
+            self._impl['n' + str(node)]['val'] = v
 
     def getImpl(self, nodes=None):
         """
@@ -508,7 +411,7 @@ class Parameter(AbstractVariable):
 
         nodes = misc.checkNodes(nodes, self._nodes)
 
-        par_impl = cs.vertcat(*[self._par_impl['n' + str(i)]['par'] for i in nodes])
+        par_impl = cs.vertcat(*[self._impl['n' + str(i)]['par'] for i in nodes])
 
         return par_impl
 
@@ -527,7 +430,7 @@ class Parameter(AbstractVariable):
             nodes = self._nodes
 
         nodes = misc.checkNodes(nodes, self._nodes)
-        par_impl = cs.horzcat(*[self._par_impl['n' + str(i)]['val'] for i in nodes]).toarray()
+        par_impl = cs.horzcat(*[self._impl['n' + str(i)]['val'] for i in nodes]).toarray()
 
         return par_impl
 
@@ -569,7 +472,7 @@ class Parameter(AbstractVariable):
             createTag = lambda name, node: name + str(node) if node is not None else name
 
             new_tag = createTag(self._tag, node)
-            par = OffsetParameter(self._tag, new_tag, self._dim, int(node), self._par_impl)
+            par = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._impl)
 
             self._par_offset[node] = par
         return par
@@ -611,9 +514,9 @@ class ParameterView(AbstractVariableView):
            nodes: nodes at which the parameter is assigned
        """
         if nodes is None:
-            nodes = self._parent._nodes
+            nodes = self._parent._nodes_array
         else:
-            nodes = misc.checkNodes(nodes, self._parent._nodes)
+            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
         vals = misc.checkValueEntry(vals)
 
@@ -634,9 +537,9 @@ class ParameterView(AbstractVariableView):
                     value/s of the parameter
                 """
         if nodes is None:
-            nodes = self._parent._nodes
+            nodes = self._parent._nodes_array
 
-        nodes = misc.checkNodes(nodes, self._parent._nodes)
+        nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
         par_impl = cs.horzcat(*[self._parent._par_impl['n' + str(i)]['val'][self._indices] for i in nodes]).toarray()
 
@@ -649,7 +552,7 @@ class SingleVariable(AbstractVariable):
     The single variable is the same along the horizon, since it is node-independent.
     The Variable is abstract, and gets implemented automatically.
     """
-    def __init__(self, tag, dim, dummy_nodes):
+    def __init__(self, tag, dim, dummy_nodes, casadi_type=cs.SX):
         """
         Initialize the Single Variable: a node-independent variable which is not projected over the horizon.
         The bounds of the variable are initialized to -inf/inf.
@@ -661,12 +564,13 @@ class SingleVariable(AbstractVariable):
         """
         super(SingleVariable, self).__init__(tag, dim)
 
-        self._var_impl = dict()
+        self._casadi_type = casadi_type
+        self._impl = dict()
         # todo do i create another var or do I use the SX var inside SingleVariable?
-        self._var_impl['var'] = cs.SX.sym(self._tag + '_impl', self._dim)
-        self._var_impl['lb'] = np.full(self._dim, -np.inf)
-        self._var_impl['ub'] = np.full(self._dim, np.inf)
-        self._var_impl['w0'] = np.zeros(self._dim)
+        self._impl['var'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
+        self._impl['lb'] = np.full(self._dim, -np.inf)
+        self._impl['ub'] = np.full(self._dim, np.inf)
+        self._impl['w0'] = np.zeros(self._dim)
 
     def _setVals(self, val_type, input_val):
 
@@ -675,7 +579,7 @@ class SingleVariable(AbstractVariable):
         if val.shape[0] != self._dim:
             raise Exception(f'Wrong dimension of {val_type} inserted.')
 
-        self._var_impl[val_type] = val
+        self._impl[val_type] = val
 
     def setLowerBounds(self, bounds):
         """
@@ -726,10 +630,10 @@ class SingleVariable(AbstractVariable):
             implemented instances of the abstract variable
         """
         if nodes is None:
-            var_impl = self._var_impl['var']
+            var_impl = self._impl['var']
         else:
             nodes = misc.checkNodes(nodes)
-            var_impl = cs.vertcat(*[self._var_impl['var'] for i in nodes])
+            var_impl = cs.vertcat(*[self._impl['var'] for i in nodes])
         return var_impl
 
     def _getVals(self, val_type, nodes):
@@ -744,10 +648,10 @@ class SingleVariable(AbstractVariable):
             value/s of the desired argument
         """
         if nodes is None:
-            var_impl = self._var_impl[val_type]
+            var_impl = self._impl[val_type]
         else:
             nodes = misc.checkNodes(nodes)
-            var_impl = cs.vertcat(*[self._var_impl[val_type] for i in nodes])
+            var_impl = cs.vertcat(*[self._impl[val_type] for i in nodes])
         return var_impl
 
     def getLowerBounds(self, dummy_node=None):
@@ -864,7 +768,7 @@ class SingleVariableView(AbstractVariableView):
         if val.shape[0] != self._dim:
             raise Exception(f'Wrong dimension of {val_type} inserted.')
 
-        self._parent._var_impl[val_type][self._indices] = val
+        self._parent._impl[val_type][self._indices] = val
 
     def setLowerBounds(self, bounds):
         """
@@ -914,7 +818,7 @@ class Variable(AbstractVariable):
 
         Implemented variable "x" --> x_0, x_1, ... x_N-1, x_N
     """
-    def __init__(self, tag, dim, nodes):
+    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
         """
         Initialize the Variable.
         The bounds of the variable are initialized to -inf/inf.
@@ -926,16 +830,14 @@ class Variable(AbstractVariable):
         """
         super(Variable, self).__init__(tag, dim)
 
-        if isinstance(nodes, list):
-            nodes.sort()
-
-        self._nodes = list(nodes)
+        self._casadi_type = casadi_type
+        self._nodes_array = nodes
 
         self.var_offset = dict()
-        self._var_impl = dict()
+        self._impl = dict()
 
         # i project the variable over the optimization nodes
-        self._project()
+        self._project_mx()
 
     def _setVals(self, val_type, val, nodes=None):
         """
@@ -945,30 +847,31 @@ class Variable(AbstractVariable):
             bounds: desired values to set
             nodes: which nodes the values are applied on
         """
-        if nodes is None:
-            nodes = self._nodes
-        else:
-            nodes = misc.checkNodes(nodes, self._nodes)
+        # if nodes is None:
+        #     nodes = self._nodes_array
+        # else:
+        #     nodes = misc.checkNodes(nodes, self._nodes_array)
 
         val = misc.checkValueEntry(val)
 
+        # todo remove this, allows also for intuitive setting (1 value for all the dimensions)
         if val.shape[0] != self._dim:
             raise Exception(f'Wrong dimension of {val_type} inserted.')
 
         # if a matrix of values is being provided, check cols match len(nodes)
-        multiple_vals = val.ndim == 2 and val.shape[1] != 1
+        # multiple_vals = val.ndim == 2 and val.shape[1] != 1
+        #
+        # if multiple_vals and val.shape[1] != len(nodes):
+        #     raise Exception(f'Wrong dimension of {val_type} inserted.')
+        #
+        # for i, node in enumerate(nodes):
+        #
+        #     if multiple_vals:
+        #         v = val[:, i]
+        #     else:
+        #         v = val
 
-        if multiple_vals and val.shape[1] != len(nodes):
-            raise Exception(f'Wrong dimension of {val_type} inserted.')
-
-        for i, node in enumerate(nodes):
-
-            if multiple_vals:
-                v = val[:, i]
-            else:
-                v = val
-
-            self._var_impl['n' + str(node)][val_type] = v
+        self._impl[val_type][:, nodes] = val
 
     def setLowerBounds(self, bounds, nodes=None):
         """
@@ -1043,7 +946,7 @@ class Variable(AbstractVariable):
             createTag = lambda name, node: name + str(node) if node is not None else name
 
             new_tag = createTag(self._tag, node)
-            var = OffsetVariable(self._tag, new_tag, self._dim, int(node), self._var_impl)
+            var = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl)
 
             self.var_offset[node] = var
         return var
@@ -1064,8 +967,8 @@ class Variable(AbstractVariable):
         Args:
             n_nodes: the desired number of nodes to be set
         """
-        self._nodes = list(n_nodes)
-        self._project()
+        self._nodes_array = list(n_nodes)
+        self._project_mx()
 
     def _project(self):
         """
@@ -1074,12 +977,12 @@ class Variable(AbstractVariable):
         """
         new_var_impl = OrderedDict()
 
-        for n in self._nodes:
-            if 'n' + str(n) in self._var_impl:
+        for n in self._nodes_array:
+            if 'n' + str(n) in self._impl:
                 # when reprojecting, if the implemented variable is present already, use it. Do not create a new one.
-                new_var_impl['n' + str(n)] = self._var_impl['n' + str(n)]
+                new_var_impl['n' + str(n)] = self._impl['n' + str(n)]
             else:
-                var_impl = cs.SX.sym(self._tag + '_' + str(n), self._dim)
+                var_impl = self._casadi_type.sym(self._tag + '_' + str(n), self._dim)
                 new_var_impl['n' + str(n)] = dict()
                 new_var_impl['n' + str(n)]['var'] = var_impl
                 new_var_impl['n' + str(n)]['lb'] = np.full(self._dim, -np.inf)
@@ -1087,8 +990,33 @@ class Variable(AbstractVariable):
                 new_var_impl['n' + str(n)]['w0'] = np.zeros(self._dim)
 
         # this is to keep the instance at the same memory position (since it is shared by the OffsetVariable)
-        self._var_impl.clear()
-        self._var_impl.update(new_var_impl)
+        self._impl.clear()
+        self._impl.update(new_var_impl)
+
+    def _project_mx(self):
+        """
+        Implements the variable along the horizon nodes.
+        Generates an ordered dictionary containing the implemented variables and its value at each node {node: {var, lb, ub, w0}}
+        """
+        new_var_impl = OrderedDict()
+        # self._nodes contains the actual nodes on which the variable is defined
+        proj_dim = [self._dim, len(self._nodes_array)]
+        # the MX variable is created: dim x n_nodes
+        var_impl = self._casadi_type.sym(self._tag, proj_dim[0], proj_dim[1])
+        var_lb = np.full((proj_dim[0], proj_dim[1]), -np.inf)
+        var_ub = np.full((proj_dim[0], proj_dim[1]), np.inf)
+        var_w0 = np.zeros([proj_dim[0], proj_dim[1]])
+
+
+        new_var_impl['var'] = var_impl
+        new_var_impl['lb'] = var_lb
+        new_var_impl['ub'] = var_ub
+        new_var_impl['w0'] = var_w0
+
+        # this is to keep the instance at the same memory position (since it is shared by the OffsetVariable)
+        self._impl.clear()
+        self._impl.update(new_var_impl)
+
 
     def getImpl(self, nodes=None):
         """
@@ -1102,11 +1030,13 @@ class Variable(AbstractVariable):
         """
         # embed this in getVals? difference between cs.vertcat and np.hstack
         if nodes is None:
-            nodes = self._nodes
+            nodes = np.where(self._nodes_array == 1)
 
-        nodes = misc.checkNodes(nodes, self._nodes)
+        # todo do I keep this?
+        # this returns empty list if node is not in the active nodes
+        # nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        var_impl = cs.vertcat(*[self._var_impl['n' + str(i)]['var'] for i in nodes])
+        var_impl = cs.vertcat(*[self._impl['var'][:, nodes]])
 
         return var_impl
 
@@ -1122,11 +1052,11 @@ class Variable(AbstractVariable):
             value/s of the desired argument
         """
         if nodes is None:
-            nodes = self._nodes
+            nodes = misc.getNodesFromBinary(self._nodes_array)
 
-        nodes = misc.checkNodes(nodes, self._nodes)
-
-        vals = np.hstack([np.atleast_2d(self._var_impl['n' + str(i)][val_type]).T for i in nodes])
+        # nodes = misc.checkNodes(nodes, self._nodes_array)
+        # todo atleast_2d?
+        vals = np.atleast_2d(self._impl[val_type][:, nodes])
 
         return vals
 
@@ -1198,7 +1128,7 @@ class Variable(AbstractVariable):
         Returns:
             the nodes the variable is defined on
         """
-        return self._nodes
+        return misc.getNodesFromBinary(self._nodes_array)
 
     def getName(self):
         """
@@ -1221,7 +1151,7 @@ class Variable(AbstractVariable):
         Returns:
             instance of this element serialized
         """
-        return (self.__class__, (self._tag, self._dim, self._nodes, ))
+        return (self.__class__, (self._tag, self._dim, self._nodes_array,))
 
 class VariableView(AbstractVariableView):
     def __init__(self, parent: Variable, var_slice, indices):
@@ -1236,9 +1166,10 @@ class VariableView(AbstractVariableView):
             nodes: which nodes the values are applied on
         """
         if nodes is None:
-            nodes = self._parent._nodes
+            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._parent._nodes)
+
+            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
         val = misc.checkValueEntry(val)
 
@@ -1251,14 +1182,14 @@ class VariableView(AbstractVariableView):
         if multiple_vals and val.shape[1] != len(nodes):
             raise Exception(f'Wrong dimension of {val_type} inserted.')
 
-        for i, node in enumerate(nodes):
+        # for i, node in enumerate(nodes):
+        #
+        #     if multiple_vals:
+        #         v = val[:, i]
+        #     else:
+        #         v = val
 
-            if multiple_vals:
-                v = val[:, i]
-            else:
-                v = val
-
-            self._parent._var_impl['n' + str(node)][val_type][self._indices] = v
+        self._parent._impl[val_type][self._indices, nodes] = np.atleast_2d(val).T
 
     def setLowerBounds(self, bounds, nodes=None):
         """
@@ -1312,7 +1243,7 @@ class InputVariable(Variable):
 
         Implemented variable "x" --> x_0, x_1, ... x_N-1
     """
-    def __init__(self, tag, dim, nodes):
+    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
         """
         Initialize the Input Variable.
 
@@ -1321,7 +1252,7 @@ class InputVariable(Variable):
             dim: dimension of the variable
             nodes: should always be N-1, where N is the number of horizon nodes
         """
-        super(InputVariable, self).__init__(tag, dim, nodes)
+        super().__init__(tag, dim, nodes, casadi_type)
 
     def __getitem__(self, item):
         var_slice = super().__getitem__(item)
@@ -1339,7 +1270,7 @@ class StateVariable(Variable):
         Implemented variable "x" --> x_0, x_1, ... x_N-1, x_N
     """
 
-    def __init__(self, tag, dim, nodes):
+    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
         """
         Initialize the State Variable.
 
@@ -1348,7 +1279,7 @@ class StateVariable(Variable):
             dim: dimension of the variable
             nodes: should always be N, where N is the number of horizon nodes
         """
-        super(StateVariable, self).__init__(tag, dim, nodes)
+        super(StateVariable, self).__init__(tag, dim, nodes, casadi_type)
 
     def __getitem__(self, item):
         var_slice = super().__getitem__(item)
@@ -1369,12 +1300,12 @@ class AbstractAggregate(ABC):
         """
         self.var_list : List[AbstractVariable] = [item for item in args]
 
-    def getVars(self, abstr=False) -> cs.SX:
+    def getVars(self, abstr=False):
         """
         Getter for the variable stored in the aggregate.
 
         Returns:
-            a SX vector of all the variables stored
+            a casadi vector of all the variables stored
         """
 
         if abstr:
@@ -1685,7 +1616,7 @@ class VariablesContainer:
         self._vars = OrderedDict()
         self._pars = OrderedDict()
 
-    def createVar(self, var_type, name, dim, active_nodes):
+    def createVar(self, var_type, name, dim, active_nodes, casadi_type=cs.SX):
         """
         Create a variable and adds it to the Variable Container.
 
@@ -1695,7 +1626,7 @@ class VariablesContainer:
             dim: dimension of variable
             active_nodes: nodes the variable is defined on
         """
-        var = var_type(name, dim, active_nodes)
+        var = var_type(name, dim, active_nodes, casadi_type)
         self._vars[name] = var
 
         if self._logger:
@@ -1704,7 +1635,7 @@ class VariablesContainer:
 
         return var
 
-    def setVar(self, name, dim, active_nodes=None):
+    def setVar(self, name, dim, active_nodes=None, casadi_type=cs.SX):
         """
         Creates a generic variable.
 
@@ -1718,10 +1649,10 @@ class VariablesContainer:
         else:
             var_type = Variable
 
-        var = self.createVar(var_type, name, dim, active_nodes)
+        var = self.createVar(var_type, name, dim, active_nodes, casadi_type)
         return var
 
-    def setStateVar(self, name, dim, nodes):
+    def setStateVar(self, name, dim, nodes, casadi_type=cs.SX):
         """
         Creates a State variable.
 
@@ -1729,10 +1660,10 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
         """
-        var = self.createVar(StateVariable, name, dim, nodes)
+        var = self.createVar(StateVariable, name, dim, nodes, casadi_type)
         return var
 
-    def setInputVar(self, name, dim, nodes):
+    def setInputVar(self, name, dim, nodes, casadi_type=cs.SX):
         """
         Creates a Input (Control) variable.
 
@@ -1740,10 +1671,10 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
         """
-        var = self.createVar(InputVariable, name, dim, nodes)
+        var = self.createVar(InputVariable, name, dim, nodes, casadi_type)
         return var
 
-    def setSingleVar(self, name, dim):
+    def setSingleVar(self, name, dim, casadi_type=cs.SX):
         """
         Creates a Single variable.
 
@@ -1751,10 +1682,10 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
         """
-        var = self.createVar(SingleVariable, name, dim, None)
+        var = self.createVar(SingleVariable, name, dim, None, casadi_type)
         return var
 
-    def setParameter(self, name, dim, nodes):
+    def setParameter(self, name, dim, nodes, casadi_type=cs.SX):
         """
         Creates a Parameter.
 
@@ -1763,7 +1694,7 @@ class VariablesContainer:
             dim: dimension of the variable
             nodes: nodes the parameter is defined on. If not specified, all the horizon nodes are considered
         """
-        par = Parameter(name, dim, nodes)
+        par = Parameter(name, dim, nodes, casadi_type)
         self._pars[name] = par
 
         if self._logger:
@@ -1772,7 +1703,7 @@ class VariablesContainer:
 
         return par
 
-    def setSingleParameter(self, name, dim):
+    def setSingleParameter(self, name, dim, casadi_type=cs.SX):
         """
         Creates a Single Variable.
 
@@ -1780,7 +1711,7 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
         """
-        par = SingleParameter(name, dim, None)
+        par = SingleParameter(name, dim, None, casadi_type)
         self._pars[name] = par
 
         if self._logger:
@@ -1942,19 +1873,38 @@ class VariablesContainer:
         Returns:
            instance of deserialized Variable Container
         """
-        for name, var in self._vars.items():
-            self._vars[name] = cs.SX.deserialize(var)
-
-        for name, par in self._pars.items():
-            self._pars[name] = cs.SX.deserialize(par)
+        pass
+        # for name, var in self._vars.items():
+        #     self._vars[name] = cs.SX.deserialize(var)
+        #
+        # for name, par in self._pars.items():
+        #     self._pars[name] = cs.SX.deserialize(par)
 
     # def __reduce__(self):
     #     return (self.__class__, (self.nodes, self.logger, ))
 
 if __name__ == '__main__':
 
-    ####
-
+    # N = 10
+    # # a = cs.MX.sym('a', 3, 1)
+    # a = 5 * np.ones([3, 10])
+    # a[:, 3] = 3
+    # b = 2 * np.ones([3, 10])
+    # print(a)
+    # print(b)
+    #
+    # X = cs.MX.sym('X', 3, 1)
+    # Y = cs.MX.sym('Y', 3, 1)
+    # F = cs.Function('F', [X, Y], [X*Y])
+    #
+    # F.map(N, 'thread', 10)
+    # tic = time.time()
+    # res = F(a, b)
+    # toc = time.time() - tic
+    #
+    # print(res)
+    # print('time elapsed:', toc)
+    # exit()
     ## PARAMETER
     # a = Parameter('p', 3, [0, 1, 2, 3, 4, 5])
     # print(a[2:4], f'type: {type(a[2:4])}')
@@ -2029,8 +1979,16 @@ if __name__ == '__main__':
     # print(x[0:2]+2)
     # print(f'type: {type(x[-1])}')
     # x.setUpperBounds([2,2,2,2,2,2])
-    x = Variable('x', 3, [0,1,2,3,4,5,6])
-    x.setBounds([-1,-1,-1], [1,1,1], nodes=6)
+    x = Variable('x', 3, [1, 1, 0, 1, 1, 1])
+    x_prev = x.getVarOffset(-1)
+    print(x)
+    print(x.getImpl(4))
+    print(x_prev)
+
+    print(x_prev.getImpl([4, 6]))
+
+    exit()
+    x.setBounds([-1,-1,-1], [1,1,1], nodes=3)
     print(x.getBounds())
 
     # ub = np.array([[1,2,3], [1,2,3]])

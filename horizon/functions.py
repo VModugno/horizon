@@ -31,8 +31,7 @@ class Function:
 
         self._f = f
         self._name = name
-        self._nodes = []
-
+        self._nodes_array = nodes
         # todo isn't there another way to get the variables from the function g?
         self.vars = used_vars
         self.pars = used_pars
@@ -40,10 +39,10 @@ class Function:
         # create function of CASADI, dependent on (in order) [all_vars, all_pars]
         all_input = self.vars + self.pars
         all_names = [i.getName() for i in all_input]
-        self._fun = cs.Function(name, self.vars + self.pars, [self._f], 
-            all_names, ['f'])
-        self._fun_impl = dict()
-        self.setNodes(nodes)
+
+        self._fun = cs.Function(name, self.vars + self.pars, [self._f], all_names, ['f'])
+        self._fun_impl = None
+        self._project()
 
     def getName(self) -> str:
         """
@@ -81,11 +80,26 @@ class Function:
         Returns:
             instance of the CASADI function at the desired node
         """
-        if nodes is None:
-            nodes = self._nodes
+        # todo implement the second version (function defined always on all the nodes)
 
-        nodes = misc.checkNodes(nodes, self._nodes)
-        fun_impl = cs.vertcat(*[self._fun_impl['n' + str(i)] for i in nodes])
+        if nodes is None:
+            nodes = misc.getNodesFromBinary(self._nodes_array)
+
+        # if the fun is defined on all the nodes (but active only on a portion), then just guard the active nodes:
+        # GUARD:
+        if not np.all(self._nodes_array[nodes]):
+            raise Exception('Function not defined on the requested nodes: ', nodes)
+
+        # otherwise I have to convert the input nodes to the corresponding column position:
+        #     function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
+        convertNodes = lambda nodes: np.nonzero(np.in1d(np.where(self._nodes_array == 1), nodes))[0]
+
+        pos_nodes = convertNodes(nodes)
+
+        # todo add guards
+        # nodes = misc.checkNodes(nodes, self._nodes)
+        # getting the column corresponding to the nodes requested
+        fun_impl = cs.vertcat(*[self._fun_impl[:, pos_nodes]])
 
         return fun_impl
 
@@ -94,7 +108,10 @@ class Function:
         # todo throw with a meaningful error when nodes inserted are wrong
         used_var_impl = list()
         for var in self.vars:
+            print(var)
+
             var_impl = var.getImpl(self.getNodes())
+            print('(getUsedVarImpl) var_impl:', var_impl)
             var_dim = var.getDim()
             # reshape them for all-in-one evaluation of function
             # this is getting all the generic variable x, even if the function has a slice of it x[0:2].
@@ -129,13 +146,29 @@ class Function:
         Returns:
             the implemented function
         """
-        used_var_impl = self._getUsedVarImpl()
-        used_par_impl = self._getUsedParImpl()
-        all_vars = used_var_impl+used_par_impl
-        fun_eval = self._fun(*all_vars)
+        receding = False
+        if receding:
+            used_var_impl = list()
+            for var in self.vars:
+                var_impl = var.getImpl()
+                var_impl_matrix = cs.reshape(var_impl, (var.getDim(), len(self.getNodes())))
+                used_var_impl.append(var_impl_matrix)
 
-        for i in range(len(self._nodes)):
-            self._fun_impl['n' + str(self._nodes[i])] = fun_eval[:, i]
+            used_par_impl = list()
+            for par in self.pars:
+                par_impl = par.getImpl()
+                par_impl_matrix = cs.reshape(par_impl, (par.getDim(), len(self.getNodes())))
+                used_par_impl.append(par_impl_matrix)
+
+            all_vars = used_var_impl + used_par_impl
+
+            self._fun_impl = self._fun(*all_vars)
+        else:
+            used_var_impl = self._getUsedVarImpl()
+            used_par_impl = self._getUsedParImpl()
+            all_vars = used_var_impl+used_par_impl
+            fun_eval = self._fun(*all_vars)
+            self._fun_impl = fun_eval
 
         # reshape it as a vector for solver
         # fun_eval_vector = cs.reshape(fun_eval, (self.getDim() * len(self.getNodes()), 1))
@@ -149,7 +182,7 @@ class Function:
             a list of the nodes where the function is active
 
         """
-        return self._nodes
+        return misc.getNodesFromBinary(self._nodes_array)
 
     def setNodes(self, nodes, erasing=False):
         """
@@ -159,14 +192,16 @@ class Function:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+
+        # todo this method is very important. It projects the abstract functions on the nodes specified using the implemented variables
+        bin_nodes = misc.getBinaryFromNodes(len(self._nodes_array), nodes)
+
+
         if erasing:
-            self._nodes.clear()
+            self._nodes_array = np.array(len(self._nodes_array))
 
         # adding active nodes to function nodes
-        for i in nodes:
-            if i not in self._nodes:
-                self._nodes.append(i)
-                self._nodes.sort()
+        self._nodes_array[nodes] = 1
 
         # todo this is redundant. If the implemented variables do not change, this is not required, right?
         #   How do I understand when the var impl changed?
@@ -283,27 +318,21 @@ class Constraint(Function):
         self.bounds = dict()
 
         # constraints are initialize to 0.: 0. <= x <= 0.
-        for node in nodes:
-            self.bounds['n' + str(node)] = dict(lb=np.full(f.shape[0], 0.), ub=np.full(f.shape[0], 0.))
+        self.bounds['lb'] = np.full((f.shape[0], nodes.size), 0.)
+        self.bounds['ub'] = np.full((f.shape[0], nodes.size), 0.)
+
         super().__init__(name, f, used_vars, used_pars, nodes)
 
         # manage bounds
         if bounds is not None:
-
             if 'nodes' not in bounds:
                 bounds['nodes'] = None
 
             if 'lb' in bounds:
-                bounds['lb'] = misc.checkValueEntry(bounds['lb'])
-                if bounds['lb'].shape[0] != self.getDim():
-                    raise Exception('Wrong dimension of lower bounds inserted.')
                 if 'ub' not in bounds:
                     bounds['ub'] = np.full(f.shape[0], np.inf)
 
             if 'ub' in bounds:
-                bounds['ub'] = misc.checkValueEntry(bounds['ub'])
-                if bounds['ub'].shape[0] != self.getDim():
-                    raise Exception('Wrong dimension of upper bounds inserted.')
                 if 'lb' not in bounds:
                     bounds['lb'] = np.full(f.shape[0], -np.inf)
 
@@ -319,6 +348,31 @@ class Constraint(Function):
         """
         return 'constraint'
 
+    def _setVals(self, val_type, val, nodes=None):
+        """
+        Generic setter.
+
+        Args:
+            val_type: type of value
+            val: desired values to set
+            nodes: which nodes the values are applied on
+        """
+        if nodes is None:
+            nodes = misc.getNodesFromBinary(self._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
+
+        val = misc.checkValueEntry(val)
+
+        if val.shape[0] != self.getDim():
+            raise Exception('Wrong dimension of upper bounds inserted.')
+
+        # for node in nodes:
+        #     if node in self._nodes:
+        # todo guards (here it is assumed that bounds is a row)
+        val_type[:, nodes] = np.atleast_2d(val).T
+
+
     def setLowerBounds(self, bounds, nodes=None):
         """
         Setter for the lower bounds of the function.
@@ -327,20 +381,8 @@ class Constraint(Function):
             bounds: desired bounds of the function
             nodes: nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.
         """
-        if nodes is None:
-            nodes = self._nodes
-        else:
-            nodes = misc.checkNodes(nodes, self._nodes)
+        self._setVals(self.bounds['lb'], bounds, nodes)
 
-        bounds = misc.checkValueEntry(bounds)
-
-        # todo what if bounds does not have shape!
-        if bounds.shape[0] != self.getDim():
-            raise Exception('Wrong dimension of lower bounds inserted.')
-
-        for node in nodes:
-            if node in self._nodes:
-                self.bounds['n' + str(node)].update({'lb': bounds})
 
     def setUpperBounds(self, bounds, nodes=None):
         """
@@ -350,21 +392,7 @@ class Constraint(Function):
             bounds: desired bounds of the function
             nodes: nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.
         """
-        if nodes is None:
-            nodes = self._nodes
-        else:
-            nodes = misc.checkNodes(nodes, self._nodes)
-
-        bounds = misc.checkValueEntry(bounds)
-
-        if bounds.shape[0] != self.getDim():
-            raise Exception('Wrong dimension of upper bounds inserted.')
-
-        for node in nodes:
-            if node in self._nodes:
-                self.bounds['n' + str(node)].update({'ub': bounds})
-
-        # print('function upper bounds: {}'.format(nodes))
+        self._setVals(self.bounds['ub'], bounds, nodes)
 
     def setBounds(self, lb, ub, nodes=None):
         """
@@ -378,7 +406,7 @@ class Constraint(Function):
         self.setLowerBounds(lb, nodes)
         self.setUpperBounds(ub, nodes)
 
-    def _getVals(self, val_type: str, nodes=None):
+    def _getVals(self, val_type, nodes=None):
         """
         wrapper function to get the desired argument from the constraint.
 
@@ -390,14 +418,14 @@ class Constraint(Function):
             value/s of the desired argument
         """
         if nodes is None:
-            nodes = self._nodes
+            nodes = misc.getNodesFromBinary(self._nodes_array)
 
-        nodes = misc.checkNodes(nodes, self._nodes)
+        nodes = misc.checkNodes(nodes, self._nodes_array)
 
         if len(nodes) == 0:
             return np.zeros((self.getDim(), 0))
 
-        vals = np.hstack([np.atleast_2d(self.bounds['n' + str(i)][val_type]).T for i in nodes])
+        vals = np.atleast_2d(val_type[:, nodes]).T
 
         return vals
 
@@ -413,7 +441,7 @@ class Constraint(Function):
             value/s of the lower bounds
 
         """
-        lb = self._getVals('lb', node)
+        lb = self._getVals(self.bounds['lb'], node)
         return lb
 
     def getUpperBounds(self, node: int =None):
@@ -427,7 +455,7 @@ class Constraint(Function):
             value/s of the upper bounds
 
         """
-        ub = self._getVals('ub', node)
+        ub = self._getVals(self.bounds['ub'], node)
         return ub
 
     def getBounds(self, nodes=None):
@@ -451,17 +479,13 @@ class Constraint(Function):
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
         if erasing:
-            self._nodes.clear()
+            self._nodes_array[:] = 0
 
         # adding to function nodes
-        for i in nodes:
-            if i not in self._nodes:
-                self._nodes.append(i)
-                self._nodes.sort()
-                # for all the "new nodes" that weren't there, add default bounds
-                if 'n' + str(i) not in self.bounds:
-                    self.bounds['n' + str(i)] = dict(lb=np.full(self._f.shape[0], 0.),
-                                                     ub=np.full(self._f.shape[0], 0.))
+        self._nodes_array[nodes] = 1
+        # for all the "new nodes" that weren't there, add default bounds
+        self.bounds['lb'][:, nodes] = np.zeros([self._f.shape[0], 1])
+        self.bounds['ub'][:, nodes] = np.zeros([1, self._f.shape[0], 1])
 
         self._project()
 
@@ -735,5 +759,3 @@ if __name__ == '__main__':
     print(funimpl_serialized)
     print('===DEPICKLING===')
     funimpl_new = pickle.loads(funimpl_serialized)
-
-
