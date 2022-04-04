@@ -55,29 +55,31 @@ class NlpsolSolver(Solver):
         # build variables
         var_list = list()
         for var in self.var_container.getVarList(offset=False):
-            var_list.append(var.getImpl())
+            # x_2_3 --> dim 2 of node 3
+            # order is: x_0_0, x_1_0, x_0_1, x_1_1 ...
+            var_list.append(var.getImpl()[:])
         w = cs.vertcat(*var_list)
 
 
         # build parameters
         par_list = list()
         for par in self.var_container.getParList(offset=False):
-            par_list.append(par.getImpl())
+            par_list.append(par.getImpl()[:])
         p = cs.vertcat(*par_list)
 
         # build constraint functions list
         fun_list = list()
         for fun in self.fun_container.getCnstr().values():
-            fun_list.append(fun.getImpl())
+            fun_list.append(fun.getImpl()[:])
         g = cs.vertcat(*fun_list)
 
         # treat differently cost and residual (residual must be quadratized)
         fun_list = list()
         for fun in self.fun_container.getCost().values():
             if isinstance(fun, CostFunction):
-                fun_list.append(fun.getImpl())
+                fun_list.append(fun.getImpl()[:])
             elif isinstance(fun, ResidualFunction):
-                fun_list.append(cs.sumsqr(fun.getImpl()))
+                fun_list.append(cs.sumsqr(fun.getImpl()[:]))
             else:
                 raise Exception('wrong type of function found in fun_container')
 
