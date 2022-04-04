@@ -55,8 +55,6 @@ class NlpsolSolver(Solver):
         # build variables
         var_list = list()
         for var in self.var_container.getVarList(offset=False):
-            print('dan', var.getImpl())
-            exit()
             var_list.append(var.getImpl())
         w = cs.vertcat(*var_list)
 
