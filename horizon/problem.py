@@ -960,11 +960,11 @@ if __name__ == '__main__':
 
     prb.setDynamics(x)
     prb.setDt(dt)
-    x.setBounds([1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2])
+    x.setBounds([1, 1, 3, 1, 5, 1], [2, 5, 10, 2, 10, 2])
 
     constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
 
-    constr1.setBounds([1, 1], [1, 1])
+    constr1.setBounds([1, 2], [1, 2])
     solver = Solver.make_solver('ipopt', prb)
 
     all_sol = dict()
