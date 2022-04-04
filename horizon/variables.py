@@ -126,7 +126,7 @@ class OffsetTemplate(AbstractVariable):
 
         offset_nodes = misc.checkNodes(offset_nodes, self._nodes_array)
 
-        var_impl = cs.vertcat(*[self._impl['var'][:, offset_nodes]])
+        var_impl = self._impl['var'][:, offset_nodes]
 
         return var_impl
 
@@ -168,7 +168,7 @@ class SingleParameter(AbstractVariable):
     The assigned value is the same along the horizon, since this parameter is node-independent.
     The Parameter is abstract, and gets implemented automatically.
     """
-    def __init__(self, tag, dim, dummy_nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
         """
         Initialize the Single Parameter: a node-independent parameter which is not projected over the horizon.
 
@@ -180,9 +180,10 @@ class SingleParameter(AbstractVariable):
         super(SingleParameter, self).__init__(tag, dim)
 
         self._casadi_type = casadi_type
+        self._nodes_array = nodes_array
         self._impl = dict()
         self._impl['par'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
-        self._impl['val'] = np.zeros(self._dim)
+        self._impl['val'] = np.zeros([self._dim, 1])
 
     def assign(self, vals):
         """
@@ -200,6 +201,26 @@ class SingleParameter(AbstractVariable):
 
         self._impl['val'] = vals
 
+    def _getVals(self, val_type, nodes):
+        """
+        wrapper function to get the desired argument from the variable.
+
+        Args:
+            val_type: type of the argument to retrieve
+            nodes: if None, returns an array of the desired argument
+
+        Returns:
+            value/s of the desired argument
+        """
+        if nodes is None:
+            val_impl = self._impl[val_type]
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
+            num_nodes = int(np.sum(self._nodes_array[nodes]))
+            val_impl = cs.repmat(self._impl[val_type], 1, num_nodes)
+
+        return val_impl
+
     def getImpl(self, nodes=None):
         """
         Getter for the implemented parameter. Node is useless, since this parameter is node-independent.
@@ -210,12 +231,15 @@ class SingleParameter(AbstractVariable):
         Returns:
             instance of the implemented parameter
         """
+        # todo remove this temp, should return a matrix: return self._getVals('par', nodes)
+        # ==============================================
+        temp = self._getVals('par', nodes)
         if nodes is None:
-            par_impl = self._impl['par']
+            return temp
         else:
-            nodes = misc.checkNodes(nodes)
-            par_impl = cs.vertcat(*[self._impl['par'] for i in nodes])
-        return par_impl
+            num_nodes = int(np.sum(self._nodes_array[nodes]))
+        # ==============================================
+        return cs.reshape(temp, (self._dim * num_nodes, 1))
 
     def getNodes(self):
         """
@@ -237,13 +261,7 @@ class SingleParameter(AbstractVariable):
         Returns:
             value assigned to the parameter
         """
-        if nodes is None:
-            par_impl = self._impl['val']
-        else:
-            nodes = misc.checkNodes(nodes)
-            par_impl = cs.vertcat(*[self._impl['val'] for i in nodes]).toarray()
-
-        return par_impl
+        return self._getVals('val', nodes)
 
     def getParOffset(self, node):
 
@@ -303,7 +321,7 @@ class Parameter(AbstractVariable):
     Parameter of Horizon Problem.
     It is used for parametric problems: it is a symbolic variable in the optimization problem but it is not optimized. Rather, it is kept parametric and can be assigned before solving the problem.
     """
-    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
         """
         Initialize the Parameter: an abstract parameter projected over the horizon.
         Parameters are specified before building the problem and can be 'assigned' afterwards, before solving the problem.
@@ -322,7 +340,7 @@ class Parameter(AbstractVariable):
         self._par_offset = dict()
         self._impl = OrderedDict()
 
-        self._nodes = list(nodes)
+        self._nodes_array = nodes_array
         self._project()
 
     def _project(self):
@@ -332,7 +350,7 @@ class Parameter(AbstractVariable):
         """
         # todo how to re-project keeping the old variables
         #   right now it only rewrite everything
-        new_par_impl = self._impl
+        new_par_impl = OrderedDict()
 
         proj_dim = [self._dim, len(self._nodes_array)]
         # the MX variable is created: dim x n_nodes
@@ -344,8 +362,6 @@ class Parameter(AbstractVariable):
 
         self._impl.clear()
         self._impl.update(new_par_impl)
-
-
 
         # par_impl = self._casadi_type.sym(self._tag, dim)
         # for n in self._nodes:
@@ -388,7 +404,7 @@ class Parameter(AbstractVariable):
         if nodes is None:
             nodes = self._nodes
         else:
-            nodes = misc.checkNodes(nodes, self._nodes)
+            nodes = misc.checkNodes(nodes, self._nodes_array)
 
         val = misc.checkValueEntry(val)
 
@@ -401,14 +417,14 @@ class Parameter(AbstractVariable):
         if multiple_vals and val.shape[1] != len(nodes):
             raise Exception(f'Wrong dimension of parameter inserted.')
 
-        for i, node in enumerate(nodes):
+        # for i, node in enumerate(nodes):
+        #
+        #     if multiple_vals:
+        #         v = val[:, i]
+        #     else:
+        #         v = val
 
-            if multiple_vals:
-                v = val[:, i]
-            else:
-                v = val
-
-            self._impl['n' + str(node)]['val'] = v
+        self._impl['val'][:, nodes] = val
 
     def getImpl(self, nodes=None):
         """
@@ -422,14 +438,13 @@ class Parameter(AbstractVariable):
         """
 
         if nodes is None:
-            nodes = self._nodes
+            nodes = np.where(self._nodes_array == 1)
 
-        nodes = misc.checkNodes(nodes, self._nodes)
+        nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        par_impl = cs.vertcat(*[self._impl['n' + str(i)]['par'] for i in nodes])
+        par_impl = self._impl['par'][:, nodes]
 
         return par_impl
-
 
     def getValues(self, nodes=None):
         """
@@ -442,10 +457,10 @@ class Parameter(AbstractVariable):
             value/s of the parameter
         """
         if nodes is None:
-            nodes = self._nodes
+            nodes = np.where(self._nodes_array == 1)[0]
 
-        nodes = misc.checkNodes(nodes, self._nodes)
-        par_impl = cs.horzcat(*[self._impl['n' + str(i)]['val'] for i in nodes]).toarray()
+        nodes = misc.checkNodes(nodes, self._nodes_array)
+        par_impl = self._impl['val'][:, nodes]
 
         return par_impl
 
@@ -538,8 +553,7 @@ class ParameterView(AbstractVariableView):
         if vals.shape[0] != self._dim:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        for node in nodes:
-            self._parent._par_impl['n' + str(node)]['val'][self._indices] = vals
+        self._parent._par_impl['val'][self._indices, nodes] = vals
 
     def getValues(self, nodes):
         """
@@ -556,7 +570,7 @@ class ParameterView(AbstractVariableView):
 
         nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
-        par_impl = cs.horzcat(*[self._parent._par_impl['n' + str(i)]['val'][self._indices] for i in nodes]).toarray()
+        par_impl = self._parent._par_impl['val'][self._indices:, nodes]
 
         return par_impl
 
@@ -584,9 +598,9 @@ class SingleVariable(AbstractVariable):
         self._impl = dict()
         # todo do i create another var or do I use the SX var inside SingleVariable?
         self._impl['var'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
-        self._impl['lb'] = np.full(self._dim, -np.inf)
-        self._impl['ub'] = np.full(self._dim, np.inf)
-        self._impl['w0'] = np.zeros(self._dim)
+        self._impl['lb'] = np.full([self._dim, 1], -np.inf)
+        self._impl['ub'] = np.full([self._dim, 1], np.inf)
+        self._impl['w0'] = np.zeros([self._dim, 1])
 
     def _setVals(self, val_type, input_val):
 
@@ -652,10 +666,14 @@ class SingleVariable(AbstractVariable):
             nodes = misc.checkNodes(nodes, self._nodes_array)
             num_nodes = int(np.sum(self._nodes_array[nodes]))
             # todo right now repeating with repmat the same variables if requested: is it ok?
-            val_impl = cs.repmat(self._impl[val_type], num_nodes)
+            # todo here and also everywhere this should return a matrix [dim x nodes]
+            val_impl = cs.repmat(self._impl[val_type], 1, num_nodes)
+            # todo to remove for the reason above (everywhere should return a matrix)
+            if not isinstance(val_impl, cs.DM):
+                val_impl = cs.reshape(val_impl, (self._dim*num_nodes, 1))
 
         if isinstance(val_impl, cs.DM):
-            val_impl = val_impl.toarray().flatten()
+            val_impl = val_impl.toarray()
 
         return val_impl
 
@@ -1054,9 +1072,9 @@ class Variable(AbstractVariable):
 
         # todo do I keep this?
         # this returns empty list if node is not in the active nodes
-        # nodes = misc.checkNodes(nodes, self._nodes_array)
+        nodes = misc.checkNodes(nodes, self._nodes_array)
         # getting all the columns specified in nodes
-        var_impl = cs.vertcat(*[self._impl['var'][:, nodes]])
+        var_impl = self._impl['var'][:, nodes]
 
         return var_impl
 
@@ -1075,7 +1093,7 @@ class Variable(AbstractVariable):
             nodes = misc.getNodesFromBinary(self._nodes_array)
 
         # nodes = misc.checkNodes(nodes, self._nodes_array)
-        # todo atleast_2d?
+        # todo atleast_2d? why is there 2d
         vals = np.atleast_2d(self._impl[val_type][:, nodes])
 
         return vals
