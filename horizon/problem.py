@@ -120,7 +120,9 @@ class Problem:
         """
         casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
 
-        var = self.var_container.setSingleVar(name, dim, casadi_type)
+        nodes_array = np.ones(self.nodes) # dummy, cause it is the same on all the nodes
+
+        var = self.var_container.setSingleVar(name, dim, nodes_array, casadi_type)
         return var
 
     def createVariable(self, name: str, dim: int, nodes: Iterable = None, casadi_type=None) -> Union[sv.StateVariable, sv.SingleVariable]:
@@ -954,14 +956,23 @@ if __name__ == '__main__':
     prob = Problem(N, casadi_type=cs.MX)
 
     x = prob.createStateVariable('x', 5)
-    generic_var = prob.createVariable('generic_var', 2, [0,3,6])
     single_var = prob.createSingleVariable('single_var', 4)
 
     print(single_var)
-    print(single_var.getImpl().dim())
     print(single_var.getImpl())
+    print(single_var.getImpl().dim())
+    print(single_var.getImpl([2, 5]).dim())
+    print(single_var.getNodes())
+    print(single_var.getBounds())
+    print(single_var.getBounds(4))
     exit()
-    print(generic_var.getImpl())
+    single_par = prob.createSingleParameter('single_par', 3)
+
+    print(single_par)
+    print(single_par.getImpl())
+    print(single_par.getImpl().dim())
+    print(single_par.getImpl([2, 5]).dim())
+
     exit()
 
     print(x[0:3])

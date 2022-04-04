@@ -567,7 +567,7 @@ class SingleVariable(AbstractVariable):
     The single variable is the same along the horizon, since it is node-independent.
     The Variable is abstract, and gets implemented automatically.
     """
-    def __init__(self, tag, dim, dummy_nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
         """
         Initialize the Single Variable: a node-independent variable which is not projected over the horizon.
         The bounds of the variable are initialized to -inf/inf.
@@ -575,11 +575,12 @@ class SingleVariable(AbstractVariable):
         Args:
             tag: name of the variable
             dim: dimension of the variable
-            dummy_nodes: useless input, used to simplify the framework mechanics
+            nodes_array: binary array specifying which node is active
         """
         super(SingleVariable, self).__init__(tag, dim)
 
         self._casadi_type = casadi_type
+        self._nodes_array = nodes_array
         self._impl = dict()
         # todo do i create another var or do I use the SX var inside SingleVariable?
         self._impl['var'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
@@ -634,23 +635,6 @@ class SingleVariable(AbstractVariable):
         """
         self._setVals('w0', val)
 
-    def getImpl(self, nodes=None):
-        """
-        Getter for the implemented variable. Node is useless, since this variable is node-independent.
-
-        Args:
-            dummy_node: useless input, used to simplify the framework mechanics
-
-        Returns:
-            implemented instances of the abstract variable
-        """
-        if nodes is None:
-            var_impl = self._impl['var']
-        else:
-            nodes = misc.checkNodes(nodes)
-            var_impl = cs.vertcat(*[self._impl['var'] for i in nodes])
-        return var_impl
-
     def _getVals(self, val_type, nodes):
         """
         wrapper function to get the desired argument from the variable.
@@ -663,11 +647,29 @@ class SingleVariable(AbstractVariable):
             value/s of the desired argument
         """
         if nodes is None:
-            var_impl = self._impl[val_type]
+            val_impl = self._impl[val_type]
         else:
-            nodes = misc.checkNodes(nodes)
-            var_impl = cs.vertcat(*[self._impl[val_type] for i in nodes])
-        return var_impl
+            nodes = misc.checkNodes(nodes, self._nodes_array)
+            num_nodes = int(np.sum(self._nodes_array[nodes]))
+            # todo right now repeating with repmat the same variables if requested: is it ok?
+            val_impl = cs.repmat(self._impl[val_type], num_nodes)
+
+        if isinstance(val_impl, cs.DM):
+            val_impl = val_impl.toarray().flatten()
+
+        return val_impl
+
+    def getImpl(self, dummy_node=None):
+        """
+        Getter for the implemented variable. Node is useless, since this variable is node-independent.
+
+        Args:
+            dummy_node: useless input, used to simplify the framework mechanics
+
+        Returns:
+            implemented instances of the abstract variable
+        """
+        return self._getVals('var', dummy_node)
 
     def getLowerBounds(self, dummy_node=None):
         """
@@ -1637,7 +1639,7 @@ class VariablesContainer:
         self._vars = OrderedDict()
         self._pars = OrderedDict()
 
-    def createVar(self, var_type, name, dim, active_nodes, casadi_type=default_casadi_type):
+    def createVar(self, var_type, name, dim, nodes_array, casadi_type=default_casadi_type):
         """
         Create a variable and adds it to the Variable Container.
 
@@ -1645,10 +1647,10 @@ class VariablesContainer:
             var_type: type of variable
             name: name of variable
             dim: dimension of variable
-            active_nodes: nodes the variable is defined on
+            nodes_array: nodes the variable is defined on
             casadi_type: type of casadi variable (SX or MX)
         """
-        var = var_type(name, dim, active_nodes, casadi_type)
+        var = var_type(name, dim, nodes_array, casadi_type)
         self._vars[name] = var
 
         if self._logger:
@@ -1657,7 +1659,7 @@ class VariablesContainer:
 
         return var
 
-    def setVar(self, name, dim, active_nodes=None, casadi_type=default_casadi_type):
+    def setVar(self, name, dim, nodes_array=None, casadi_type=default_casadi_type):
         """
         Creates a generic variable.
 
@@ -1667,61 +1669,64 @@ class VariablesContainer:
             active_nodes: nodes the variable is defined on. If not specified, a Single Variable is generated
             casadi_type: type of casadi variable (SX or MX)
         """
-        if active_nodes is None:
+        if nodes_array is None:
             var_type = SingleVariable
         else:
             var_type = Variable
 
-        var = self.createVar(var_type, name, dim, active_nodes, casadi_type)
+        var = self.createVar(var_type, name, dim, nodes_array, casadi_type)
         return var
 
-    def setStateVar(self, name, dim, nodes, casadi_type=default_casadi_type):
+    def setStateVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
         """
         Creates a State variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            nodes_array: binary array of nodes specifying which node is active
             casadi_type: type of casadi variable (SX or MX)
         """
-        var = self.createVar(StateVariable, name, dim, nodes, casadi_type)
+        var = self.createVar(StateVariable, name, dim, nodes_array, casadi_type)
         return var
 
-    def setInputVar(self, name, dim, nodes, casadi_type=default_casadi_type):
+    def setInputVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
         """
         Creates a Input (Control) variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            nodes_array: binary array of nodes specifying which node is active
             casadi_type: type of casadi variable (SX or MX)
         """
-        var = self.createVar(InputVariable, name, dim, nodes, casadi_type)
+        var = self.createVar(InputVariable, name, dim, nodes_array, casadi_type)
         return var
 
-    def setSingleVar(self, name, dim, casadi_type=default_casadi_type):
+    def setSingleVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
         """
         Creates a Single variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            nodes_array: binary array of nodes specifying which node is active
             casadi_type: type of casadi variable (SX or MX)
         """
-        var = self.createVar(SingleVariable, name, dim, None, casadi_type)
+        var = self.createVar(SingleVariable, name, dim, nodes_array, casadi_type)
         return var
 
-    def setParameter(self, name, dim, nodes, casadi_type=default_casadi_type):
+    def setParameter(self, name, dim, nodes_array, casadi_type=default_casadi_type):
         """
         Creates a Parameter.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
-            nodes: nodes the parameter is defined on. If not specified, all the horizon nodes are considered
+            nodes_array: binary array of nodes specifying which node is active. If not specified, all the horizon nodes are considered
             casadi_type: type of casadi variable (SX or MX)
         """
-        par = Parameter(name, dim, nodes, casadi_type)
+        par = Parameter(name, dim, nodes_array, casadi_type)
         self._pars[name] = par
 
         if self._logger:
@@ -1730,16 +1735,17 @@ class VariablesContainer:
 
         return par
 
-    def setSingleParameter(self, name, dim, casadi_type=default_casadi_type):
+    def setSingleParameter(self, name, dim, nodes_array, casadi_type=default_casadi_type):
         """
         Creates a Single Variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            nodes_array: binary array of nodes specifying which node is active.
             casadi_type: type of casadi variable (SX or MX)
         """
-        par = SingleParameter(name, dim, None, casadi_type)
+        par = SingleParameter(name, dim, nodes_array, casadi_type)
         self._pars[name] = par
 
         if self._logger:
