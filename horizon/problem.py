@@ -912,6 +912,32 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
+    nodes = 10
+    dt = 0.01
+    prb = Problem(nodes, crash_if_suboptimal=True)
+    x = prb.createStateVariable('x', 6)
+    u = prb.createInputVariable('u', 2)
+    p = prb.createSingleParameter('p', 6)
+
+    prb.setDynamics(x)
+    prb.setDt(dt)
+    x.setBounds([1, 1, 0, 1, 5, 1], [2, 5, 0, 2, 10, 2])
+
+    constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
+
+    constr1.setBounds([1, 2], [3, 5])
+    solver = Solver.make_solver('ipopt', prb)
+
+    all_sol = dict()
+    for i in range(100):
+        p.assign(6 * [2 * i])
+        solver.solve()
+        sol = solver.getSolutionDict()
+        print(sol['x'])
+        exit()
+        all_sol[i] = sol
+
+    exit()
 
     N = 2
     dt = 0.01
