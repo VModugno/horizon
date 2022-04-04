@@ -185,8 +185,8 @@ class Problem:
 
         """
         casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
-
-        par = self.var_container.setSingleParameter(name, dim, casadi_type)
+        nodes_array = np.ones(self.nodes)
+        par = self.var_container.setSingleParameter(name, dim, nodes_array, casadi_type)
         return par
 
     def getState(self) -> sv.StateAggregate:
@@ -953,25 +953,35 @@ if __name__ == '__main__':
 
     N = 10
     dt = 0.01
-    prob = Problem(N, casadi_type=cs.MX)
+    prob = Problem(N, casadi_type=cs.SX)
 
     x = prob.createStateVariable('x', 5)
-    single_var = prob.createSingleVariable('single_var', 4)
 
-    print(single_var)
-    print(single_var.getImpl())
-    print(single_var.getImpl().dim())
-    print(single_var.getImpl([2, 5]).dim())
-    print(single_var.getNodes())
-    print(single_var.getBounds())
-    print(single_var.getBounds(4))
+
+    par = prob.createParameter('par', 3)
+    print(par.getImpl())
+
+    exit()
+
+
+
+    single_var = prob.createSingleVariable('single_var', 4)
+    print(x.getImpl())
+    # print(single_var)
+    # print(single_var.getImpl().dim())
+    # print(single_var.getImpl([2, 5]))
+    # print(single_var.getBounds())
+    # print(single_var.getLowerBounds([4, 5]))
+    # print(single_var.getLowerBounds())
+
     exit()
     single_par = prob.createSingleParameter('single_par', 3)
 
     print(single_par)
     print(single_par.getImpl())
-    print(single_par.getImpl().dim())
-    print(single_par.getImpl([2, 5]).dim())
+    # print(single_par.getImpl().dim())
+    print(single_par.getImpl([2, 5]))
+    print(single_par.getValues([2, 3]))
 
     exit()
 
