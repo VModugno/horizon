@@ -38,7 +38,7 @@ def checkNodes(nodes, nodes_array=None):
         checked_nodes = nodes_vec
     else:
         # get from nodes only the nodes active in nodes_array
-        checked_nodes = np.ma.masked_array(nodes_vec, mask=np.logical_not(nodes_array[nodes_vec])).compressed()
+        checked_nodes = np.ma.masked_array(nodes_vec, mask=np.logical_not(nodes_array[nodes_vec])).compressed().astype(int)
 
     # if hasattr(nodes, "__iter__") and not isinstance(nodes, str):
     #     if nodes_array is None:
