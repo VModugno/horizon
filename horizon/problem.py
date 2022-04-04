@@ -972,6 +972,8 @@ if __name__ == '__main__':
         p.assign(6 * [2*i])
         solver.solve()
         sol = solver.getSolutionDict()
+        print(sol['x'])
+        exit()
         all_sol[i] = sol
 
     exit()
