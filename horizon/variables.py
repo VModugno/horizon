@@ -116,7 +116,7 @@ class OffsetTemplate(AbstractVariable):
         """
         # todo why update nodes given the _var_impl?
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)
+            nodes = np.where(self._nodes_array == 1)[0]
 
         # offset the node of self.offset
         offset_nodes = nodes + self._offset
@@ -219,6 +219,9 @@ class SingleParameter(AbstractVariable):
             num_nodes = int(np.sum(self._nodes_array[nodes]))
             val_impl = cs.repmat(self._impl[val_type], 1, num_nodes)
 
+        if isinstance(val_impl, cs.DM):
+            val_impl = val_impl.toarray()
+
         return val_impl
 
     def getImpl(self, nodes=None):
@@ -314,7 +317,7 @@ class SingleParameterView(AbstractVariableView):
         if vals.shape[0] != self._dim:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._parent._par_impl['val'][self._indices] = vals
+        self._parent._impl['val'][self._indices] = vals
 
 class Parameter(AbstractVariable):
     """
@@ -380,7 +383,7 @@ class Parameter(AbstractVariable):
         Returns:
             list of nodes the parameter is active on.
         """
-        return self._nodes
+        return misc.getNodesFromBinary(self._nodes_array)
 
     def _setNNodes(self, n_nodes):
         """
@@ -402,7 +405,7 @@ class Parameter(AbstractVariable):
            nodes: nodes at which the parameter is assigned
        """
         if nodes is None:
-            nodes = self._nodes
+            nodes = np.where(self._nodes_array == 1)[0]
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
@@ -423,8 +426,8 @@ class Parameter(AbstractVariable):
         #         v = val[:, i]
         #     else:
         #         v = val
-
-        self._impl['val'][:, nodes] = val
+        # todo this is because what I receive as val is 1-dimensional array which cannot be assigned to a matrix
+        self._impl['val'][:, nodes] = np.atleast_2d(val).T
 
     def getImpl(self, nodes=None):
         """
@@ -438,11 +441,13 @@ class Parameter(AbstractVariable):
         """
 
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)
+            nodes = np.where(self._nodes_array == 1)[0]
 
         nodes = misc.checkNodes(nodes, self._nodes_array)
 
         par_impl = self._impl['par'][:, nodes]
+        # todo remove the next line, it should return a matrix!
+        par_impl = cs.reshape(par_impl, len(nodes)*self._dim, 1)
 
         return par_impl
 
@@ -544,7 +549,7 @@ class ParameterView(AbstractVariableView):
            nodes: nodes at which the parameter is assigned
        """
         if nodes is None:
-            nodes = self._parent._nodes_array
+            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
         else:
             nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
@@ -553,9 +558,9 @@ class ParameterView(AbstractVariableView):
         if vals.shape[0] != self._dim:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._parent._par_impl['val'][self._indices, nodes] = vals
+        self._parent._impl['val'][self._indices, nodes] = vals
 
-    def getValues(self, nodes):
+    def getValues(self, nodes=None):
         """
                 Getter for the value of the parameter.
 
@@ -566,11 +571,11 @@ class ParameterView(AbstractVariableView):
                     value/s of the parameter
                 """
         if nodes is None:
-            nodes = self._parent._nodes_array
+            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
 
         nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
-        par_impl = self._parent._par_impl['val'][self._indices:, nodes]
+        par_impl = self._parent._impl['val'][self._indices, nodes]
 
         return par_impl
 
@@ -882,16 +887,10 @@ class Variable(AbstractVariable):
             bounds: desired values to set
             nodes: which nodes the values are applied on
         """
-        # if nodes is None:
-        #     nodes = self._nodes_array
-        # else:
-        #     nodes = misc.checkNodes(nodes, self._nodes_array)
-
-        val = misc.checkValueEntry(val)
-
-        # todo remove this, allows also for intuitive setting (1 value for all the dimensions)
-        if val.shape[0] != self._dim:
-            raise Exception(f'Wrong dimension of {val_type} inserted.')
+        if nodes is None:
+            nodes = np.where(self._nodes_array == 1)[0]
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
 
         # if a matrix of values is being provided, check cols match len(nodes)
         # multiple_vals = val.ndim == 2 and val.shape[1] != 1
@@ -905,8 +904,7 @@ class Variable(AbstractVariable):
         #         v = val[:, i]
         #     else:
         #         v = val
-
-        self._impl[val_type][:, nodes] = val
+        self._impl[val_type][:, nodes] = np.atleast_2d(val).T
 
     def setLowerBounds(self, bounds, nodes=None):
         """
@@ -1228,6 +1226,30 @@ class VariableView(AbstractVariableView):
         #         v = val
 
         self._parent._impl[val_type][self._indices, nodes] = np.atleast_2d(val).T
+
+    def getImpl(self, nodes=None):
+        """
+        Getter for the implemented variable.
+
+        Args:
+            node: node at which the variable is retrieved
+
+        Returns:
+            implemented instances of the variable
+        """
+        if nodes is None:
+            nodes = np.where(self._parent._nodes_array == 1)[0]
+
+        # todo do I keep this?
+        # this returns empty list if node is not in the active nodes
+        nodes = misc.checkNodes(nodes, self._parent._nodes_array)
+        # getting all the columns specified in nodes
+        var_impl = self._parent._impl['var'][self._indices, nodes]
+
+        return var_impl
+
+    def getBounds(self, nodes=None):
+        raise NotImplementedError('yet to implement!')
 
     def setLowerBounds(self, bounds, nodes=None):
         """

@@ -34,7 +34,10 @@ class NlpsolSolver(Solver):
         # g = self.function_container.getCnstrFList()
         # p = self.var_container.getParameterList()
 
-
+        print(j)
+        print(w)
+        print(g)
+        print(p)
         self.prob_dict = {'f': j, 'x': w, 'g': g, 'p': p}
 
         # create solver from prob
@@ -52,6 +55,8 @@ class NlpsolSolver(Solver):
         # build variables
         var_list = list()
         for var in self.var_container.getVarList(offset=False):
+            print('dan', var.getImpl())
+            exit()
             var_list.append(var.getImpl())
         w = cs.vertcat(*var_list)
 

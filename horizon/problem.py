@@ -951,57 +951,116 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
+    nodes = 10
+    dt = 0.01
+    prb = Problem(nodes, crash_if_suboptimal=True)
+    x = prb.createStateVariable('x', 6)
+    u = prb.createInputVariable('u', 2)
+    p = prb.createSingleParameter('p', 6)
+
+    prb.setDynamics(x)
+    prb.setDt(dt)
+    x.setBounds([1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2])
+
+    constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
+
+    constr1.setBounds([1, 1], [1, 1])
+    solver = Solver.make_solver('ipopt', prb)
+
+    all_sol = dict()
+    for i in range(100):
+        p.assign(6 * [2*i])
+        solver.solve()
+        sol = solver.getSolutionDict()
+        all_sol[i] = sol
+
+    exit()
+
     N = 10
     dt = 0.01
     prob = Problem(N, casadi_type=cs.SX)
 
     x = prob.createStateVariable('x', 5)
 
+    x.setLowerBounds([3, 3, 3, 3, 3], 2)
+
+    exit()
 
     par = prob.createParameter('par', 3)
     print(par.getImpl())
+    # # print(par.getValues())
+    # # par.assign([2, 2, 2], [3, 5])
+    # 
+    # # par[2].assign(2, [0, 4])
+    # # print(par[2].getValues())
+    # # print(par.getValues())
+    # single_var = prob.createSingleVariable('single_var', 4)
+    # 
+    # # print(x.getImpl())
+    # 
+    # # print(x[2].getImpl(2))
+    # # x[2].setLowerBounds(2, 6)
+    # # print(x.getLowerBounds())
+    # 
+    # # print(single_var)
+    # # print(single_var.getImpl().dim())
+    # # print(single_var.getImpl([2, 5]))
+    # # print(single_var.getBounds())
+    # # print(single_var.getLowerBounds([4, 5]))
+    # # print(single_var.getLowerBounds())
+    # 
+    # single_par = prob.createSingleParameter('single_par', 3)
+    # 
+    # print(single_par)
+    # print(single_par.getImpl())
+    # # print(single_par.getImpl().dim())
+    # print(single_par.getImpl([2, 5]))
+    # print(single_par.getValues([2, 3]))
+    # single_par[1].assign(3)
+    # print(single_par.getValues(2))
+    # print(x.getNodes())
+    # exit()
+    # 
+    # print(x[0:3])
+    # x[0:3].setLowerBounds([1,2,3])
+    # print(x.getLowerBounds())
+    # y = prob.createInputVariable('y', 5)
+    # x_prev = x.getVarOffset(-1)
+    # 
+    # xdot = cs.vertcat(x)
+    # prob.setDynamics(xdot)
+    # cnsrt = prob.createConstraint('cnsrt', x_prev + y, nodes=range(5, 9), bounds=dict(lb=[0, 0, 0, 0, 0], ub=[10, 10, 10, 10, 10]))
+    # 
+    # print(cnsrt.getBounds())
+    # 
+    # cnsrt.setNodes([1], erasing=True)
+    # print(cnsrt.getImpl([1]))
+    # 
+    # cost = prob.createIntermediateCost('cost', x*y)
+    # 
+    # 
+    # exit()
 
-    exit()
+    N = 3
+    prb = Problem(N)
+    x1 = prb.createStateVariable('x1', 2)
+    x2 = prb.createStateVariable('x2', 3)
+    p1 = prb.createParameter('p1', 4)
+    c = prb.createConstraint('c', x1)
+
+    xini = -np.array([1, 2, 3, 4, 5])
+    xini_proj = np.repeat(np.atleast_2d(xini).T, N + 1, axis=1)
+
+    prb.getState().setInitialGuess(xini)
+    xini_output = prb.getState().getInitialGuess()
+
+    nx = prb.getState().getVars().size1()
 
 
+    xini_output = x1.getInitialGuess()
 
-    single_var = prob.createSingleVariable('single_var', 4)
-    print(x.getImpl())
-    # print(single_var)
-    # print(single_var.getImpl().dim())
-    # print(single_var.getImpl([2, 5]))
-    # print(single_var.getBounds())
-    # print(single_var.getLowerBounds([4, 5]))
-    # print(single_var.getLowerBounds())
 
-    exit()
-    single_par = prob.createSingleParameter('single_par', 3)
-
-    print(single_par)
-    print(single_par.getImpl())
-    # print(single_par.getImpl().dim())
-    print(single_par.getImpl([2, 5]))
-    print(single_par.getValues([2, 3]))
-
-    exit()
-
-    print(x[0:3])
-    x[0:3].setLowerBounds([1,2,3])
-    print(x.getLowerBounds())
-
-    y = prob.createInputVariable('y', 5)
-    x_prev = x.getVarOffset(-1)
-
-    xdot = cs.vertcat(x)
-    prob.setDynamics(xdot)
-    cnsrt = prob.createConstraint('cnsrt', x_prev + y, nodes=range(5, 9), bounds=dict(lb=[0, 0, 0, 0, 0], ub=[10, 10, 10, 10, 10]))
-
-    print(cnsrt.getBounds())
-
-    cnsrt.setNodes([1], erasing=True)
-    print(cnsrt.getImpl([1]))
-
-    cost = prob.createIntermediateCost('cost', x*y)
+    xini_output = x2.getInitialGuess()
 
 
     exit()

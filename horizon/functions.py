@@ -108,10 +108,8 @@ class Function:
         # todo throw with a meaningful error when nodes inserted are wrong
         used_var_impl = list()
         for var in self.vars:
-            print(var)
-
             var_impl = var.getImpl(self.getNodes())
-            print('(getUsedVarImpl) var_impl:', var_impl)
+            # print('(getUsedVarImpl) var_impl:', var_impl)
             var_dim = var.getDim()
             # reshape them for all-in-one evaluation of function
             # this is getting all the generic variable x, even if the function has a slice of it x[0:2].
