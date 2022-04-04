@@ -17,7 +17,7 @@ class Function:
             This function is an abstract representation of its projection over the nodes of the optimization problem.
             An abstract function gets internally implemented at each node, using the variables at that node.
     """
-    def __init__(self, name: str, f: cs.SX, used_vars: list, used_pars: list, nodes: Union[int, Iterable]):
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes: Union[int, Iterable]):
         """
         Initialize the Horizon Function.
 
@@ -214,7 +214,7 @@ class Function:
         Getter for the variables used in the function.
 
         Returns:
-            a dictionary of all the used variable. {name: cs.SX}
+            a dictionary of all the used variable. {name: cs.SX or cs.MX}
         """
 
         if offset:
@@ -233,7 +233,7 @@ class Function:
         Getter for the parameters used in the function.
 
         Returns:
-            a dictionary of all the used parameters. {name: cs.SX}
+            a dictionary of all the used parameters. {name: cs.SX or cs.MX}
         """
         return self.pars
 
@@ -303,7 +303,7 @@ class Constraint(Function):
     """
     Constraint Function of Horizon.
     """
-    def __init__(self, name: str, f: cs.SX, used_vars: list, used_pars: list, nodes: Union[int, Iterable], bounds =None):
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes: Union[int, Iterable], bounds =None):
         """
         Initialize the Constraint Function.
 

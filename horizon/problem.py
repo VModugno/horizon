@@ -62,7 +62,7 @@ class Problem:
         self.state_der: cs.SX = None
         self.dt = None
 
-    def createStateVariable(self, name: str, dim: int, casadi_type=cs.SX) -> sv.StateVariable:
+    def createStateVariable(self, name: str, dim: int, casadi_type=None) -> sv.StateVariable:
         """
         Create a State Variable active on ALL the N+1 nodes of the optimization problem.
 
@@ -74,6 +74,8 @@ class Problem:
             instance of the State Variable
 
         """
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
         if self.state_der is not None:
             raise RuntimeError('createStateVariable must be called *before* setDynamics')
 
@@ -84,7 +86,7 @@ class Problem:
         self.state_aggr.addVariable(var)
         return var
 
-    def createInputVariable(self, name: str, dim: int, casadi_type=cs.SX) -> sv.InputVariable:
+    def createInputVariable(self, name: str, dim: int, casadi_type=None) -> sv.InputVariable:
         """
         Create an Input Variable active on all the nodes of the optimization problem except the final one. (Input is not defined on the last node)
 
@@ -95,6 +97,8 @@ class Problem:
         Returns:
             instance of Input Variable
         """
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
         # binary array to select which nodes are "active" for the variable. In this case, all of them
         nodes_array = np.ones(self.nodes)
         nodes_array[-1] = 0
@@ -103,7 +107,7 @@ class Problem:
         self.input_aggr.addVariable(var)
         return var
 
-    def createSingleVariable(self, name: str, dim: int, casadi_type=cs.SX) -> sv.SingleVariable:
+    def createSingleVariable(self, name: str, dim: int, casadi_type=None) -> sv.SingleVariable:
         """
         Create a node-independent Single Variable of the optimization problem. It is a single decision variable which is not projected over the horizon.
 
@@ -114,12 +118,12 @@ class Problem:
         Returns:
             instance of Single Variable
         """
-        nodes_array = None
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
 
-        var = self.var_container.setSingleVar(name, dim, nodes_array, casadi_type)
+        var = self.var_container.setSingleVar(name, dim, casadi_type)
         return var
 
-    def createVariable(self, name: str, dim: int, nodes: Iterable = None, casadi_type=cs.SX) -> Union[sv.StateVariable, sv.SingleVariable]:
+    def createVariable(self, name: str, dim: int, nodes: Iterable = None, casadi_type=None) -> Union[sv.StateVariable, sv.SingleVariable]:
         """
         Create a generic Variable of the optimization problem. Can be specified over a desired portion of the horizon nodes.
 
@@ -132,12 +136,17 @@ class Problem:
             instance of Variable
 
         """
-        nodes_array = self._convertNodes(nodes)
+        # todo: right now the variable is created only in the nodes specified
+        #     better to create it on every nodes anyway?
+
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
+        nodes_array = np.ones(self.nodes) if nodes is None else misc.getBinaryFromNodes(self.nodes, misc.checkNodes(nodes, np.ones(self.nodes)))
 
         var = self.var_container.setVar(name, dim, nodes_array, casadi_type)
         return var
 
-    def createParameter(self, name: str, dim: int, nodes: Iterable = None, casadi_type=cs.SX) -> Union[
+    def createParameter(self, name: str, dim: int, nodes: Iterable = None, casadi_type=None) -> Union[
         sv.Parameter, sv.SingleParameter]:
         """
         Create a Parameter used in the optimization problem. Can be specified over a desired portion of the horizon nodes.
@@ -152,13 +161,15 @@ class Problem:
             instance of Parameter
 
         """
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
         nodes_array = np.zeros(self.nodes)
         nodes_array[nodes] = 1
 
         par = self.var_container.setParameter(name, dim, nodes_array, casadi_type)
         return par
 
-    def createSingleParameter(self, name: str, dim: int, casadi_type=cs.SX) -> sv.SingleParameter:
+    def createSingleParameter(self, name: str, dim: int, casadi_type=None) -> sv.SingleParameter:
         """
         Create a node-independent Single Parameter used to solve the optimization problem. It is a single parameter which is not projected over the horizon.
         Parameters are specified before building the problem and can be 'assigned' afterwards, before solving the problem.
@@ -171,6 +182,8 @@ class Problem:
             instance of Single Parameter
 
         """
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
         par = self.var_container.setSingleParameter(name, dim, casadi_type)
         return par
 
@@ -938,9 +951,18 @@ if __name__ == '__main__':
 
     N = 10
     dt = 0.01
-    prob = Problem(N)
+    prob = Problem(N, casadi_type=cs.MX)
 
     x = prob.createStateVariable('x', 5)
+    generic_var = prob.createVariable('generic_var', 2, [0,3,6])
+    single_var = prob.createSingleVariable('single_var', 4)
+
+    print(single_var)
+    print(single_var.getImpl().dim())
+    print(single_var.getImpl())
+    exit()
+    print(generic_var.getImpl())
+    exit()
 
     print(x[0:3])
     x[0:3].setLowerBounds([1,2,3])

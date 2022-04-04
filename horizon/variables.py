@@ -179,8 +179,9 @@ class SingleParameter(AbstractVariable):
         """
         super(SingleParameter, self).__init__(tag, dim)
 
+        self._casadi_type = casadi_type
         self._impl = dict()
-        self._impl['par'] = casadi_type.sym(self._tag + '_impl', self._dim)
+        self._impl['par'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
         self._impl['val'] = np.zeros(self._dim)
 
     def assign(self, vals):
@@ -319,7 +320,7 @@ class Parameter(AbstractVariable):
         self._casadi_type = casadi_type
 
         self._par_offset = dict()
-        self._impl = dict()
+        self._impl = OrderedDict()
 
         self._nodes = list(nodes)
         self._project()
@@ -329,18 +330,32 @@ class Parameter(AbstractVariable):
         Implements the parameter along the horizon nodes.
         Generates an ordered dictionary containing the implemented parameter and its value at each node {node: {par, val}}
         """
-        new_par_impl = OrderedDict()
+        # todo how to re-project keeping the old variables
+        #   right now it only rewrite everything
+        new_par_impl = self._impl
 
-        for n in self._nodes:
-            if 'n' + str(n) in self._impl:
-                new_par_impl['n' + str(n)] = self._impl['n' + str(n)]
-            else:
-                par_impl = self._casadi_type.sym(self._tag + '_' + str(n), self._dim)
-                new_par_impl['n' + str(n)] = dict()
-                new_par_impl['n' + str(n)]['par'] = par_impl
-                new_par_impl['n' + str(n)]['val'] = np.zeros(self._dim)
+        proj_dim = [self._dim, len(self._nodes_array)]
+        # the MX variable is created: dim x n_nodes
+        par_impl = self._casadi_type.sym(self._tag, proj_dim[0], proj_dim[1])
+        par_value = np.zeros([proj_dim[0], proj_dim[1]])
 
-        self._impl = new_par_impl
+        new_par_impl['par'] = par_impl
+        new_par_impl['val'] = par_value
+
+        self._impl.clear()
+        self._impl.update(new_par_impl)
+
+
+
+        # par_impl = self._casadi_type.sym(self._tag, dim)
+        # for n in self._nodes:
+        #     if 'n' + str(n) in self._impl:
+        #         new_par_impl['n' + str(n)] = self._impl['n' + str(n)]
+        #     else:
+        #         par_impl = self._casadi_type.sym(self._tag + '_' + str(n), self._dim)
+        #         new_par_impl['n' + str(n)] = dict()
+        #         new_par_impl['n' + str(n)]['par'] = par_impl
+        #         new_par_impl['n' + str(n)]['val'] = np.zeros(self._dim)
 
     def getNodes(self):
         """
@@ -818,7 +833,7 @@ class Variable(AbstractVariable):
 
         Implemented variable "x" --> x_0, x_1, ... x_N-1, x_N
     """
-    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
         """
         Initialize the Variable.
         The bounds of the variable are initialized to -inf/inf.
@@ -826,18 +841,18 @@ class Variable(AbstractVariable):
         Args:
             tag: name of the variable
             dim: dimension of the variable
-            nodes: nodes the variable is defined on
+            nodes_array: binary array specifying the variable is defined on
         """
         super(Variable, self).__init__(tag, dim)
 
         self._casadi_type = casadi_type
-        self._nodes_array = nodes
+        self._nodes_array = nodes_array
 
         self.var_offset = dict()
         self._impl = dict()
 
-        # i project the variable over the optimization nodes
-        self._project_mx()
+        # project the variable over the optimization nodes
+        self._project()
 
     def _setVals(self, val_type, val, nodes=None):
         """
@@ -968,36 +983,39 @@ class Variable(AbstractVariable):
             n_nodes: the desired number of nodes to be set
         """
         self._nodes_array = list(n_nodes)
-        self._project_mx()
+        self._project()
+
+    # def _project(self):
+    #     """
+    #     Implements the variable along the horizon nodes.
+    #     Generates an ordered dictionary containing the implemented variables and its value at each node {node: {var, lb, ub, w0}}
+    #     """
+    #     new_var_impl = OrderedDict()
+    #
+    #     for n in self._nodes_array:
+    #         if 'n' + str(n) in self._impl:
+    #             # when reprojecting, if the implemented variable is present already, use it. Do not create a new one.
+    #             new_var_impl['n' + str(n)] = self._impl['n' + str(n)]
+    #         else:
+    #             var_impl = self._casadi_type.sym(self._tag + '_' + str(n), self._dim)
+    #             new_var_impl['n' + str(n)] = dict()
+    #             new_var_impl['n' + str(n)]['var'] = var_impl
+    #             new_var_impl['n' + str(n)]['lb'] = np.full(self._dim, -np.inf)
+    #             new_var_impl['n' + str(n)]['ub'] = np.full(self._dim, np.inf)
+    #             new_var_impl['n' + str(n)]['w0'] = np.zeros(self._dim)
+    #
+    #     # this is to keep the instance at the same memory position (since it is shared by the OffsetVariable)
+    #     self._impl.clear()
+    #     self._impl.update(new_var_impl)
 
     def _project(self):
         """
         Implements the variable along the horizon nodes.
         Generates an ordered dictionary containing the implemented variables and its value at each node {node: {var, lb, ub, w0}}
         """
-        new_var_impl = OrderedDict()
+        # todo how to re-project keeping the old variables
+        #   right now it only rewrite everything
 
-        for n in self._nodes_array:
-            if 'n' + str(n) in self._impl:
-                # when reprojecting, if the implemented variable is present already, use it. Do not create a new one.
-                new_var_impl['n' + str(n)] = self._impl['n' + str(n)]
-            else:
-                var_impl = self._casadi_type.sym(self._tag + '_' + str(n), self._dim)
-                new_var_impl['n' + str(n)] = dict()
-                new_var_impl['n' + str(n)]['var'] = var_impl
-                new_var_impl['n' + str(n)]['lb'] = np.full(self._dim, -np.inf)
-                new_var_impl['n' + str(n)]['ub'] = np.full(self._dim, np.inf)
-                new_var_impl['n' + str(n)]['w0'] = np.zeros(self._dim)
-
-        # this is to keep the instance at the same memory position (since it is shared by the OffsetVariable)
-        self._impl.clear()
-        self._impl.update(new_var_impl)
-
-    def _project_mx(self):
-        """
-        Implements the variable along the horizon nodes.
-        Generates an ordered dictionary containing the implemented variables and its value at each node {node: {var, lb, ub, w0}}
-        """
         new_var_impl = OrderedDict()
         # self._nodes contains the actual nodes on which the variable is defined
         proj_dim = [self._dim, len(self._nodes_array)]
@@ -1030,12 +1048,12 @@ class Variable(AbstractVariable):
         """
         # embed this in getVals? difference between cs.vertcat and np.hstack
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)
+            nodes = np.where(self._nodes_array == 1)[0]
 
         # todo do I keep this?
         # this returns empty list if node is not in the active nodes
         # nodes = misc.checkNodes(nodes, self._nodes_array)
-
+        # getting all the columns specified in nodes
         var_impl = cs.vertcat(*[self._impl['var'][:, nodes]])
 
         return var_impl
@@ -1598,6 +1616,9 @@ class InputAggregate(Aggregate):
 #             z: [nNone, n0, n1, ...])
 
 #
+
+default_casadi_type = cs.SX
+
 class VariablesContainer:
     """
     Container of all the variables of Horizon.
@@ -1616,7 +1637,7 @@ class VariablesContainer:
         self._vars = OrderedDict()
         self._pars = OrderedDict()
 
-    def createVar(self, var_type, name, dim, active_nodes, casadi_type=cs.SX):
+    def createVar(self, var_type, name, dim, active_nodes, casadi_type=default_casadi_type):
         """
         Create a variable and adds it to the Variable Container.
 
@@ -1625,6 +1646,7 @@ class VariablesContainer:
             name: name of variable
             dim: dimension of variable
             active_nodes: nodes the variable is defined on
+            casadi_type: type of casadi variable (SX or MX)
         """
         var = var_type(name, dim, active_nodes, casadi_type)
         self._vars[name] = var
@@ -1635,7 +1657,7 @@ class VariablesContainer:
 
         return var
 
-    def setVar(self, name, dim, active_nodes=None, casadi_type=cs.SX):
+    def setVar(self, name, dim, active_nodes=None, casadi_type=default_casadi_type):
         """
         Creates a generic variable.
 
@@ -1643,6 +1665,7 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             active_nodes: nodes the variable is defined on. If not specified, a Single Variable is generated
+            casadi_type: type of casadi variable (SX or MX)
         """
         if active_nodes is None:
             var_type = SingleVariable
@@ -1652,40 +1675,43 @@ class VariablesContainer:
         var = self.createVar(var_type, name, dim, active_nodes, casadi_type)
         return var
 
-    def setStateVar(self, name, dim, nodes, casadi_type=cs.SX):
+    def setStateVar(self, name, dim, nodes, casadi_type=default_casadi_type):
         """
         Creates a State variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            casadi_type: type of casadi variable (SX or MX)
         """
         var = self.createVar(StateVariable, name, dim, nodes, casadi_type)
         return var
 
-    def setInputVar(self, name, dim, nodes, casadi_type=cs.SX):
+    def setInputVar(self, name, dim, nodes, casadi_type=default_casadi_type):
         """
         Creates a Input (Control) variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            casadi_type: type of casadi variable (SX or MX)
         """
         var = self.createVar(InputVariable, name, dim, nodes, casadi_type)
         return var
 
-    def setSingleVar(self, name, dim, casadi_type=cs.SX):
+    def setSingleVar(self, name, dim, casadi_type=default_casadi_type):
         """
         Creates a Single variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            casadi_type: type of casadi variable (SX or MX)
         """
         var = self.createVar(SingleVariable, name, dim, None, casadi_type)
         return var
 
-    def setParameter(self, name, dim, nodes, casadi_type=cs.SX):
+    def setParameter(self, name, dim, nodes, casadi_type=default_casadi_type):
         """
         Creates a Parameter.
 
@@ -1693,6 +1719,7 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             nodes: nodes the parameter is defined on. If not specified, all the horizon nodes are considered
+            casadi_type: type of casadi variable (SX or MX)
         """
         par = Parameter(name, dim, nodes, casadi_type)
         self._pars[name] = par
@@ -1703,13 +1730,14 @@ class VariablesContainer:
 
         return par
 
-    def setSingleParameter(self, name, dim, casadi_type=cs.SX):
+    def setSingleParameter(self, name, dim, casadi_type=default_casadi_type):
         """
         Creates a Single Variable.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
+            casadi_type: type of casadi variable (SX or MX)
         """
         par = SingleParameter(name, dim, None, casadi_type)
         self._pars[name] = par
