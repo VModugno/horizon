@@ -13,6 +13,8 @@ from abc import ABC, abstractmethod
 now the StateVariable is only abstract at the very beginning.
 Formerly
 '''
+
+# todo check the setter 'assign': np.atleast_2d(vals).T
 # todo create function checker to check if nodes are in self.nodes and if everything is ok with the input (no dict, no letters...)
 
 class AbstractVariable(ABC, cs.SX):
@@ -317,7 +319,7 @@ class SingleParameterView(AbstractVariableView):
         if vals.shape[0] != self._dim:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._parent._impl['val'][self._indices] = vals
+        self._parent._impl['val'][self._indices] = np.atleast_2d(vals).T
 
 class Parameter(AbstractVariable):
     """
@@ -558,7 +560,7 @@ class ParameterView(AbstractVariableView):
         if vals.shape[0] != self._dim:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._parent._impl['val'][self._indices, nodes] = vals
+        self._parent._impl['val'][self._indices, nodes] = np.atleast_2d(vals).T
 
     def getValues(self, nodes=None):
         """
