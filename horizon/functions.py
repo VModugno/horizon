@@ -423,7 +423,7 @@ class Constraint(Function):
         if len(nodes) == 0:
             return np.zeros((self.getDim(), 0))
 
-        vals = np.atleast_2d(val_type[:, nodes]).T
+        vals = np.atleast_2d(val_type[:, nodes])
 
         return vals
 

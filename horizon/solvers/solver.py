@@ -134,7 +134,7 @@ class Solver(ABC):
             else:
                 raise ValueError(f"value '{type}' not allowed.")
 
-            fun_list.append(retriever.flatten())
+            fun_list.append(retriever.flatten(order='F'))
 
         f = cs.vertcat(*fun_list)
         return f
