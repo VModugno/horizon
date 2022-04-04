@@ -952,30 +952,27 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     nodes = 10
-    dt = 0.01
-    prb = Problem(nodes, crash_if_suboptimal=True)
-    x = prb.createStateVariable('x', 6)
-    u = prb.createInputVariable('u', 2)
-    p = prb.createSingleParameter('p', 6)
+    prb = Problem(nodes)
+    x = prb.createStateVariable('x', 5)
+    y = prb.createInputVariable('y', 5)
+    z = prb.createVariable('z', 5, [3, 4, 5])
+    p = prb.createParameter('p', 4)
+    b = prb.createSingleParameter('b', 6)
 
-    prb.setDynamics(x)
-    prb.setDt(dt)
-    x.setBounds([1, 1, 3, 1, 5, 1], [2, 5, 10, 2, 10, 2])
+    x_prev = x.getVarOffset(-2)
 
-    constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
+    cnsrt1 = prb.createIntermediateConstraint('cnsrt1', x + y)
+    cnsrt2 = prb.createConstraint('cnsrt2', x[0:4] + p)
+    cnsrt3 = prb.createConstraint('cnsrt3', z + b[1:6], [3, 4, 5])
 
-    constr1.setBounds([1, 2], [1, 2])
-    solver = Solver.make_solver('ipopt', prb)
+    state = prb.getState()
+    state[0][2].setLowerBounds([2])
 
-    all_sol = dict()
-    for i in range(100):
-        p.assign(6 * [2*i])
-        solver.solve()
-        sol = solver.getSolutionDict()
-        print(sol['x'])
-        exit()
-        all_sol[i] = sol
-
+    p_slice = p[2:4]
+    print(f'{type(p)} --> {type(p_slice)}')
+    p_slice.assign([52, 52])
+    print(p.getValues())
+    print('==============================')
     exit()
 
     N = 10
