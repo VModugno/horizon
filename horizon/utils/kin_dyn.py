@@ -1,6 +1,34 @@
 from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
+from horizon.utils import utils
 import casadi as cs
 import numpy as np
+
+def SRBD(m, I, f_dict, r, rddot, p_dict, w, wdot):
+    """
+    Returns Single Rigid Body Dynamics constraint
+    Args:
+        m: robot mass
+        I: robot centroidal inertia
+        f_dict: dictionary of contact forces
+        r: com position
+        rddot: com acceleration
+        p_dict: dictionary of contact points
+        w: base angular velocity
+        wdot: base angular acceleration
+    Returns:
+        constraint as a vertcat
+        m(rddot - g) - sum(f) = 0
+        Iwdot + w x Iw - sum(r - p) x f
+    """
+    g = np.array([0., 0., -9.81])
+    eq1 = m * (rddot - g)
+    eq2 = cs.mtimes(I, wdot) + cs.mtimes(utils.skew(w), cs.mtimes(I,  w))
+    for i, f in f_dict.items():
+        eq1 = eq1 - f
+        eq2 = eq2 - cs.mtimes(utils.skew(p_dict[i] - r),  f)
+
+    return cs.vertcat(eq1, eq2)
+
 
 def surface_point_contact(plane_dict, q, kindyn, frame):
     """
