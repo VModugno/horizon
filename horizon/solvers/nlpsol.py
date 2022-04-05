@@ -78,7 +78,8 @@ class NlpsolSolver(Solver):
             else:
                 raise Exception('wrong type of function found in fun_container')
 
-        j = cs.sum1(cs.veccat(*fun_list))
+        # if it is empty, just set j to []
+        j = cs.sum1(cs.veccat(*fun_list)) if fun_list else []
 
         return j, w, g, p
 
