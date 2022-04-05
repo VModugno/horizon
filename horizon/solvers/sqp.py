@@ -28,18 +28,18 @@ class GNSQPSolver(Solver):
         var_list = list()
         for var in prb.var_container.getVarList(offset=False):
             var_list.append(var.getImpl())
-        w = cs.vertcat(*var_list)  #
+        w = cs.veccat(*var_list)  #
 
         fun_list = list()
         for fun in prb.function_container.getCnstr().values():
             fun_list.append(fun.getImpl())
-        g = cs.vertcat(*fun_list)
+        g = cs.veccat(*fun_list)
 
         # build cost functions list
         cost_list = list()
         for fun in prb.function_container.getCost().values():
             cost_list.append(fun.getImpl())
-        f = cs.vertcat(cs.vertcat(*cost_list))
+        f = cs.vertcat(cs.veccat(*cost_list))
 
         # create solver from prob
         F = cs.Function('f', [w], [f], ['x'], ['f'])
