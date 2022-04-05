@@ -1091,10 +1091,14 @@ class Variable(AbstractVariable):
         """
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        # nodes = misc.checkNodes(nodes, self._nodes_array)
-        # todo atleast_2d? why is there 2d
-        vals = np.atleast_2d(self._impl[val_type][:, nodes])
+        # todo warning:
+        #  calling the following with a node of type int '5' will return a 1-dim array (WRONG)
+        #  calling the following with a node of type list '[5]' will return a 2-dim array (CORRECT)
+        #  checkNodes() takes care of it
+        vals = self._impl[val_type][:, nodes]
 
         return vals
 
