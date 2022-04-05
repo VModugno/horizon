@@ -430,18 +430,18 @@ class Problem:
         # todo add guards
         if nodes is None:
             # all the nodes besides the last
-            active_nodes_array = np.ones(self.nodes)
+            nodes_array = np.ones(self.nodes)
         else:
-            active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+            nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
             # nodes = misc.checkNodes(nodes, range(self.nodes))
 
         used_var = self._getUsedVar(j)
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)}')
+            self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.CostFunction(name, j, used_var, used_par, active_nodes_array)
+        fun = fc.CostFunction(name, j, used_var, used_par, nodes_array)
 
         self.function_container.addFunction(fun)
 
@@ -502,17 +502,17 @@ class Problem:
         """
         # todo add guards
         if nodes is None:
-            active_nodes_array = np.ones(self.nodes)
+            nodes_array = np.ones(self.nodes)
         else:
-            active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+            nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
 
         used_var = self._getUsedVar(j)
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)}')
+            self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.ResidualFunction(name, j, used_var, used_par, active_nodes_array)
+        fun = fc.ResidualFunction(name, j, used_var, used_par, nodes_array)
 
         self.function_container.addFunction(fun)
 

@@ -34,10 +34,6 @@ class NlpsolSolver(Solver):
         # g = self.function_container.getCnstrFList()
         # p = self.var_container.getParameterList()
 
-        print(j)
-        print(w)
-        print(g)
-        print(p)
         self.prob_dict = {'f': j, 'x': w, 'g': g, 'p': p}
 
         # create solver from prob
@@ -57,21 +53,20 @@ class NlpsolSolver(Solver):
         for var in self.var_container.getVarList(offset=False):
             # x_2_3 --> dim 2 of node 3
             # order is: x_0_0, x_1_0, x_0_1, x_1_1 ...
-            var_list.append(var.getImpl()[:])
-        w = cs.vertcat(*var_list)
-
+            var_list.append(var.getImpl())
+        w = cs.veccat(*var_list)
 
         # build parameters
         par_list = list()
         for par in self.var_container.getParList(offset=False):
-            par_list.append(par.getImpl()[:])
-        p = cs.vertcat(*par_list)
+            par_list.append(par.getImpl())
+        p = cs.veccat(*par_list)
 
         # build constraint functions list
         fun_list = list()
         for fun in self.fun_container.getCnstr().values():
-            fun_list.append(fun.getImpl()[:])
-        g = cs.vertcat(*fun_list)
+            fun_list.append(fun.getImpl())
+        g = cs.veccat(*fun_list)
 
         # treat differently cost and residual (residual must be quadratized)
         fun_list = list()
@@ -83,7 +78,7 @@ class NlpsolSolver(Solver):
             else:
                 raise Exception('wrong type of function found in fun_container')
 
-        j = cs.sum1(cs.vertcat(*fun_list))
+        j = cs.sum1(cs.veccat(*fun_list))
 
         return j, w, g, p
 
