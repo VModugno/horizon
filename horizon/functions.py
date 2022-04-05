@@ -192,11 +192,8 @@ class Function:
         """
 
         # todo this method is very important. It projects the abstract functions on the nodes specified using the implemented variables
-        bin_nodes = misc.getBinaryFromNodes(len(self._nodes_array), nodes)
-
-
         if erasing:
-            self._nodes_array = np.array(len(self._nodes_array))
+            self._nodes_array[:] = 0
 
         # adding active nodes to function nodes
         self._nodes_array[nodes] = 1
