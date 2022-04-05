@@ -17,7 +17,7 @@ class Function:
             This function is an abstract representation of its projection over the nodes of the optimization problem.
             An abstract function gets internally implemented at each node, using the variables at that node.
     """
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes: Union[int, Iterable]):
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: Iterable):
         """
         Initialize the Horizon Function.
 
@@ -26,12 +26,12 @@ class Function:
             f: SX function
             used_vars: variable used in the function
             used_pars: parameters used in the function
-            nodes: nodes the function is active on
+            nodes_array: binary array specifying the nodes the function is active on
         """
 
         self._f = f
         self._name = name
-        self._nodes_array = nodes
+        self._nodes_array = nodes_array
         # todo isn't there another way to get the variables from the function g?
         self.vars = used_vars
         self.pars = used_pars
@@ -86,7 +86,7 @@ class Function:
             nodes = misc.getNodesFromBinary(self._nodes_array)
 
         # if the fun is defined on all the nodes (but active only on a portion), then just guard the active nodes:
-        # GUARD:
+        # todo GUARD:
         if not np.all(self._nodes_array[nodes]):
             raise Exception('Function not defined on the requested nodes: ', nodes)
 
@@ -301,7 +301,7 @@ class Constraint(Function):
     """
     Constraint Function of Horizon.
     """
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes: Union[int, Iterable], bounds =None):
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: Union[int, Iterable], bounds =None):
         """
         Initialize the Constraint Function.
 
@@ -310,16 +310,16 @@ class Constraint(Function):
             f: constraint SX function
             used_vars: variable used in the function
             used_pars: parameters used in the function
-            nodes: nodes the function is active on
+            nodes_array: nodes the function is active on
             bounds: bounds of the constraint. If not specified, the bounds are set to zero.
         """
         self.bounds = dict()
 
         # constraints are initialize to 0.: 0. <= x <= 0.
-        self.bounds['lb'] = np.full((f.shape[0], nodes.size), 0.)
-        self.bounds['ub'] = np.full((f.shape[0], nodes.size), 0.)
+        self.bounds['lb'] = np.full((f.shape[0], nodes_array.size), 0.)
+        self.bounds['ub'] = np.full((f.shape[0], nodes_array.size), 0.)
 
-        super().__init__(name, f, used_vars, used_pars, nodes)
+        super().__init__(name, f, used_vars, used_pars, nodes_array)
 
         # manage bounds
         if bounds is not None:
@@ -491,7 +491,7 @@ class CostFunction(Function):
     """
     Cost Function of Horizon.
     """
-    def __init__(self, name, f, used_vars, used_pars, nodes):
+    def __init__(self, name, f, used_vars, used_pars, nodes_array):
         """
         Initialize the Cost Function.
 
@@ -500,9 +500,9 @@ class CostFunction(Function):
             f: SX function
             used_vars: variable used in the function
             used_pars: parameters used in the function
-            nodes: nodes the function is active on
+            nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes)
+        super().__init__(name, f, used_vars, used_pars, nodes_array)
 
     def getType(self):
         """
@@ -517,7 +517,7 @@ class ResidualFunction(Function):
     """
     Residual Function of Horizon.
     """
-    def __init__(self, name, f, used_vars, used_pars, nodes):
+    def __init__(self, name, f, used_vars, used_pars, nodes_array):
         """
         Initialize the Residual Function.
 
@@ -526,9 +526,9 @@ class ResidualFunction(Function):
             f: SX function
             used_vars: variable used in the function
             used_pars: parameters used in the function
-            nodes: nodes the function is active on
+            nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes)
+        super().__init__(name, f, used_vars, used_pars, nodes_array)
 
     def getType(self):
         """
