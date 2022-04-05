@@ -1,0 +1,26 @@
+<launch>
+
+    <!-- LOAD URDF AND SRDF IN PARAM SERVER -->
+    <arg name="enable_crane" default="false"/> 
+    <arg name="simulation" default="false"/>
+    <arg name="fixed_base" default="false"/>
+    <arg name="use_mimic" default="false"/>
+    
+    <param name="robot_description" command=" $(find xacro)/xacro --inorder '$(find kangaroo_horizon)/urdf/kangaroo_cartesio.urdf.xacro'
+                enable_crane:=$(arg enable_crane) simulation:=$(arg simulation) fixed_base:=$(arg fixed_base) use_mimic:=$(arg use_mimic)"/>
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" >
+        <param name="publish_frequency" type="double" value="250.0" />
+    </node>
+
+    <node pkg="joy" type="joy_node" name="joy_node">
+        <param name="dev" type="string" value="/dev/input/js0" />
+        <param name="autorepeat_rate" type="double" value="10." />
+    </node>
+
+
+    <!-- RVIZ -->
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find horizon_examples)/SRBD_horizon.rviz"/>
+            
+
+</launch>
