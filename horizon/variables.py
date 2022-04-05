@@ -33,7 +33,7 @@ class AbstractVariable(ABC, cs.SX):
             tag: name of the variable
             dim: dimension of the variable
         """
-        super().__init__( cs.SX.sym(tag, dim))
+        super().__init__(cs.SX.sym(tag, dim))
 
         self._tag = tag
         self._dim = dim
@@ -116,9 +116,8 @@ class OffsetTemplate(AbstractVariable):
         Returns:
             implemented instances of the abstract offsetted variable
         """
-        # todo why update nodes given the _var_impl?
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)[0]
+            nodes = misc.getNodesFromBinary(self._nodes_array)
 
         # offset the node of self.offset
         offset_nodes = nodes + self._offset
@@ -357,7 +356,9 @@ class Parameter(AbstractVariable):
         #   right now it only rewrite everything
         new_par_impl = OrderedDict()
 
-        proj_dim = [self._dim, len(self._nodes_array)]
+        # count how many nodes are active and create a matrix with only than number of columns (nodes)
+        num_nodes = np.sum(self._nodes_array).astype(int)
+        proj_dim = [self._dim, num_nodes]
         # the MX variable is created: dim x n_nodes
         par_impl = self._casadi_type.sym(self._tag, proj_dim[0], proj_dim[1])
         par_value = np.zeros([proj_dim[0], proj_dim[1]])
@@ -407,7 +408,7 @@ class Parameter(AbstractVariable):
            nodes: nodes at which the parameter is assigned
        """
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)[0]
+            nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
@@ -443,7 +444,7 @@ class Parameter(AbstractVariable):
         """
 
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)[0]
+            nodes = misc.getNodesFromBinary(self._nodes_array)
 
         nodes = misc.checkNodes(nodes, self._nodes_array)
 
@@ -464,7 +465,7 @@ class Parameter(AbstractVariable):
             value/s of the parameter
         """
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)[0]
+            nodes = misc.getNodesFromBinary(self._nodes_array)
 
         nodes = misc.checkNodes(nodes, self._nodes_array)
         par_impl = self._impl['val'][:, nodes]
@@ -574,8 +575,8 @@ class ParameterView(AbstractVariableView):
                 """
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._parent._nodes_array)
-
-        nodes = misc.checkNodes(nodes, self._parent._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
         par_impl = self._parent._impl['val'][self._indices, nodes]
 
@@ -890,7 +891,7 @@ class Variable(AbstractVariable):
             nodes: which nodes the values are applied on
         """
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)[0]
+            nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
@@ -1038,7 +1039,8 @@ class Variable(AbstractVariable):
 
         new_var_impl = OrderedDict()
         # self._nodes contains the actual nodes on which the variable is defined
-        proj_dim = [self._dim, len(self._nodes_array)]
+        num_nodes = np.sum(self._nodes_array).astype(int)
+        proj_dim = [self._dim, num_nodes]
         # the MX variable is created: dim x n_nodes
         var_impl = self._casadi_type.sym(self._tag, proj_dim[0], proj_dim[1])
         var_lb = np.full((proj_dim[0], proj_dim[1]), -np.inf)
@@ -1068,12 +1070,14 @@ class Variable(AbstractVariable):
         """
         # embed this in getVals? difference between cs.vertcat and np.hstack
         if nodes is None:
-            nodes = np.where(self._nodes_array == 1)[0]
+            nodes = misc.getNodesFromBinary(self._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        # todo do I keep this?
-        # this returns empty list if node is not in the active nodes
-        nodes = misc.checkNodes(nodes, self._nodes_array)
         # getting all the columns specified in nodes
+
+        # todo now everything should be filtered:
+        #     function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
         var_impl = self._impl['var'][:, nodes]
 
         return var_impl
@@ -1098,6 +1102,7 @@ class Variable(AbstractVariable):
         #  calling the following with a node of type int '5' will return a 1-dim array (WRONG)
         #  calling the following with a node of type list '[5]' will return a 2-dim array (CORRECT)
         #  checkNodes() takes care of it
+
         vals = self._impl[val_type][:, nodes]
 
         return vals
@@ -1210,7 +1215,6 @@ class VariableView(AbstractVariableView):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._parent._nodes_array)
         else:
-
             nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
         val = misc.checkValueEntry(val)
@@ -1244,7 +1248,7 @@ class VariableView(AbstractVariableView):
             implemented instances of the variable
         """
         if nodes is None:
-            nodes = np.where(self._parent._nodes_array == 1)[0]
+            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
 
         # todo do I keep this?
         # this returns empty list if node is not in the active nodes
