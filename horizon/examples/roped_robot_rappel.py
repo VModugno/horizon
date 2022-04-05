@@ -104,7 +104,7 @@ def main(args):
     q.setBounds(q_min, q_max)
     q.setBounds(q_init, q_init, 0)
 
-    qdot.setBounds(np.zeros(nv), np.zeros(nv), [0, n_nodes+1])
+    qdot.setBounds(np.zeros(nv), np.zeros(nv), [0, n_nodes])
 
 
     node_action = (10, 60) #20
