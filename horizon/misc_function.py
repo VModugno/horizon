@@ -78,6 +78,11 @@ def checkValueEntry(val):
 
     return val
 
+def convertNodestoPos(nodes, nodes_array):
+    # todo add guards
+    nodes_to_pos = np.nonzero(np.in1d(np.where(nodes_array == 1), nodes))[0]
+    return nodes_to_pos
+
 def getBinaryFromNodes(total_nodes: int, active_nodes: list):
     # add guards
     # if not isinstance(nodes, list):

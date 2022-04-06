@@ -952,36 +952,17 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     nodes = 10
-    dt = 0.01
-    prb = Problem(nodes, crash_if_suboptimal=True, casadi_type=cs.MX)
-    x = prb.createStateVariable('x', 6)
-    u = prb.createInputVariable('u', 2)
-    # p = prb.createSingleParameter('p', 6)
-    prb.setDynamics(x)
-    prb.setDt(dt)
-    x.setBounds([1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2])
+    prb = Problem(nodes)
+    x = prb.createStateVariable('x', 5)
+    v = prb.createStateVariable('v', 5)
+    y = prb.createInputVariable('y', 5)
+    z = prb.createVariable('z', 5, [3, 4, 5])
+    p = prb.createParameter('p', 3, [2, 4, 5])
 
-    # constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
+    print(z.getImpl(4))
 
-    # constr1.setBounds([1, 1], [1, 1])
-    solver = Solver.make_solver('ipopt', prb)
+    print(p.getImpl(5))
 
-    all_sol = dict()
-    for i in range(100):
-        # p.assign(6 * [2 * i])
-        solver.solve()
-        sol = solver.getSolutionDict()
-        all_sol[i] = sol
-
-    exit()
-
-    N = 10
-    dt = 0.01
-    prob = Problem(N, casadi_type=cs.SX)
-
-    x = prob.createStateVariable('x', 5)
-
-    x.setLowerBounds([3, 3, 3, 3, 3], 2)
 
     exit()
 
