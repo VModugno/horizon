@@ -182,7 +182,7 @@ class SingleParameter(AbstractVariable):
         self._impl['par'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
         self._impl['val'] = np.zeros([self._dim, 1])
 
-    def assign(self, vals):
+    def assign(self, vals, indices=None):
         """
         Assign a value to the parameter. Can be assigned also after the problem is built, before solving the problem.
         If not assigned, its default value is zero.
@@ -192,11 +192,16 @@ class SingleParameter(AbstractVariable):
         """
         vals = misc.checkValueEntry(vals)
 
+        if indices is None:
+            indices_vec = np.array(range(self._dim)).astype(int)
+        else:
+            indices_vec = np.array(indices).astype(int)
+
         # todo what if vals has no shape?
-        if vals.shape[0] != self._dim:
+        if vals.shape[0] != indices_vec.size:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._impl['val'] = vals
+        self._impl['val'][indices_vec] = np.atleast_2d(vals).T
 
     def _getVals(self, val_type, nodes):
         """
@@ -308,13 +313,8 @@ class SingleParameterView(AbstractVariableView):
         Args:
             vals: value of the parameter
         """
-        vals = misc.checkValueEntry(vals)
-
-        # todo what if vals has no shape?
-        if vals.shape[0] != self._dim:
-            raise Exception('Wrong dimension of parameter values inserted.')
-
-        self._parent._impl['val'][self._indices] = np.atleast_2d(vals).T
+        indices = np.array(range(self._parent._dim))[self._indices]
+        self._parent.assign(vals, indices=indices)
 
 class Parameter(AbstractVariable):
     """
@@ -394,7 +394,7 @@ class Parameter(AbstractVariable):
         self._nodes = list(n_nodes)
         self._project()
 
-    def assign(self, val, nodes=None):
+    def assign(self, val, nodes=None, indices=None):
         """
        Assign a value to the parameter at a desired node. Can be assigned also after the problem is built, before solving the problem.
        If not assigned, its default value is zero.
@@ -408,9 +408,17 @@ class Parameter(AbstractVariable):
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+
         val = misc.checkValueEntry(val)
 
-        if val.shape[0] != self._dim:
+        if indices is None:
+            indices_vec = np.array(range(self._dim)).astype(int)
+        else:
+            indices_vec = np.array(indices).astype(int)
+
+        # todo what if vals has no shape?
+        if val.shape[0] != indices_vec.size:
             raise Exception('Wrong dimension of parameter values inserted.')
 
         # if a matrix of values is being provided, check cols match len(nodes)
@@ -419,14 +427,8 @@ class Parameter(AbstractVariable):
         if multiple_vals and val.shape[1] != len(nodes):
             raise Exception(f'Wrong dimension of parameter inserted.')
 
-        # for i, node in enumerate(nodes):
-        #
-        #     if multiple_vals:
-        #         v = val[:, i]
-        #     else:
-        #         v = val
         # todo this is because what I receive as val is 1-dimensional array which cannot be assigned to a matrix
-        self._impl['val'][:, nodes] = np.atleast_2d(val).T
+        self._impl['val'][indices_vec, pos_nodes] = np.atleast_2d(val)
 
     def getImpl(self, nodes=None):
         """
@@ -438,18 +440,7 @@ class Parameter(AbstractVariable):
         Returns:
             implemented instances of the abstract parameter
         """
-
-        if nodes is None:
-            pos_nodes = misc.getNodesFromBinary(self._nodes_array)
-        else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
-            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
-
-        par_impl = self._impl['par'][:, pos_nodes]
-        # todo remove the next line, it should return a matrix!
-        par_impl = cs.reshape(par_impl, len(nodes)*self._dim, 1)
-
-        return par_impl
+        return self._getVals('par', nodes)
 
     def getValues(self, nodes=None):
         """
@@ -461,12 +452,27 @@ class Parameter(AbstractVariable):
         Returns:
             value/s of the parameter
         """
+        return self._getVals('val', nodes)
+
+    def _getVals(self, val_type, nodes):
+        """
+        wrapper function to get the desired argument from the variable.
+
+        Args:
+            val_type: type of the argument to retrieve
+            nodes: if None, returns an array of the desired argument
+
+        Returns:
+            value/s of the desired argument
+        """
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        par_impl = self._impl['val'][:, nodes]
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+
+        par_impl = self._impl[val_type][:, pos_nodes]
 
         return par_impl
 
@@ -549,17 +555,8 @@ class ParameterView(AbstractVariableView):
            vals: value of the parameter
            nodes: nodes at which the parameter is assigned
        """
-        if nodes is None:
-            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
-        else:
-            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
-
-        vals = misc.checkValueEntry(vals)
-
-        if vals.shape[0] != self._dim:
-            raise Exception('Wrong dimension of parameter values inserted.')
-
-        self._parent._impl['val'][self._indices, nodes] = np.atleast_2d(vals).T
+        indices = np.array(range(self._parent._dim))[self._indices]
+        self._parent.assign(vals, nodes=nodes, indices=indices)
 
     def getValues(self, nodes=None):
         """
@@ -571,15 +568,9 @@ class ParameterView(AbstractVariableView):
                 Returns:
                     value/s of the parameter
                 """
-        if nodes is None:
-            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
-        else:
-            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
-
-        par_impl = self._parent._impl['val'][self._indices, nodes]
+        par_impl = self._parent.getValues(nodes)[self._indices, :]
 
         return par_impl
-
 
 class SingleVariable(AbstractVariable):
     """
@@ -893,19 +884,9 @@ class Variable(AbstractVariable):
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        # if a matrix of values is being provided, check cols match len(nodes)
-        # multiple_vals = val.ndim == 2 and val.shape[1] != 1
-        #
-        # if multiple_vals and val.shape[1] != len(nodes):
-        #     raise Exception(f'Wrong dimension of {val_type} inserted.')
-        #
-        # for i, node in enumerate(nodes):
-        #
-        #     if multiple_vals:
-        #         v = val[:, i]
-        #     else:
-        #         v = val
-        self._impl[val_type][:, nodes] = np.atleast_2d(val).T
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+
+        self._impl[val_type][:, pos_nodes] = np.atleast_2d(val).T
 
     def setLowerBounds(self, bounds, nodes=None):
         """
@@ -1055,30 +1036,6 @@ class Variable(AbstractVariable):
         self._impl.clear()
         self._impl.update(new_var_impl)
 
-
-    def getImpl(self, nodes=None):
-        """
-        Getter for the implemented variable.
-
-        Args:
-            node: node at which the variable is retrieved
-
-        Returns:
-            implemented instances of the abstract variable
-        """
-        # embed this in getVals? difference between cs.vertcat and np.hstack
-        if nodes is None:
-            pos_nodes = misc.getNodesFromBinary(self._nodes_array)
-        else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
-            # function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
-            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
-
-
-        var_impl = self._impl['var'][:, pos_nodes]
-
-        return var_impl
-
     def _getVals(self, val_type, nodes):
         """
         wrapper function to get the desired argument from the variable.
@@ -1095,14 +1052,23 @@ class Variable(AbstractVariable):
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        # todo warning:
-        #  calling the following with a node of type int '5' will return a 1-dim array (WRONG)
-        #  calling the following with a node of type list '[5]' will return a 2-dim array (CORRECT)
-        #  checkNodes() takes care of it
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
-        vals = self._impl[val_type][:, nodes]
+        vals = self._impl[val_type][:, pos_nodes]
 
         return vals
+
+    def getImpl(self, nodes=None):
+        """
+        Getter for the implemented variable.
+
+        Args:
+            node: node at which the variable is retrieved
+
+        Returns:
+            implemented instances of the abstract variable
+        """
+        return self._getVals('var', nodes)
 
     def getLowerBounds(self, node=None):
         """
