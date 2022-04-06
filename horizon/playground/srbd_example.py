@@ -192,10 +192,12 @@ foot_frames = ["left_foot_upper_left", "left_foot_upper_right", "left_foot_lower
                                  "right_foot_lower_right"] # contact 4 to 7
 
 i = 0
+initial_foot_position = dict()
 for frame in foot_frames:
     FK = cs.Function.deserialize(kindyn.fk(frame))
     p = FK(q=joint_init)['ee_pos']
     print(f"{frame}: {p}")
+    initial_foot_position[i] = p
 
     c[i].setInitialGuess(p)
     c[i].setBounds(p, p, 0)  # starts in homing
@@ -233,7 +235,16 @@ prb.createCost("min_qddot", 1e1*cs.sumsqr(qddot), nodes=list(range(0, ns)))
 
 for i in range(0, nc):
     prb.createCost("min_f" + str(i), 1e-3*cs.sumsqr(f[i]), nodes=list(range(0, ns)))
-    prb.createCost("min_cdot" + str(i), 1e6 * cs.sumsqr(cdot[i]))
+
+for i in range(0, 4):
+    prb.createCost("min_cdotx" + str(i), 1e6 * cs.sumsqr(cdot[i][0]))
+    prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
+    prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
+for i in range(4, 8):
+    prb.createCost("min_cdotx" + str(i), 1e6 * cs.sumsqr(cdot[i][0]))
+    prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
+    prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
+
 
 # CONSTRAINTS
 x_prev, _ = utils.double_integrator_with_floating_base(q_prev, qdot_prev, qddot_prev)
