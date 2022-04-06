@@ -83,19 +83,14 @@ class Function:
         Returns:
             instance of the CASADI function at the desired node
         """
-        # todo implement the second version (function defined always on all the nodes)
-
         if nodes is None:
-            nodes = misc.getNodesFromBinary(self._nodes_array)
-
-        # if the fun is defined on all the nodes (but active only on a portion), then just guard the active nodes:
-        # todo GUARD:
-        if not np.all(self._nodes_array[nodes]):
-            raise Exception('Function not defined on the requested nodes: ', nodes)
+            pos_nodes = misc.getNodesFromBinary(self._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
 
         # otherwise I have to convert the input nodes to the corresponding column position:
         #     function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
-        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
         # todo add guards
         # nodes = misc.checkNodes(nodes, self._nodes)
