@@ -15,7 +15,8 @@
 
     <node pkg="joy" type="joy_node" name="joy_node">
         <param name="dev" type="string" value="/dev/input/js0" />
-        <param name="autorepeat_rate" type="double" value="10." />
+        <!-- param name="autorepeat_rate" type="double" value="10." / -->
+        <param name="deadzone" type="double" value="0.1" />
     </node>
 
 

@@ -18,6 +18,8 @@ from ttictoc import tic,toc
 import tf
 from geometry_msgs.msg import WrenchStamped
 from sensor_msgs.msg import Joy
+from numpy import linalg as LA
+from visualization_msgs.msg import Marker
 
 def joy_cb(msg):
     global joy_msg
@@ -47,6 +49,27 @@ def SRBDTfBroadcaster(r, o, c_dict, t):
     br.sendTransform(r,o,t,"SRB","world")
     for key, val in c_dict.items():
         br.sendTransform(val, [0., 0., 0., 1.], t, key, "world")
+
+# def SRBDViewer(I, base_frame, t):
+#     marker = Marker()
+#     marker.header.frame_id = base_frame
+#     marker.header.stamp = t
+#     marker.header.ns = "SRBD"
+#     marker.id = 0
+#     marker.type = Marker.SPHERE
+#     marker.action = Marker.ADD
+#     marker.pose.position.x = marker.pose.position.y = marker.pose.position.z = 0.
+#     marker.pose.orientation.x = marker.pose.orientation.y = marker.pose.orientation.z = 0.
+#     marker.pose.orientation.w = 1.
+#     marker.scale.x = 1;
+#     marker.scale.y = 0.1;
+#     marker.scale.z = 0.1;
+#     marker.color.a = 1.0;
+#     marker.color.r = 0.0;
+#     marker.color.g = 1.0;
+#     marker.color.b = 0.0;
+
+
 
 
 horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
@@ -153,6 +176,8 @@ for frame in foot_frames:
     cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], 0)  # starts with 0 velocity
     cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], ns)  # ends with 0 velocity
 
+    f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.])
+
     i = i + 1
 
 COM = cs.Function.deserialize(kindyn.centerOfMass())
@@ -170,12 +195,17 @@ w.setInitialGuess([0., 0., 0.])
 w.setBounds([0., 0., 0.], [0., 0., 0.], 0)
 
 # SET UP COST FUNCTION
+prb.createCost("rz_tracking", 2e3 * cs.sumsqr(r[2] - com[2]), nodes=range(1, ns+1))
+Wo = prb.createParameter('Wo', 1)
+Wo.assign(0.)
+prb.createCost("o_tracking", Wo * cs.sumsqr(o - joint_init[3:7]), nodes=range(1, ns+1))
 prb.createCost("rdot_tracking", 1e3 * cs.sumsqr(rdot - rdot_ref), nodes=range(1, ns+1))
 prb.createCost("w_tracking", 1e3*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
 prb.createCost("min_qddot", 1e1*cs.sumsqr(qddot), nodes=list(range(0, ns)))
 
 for i in range(0, nc):
-    prb.createCost("min_f" + str(i), 1e-6*cs.sumsqr(f[i]), nodes=list(range(0, ns)))
+    prb.createCost("min_f" + str(i), 1e-3*cs.sumsqr(f[i]), nodes=list(range(0, ns)))
+    prb.createCost("min_cdot" + str(i), 1e6 * cs.sumsqr(cdot[i]))
 
 # CONSTRAINTS
 x_prev, _ = utils.double_integrator_with_floating_base(q_prev, qdot_prev, qddot_prev)
@@ -249,8 +279,36 @@ while not rospy.is_shutdown():
         c[i].setBounds(solution['c' + str(i)][: ,1], solution['c' + str(i)][: ,1], 0)
         cdot[i].setBounds(solution['cdot' + str(i)][:, 1], solution['cdot' + str(i)][:, 1], 0)
 
-    rdot_ref.assign([0.1 * joy_msg.axes[1], -0.1 * joy_msg.axes[0], 0.1 * joy_msg.axes[7]], nodes=range(1, ns+1))
-    w_ref.assign([1. * joy_msg.axes[6], -1. * joy_msg.axes[4], 1. * joy_msg.axes[3]], nodes=range(1, ns + 1))
+
+    #JOYSTICK
+    rdot_ref.assign([0.1 * joy_msg.axes[1], -0.1 * joy_msg.axes[0], 0.1 * joy_msg.axes[7]], nodes=range(1, ns+1)) #com velocities
+    w_ref.assign([1. * joy_msg.axes[6], -1. * joy_msg.axes[4], 1. * joy_msg.axes[3]], nodes=range(1, ns + 1)) #base angular velocities
+
+    if(joy_msg.buttons[3]):
+        Wo.assign(1e5)
+    else:
+        Wo.assign(0.)
+
+    def setForceLimits(id_start, id_end, f, triggered):
+        if triggered:
+            for i in range(id_start, id_end):
+                f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=range(5, ns))
+                if LA.norm(solution['f' + str(i)][:, 0]) <= 25.:
+                    f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=range(0, 5))
+        else:
+            for i in range(id_start, id_end):
+                f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=range(0, ns))
+
+    if joy_msg.buttons[4]:
+        setForceLimits(0, 4, f, True)
+    else:
+        setForceLimits(0,4, f, False)
+    if joy_msg.buttons[5]:
+        setForceLimits(4, 8, f, True)
+    else:
+        setForceLimits(4, 8, f, False)
+
+    ##
 
 
     tic()
