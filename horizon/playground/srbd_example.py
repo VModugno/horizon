@@ -19,7 +19,7 @@ import tf
 from geometry_msgs.msg import WrenchStamped
 from sensor_msgs.msg import Joy
 from numpy import linalg as LA
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker, MarkerArray
 
 def joy_cb(msg):
     global joy_msg
@@ -50,25 +50,53 @@ def SRBDTfBroadcaster(r, o, c_dict, t):
     for key, val in c_dict.items():
         br.sendTransform(val, [0., 0., 0., 1.], t, key, "world")
 
-# def SRBDViewer(I, base_frame, t):
-#     marker = Marker()
-#     marker.header.frame_id = base_frame
-#     marker.header.stamp = t
-#     marker.header.ns = "SRBD"
-#     marker.id = 0
-#     marker.type = Marker.SPHERE
-#     marker.action = Marker.ADD
-#     marker.pose.position.x = marker.pose.position.y = marker.pose.position.z = 0.
-#     marker.pose.orientation.x = marker.pose.orientation.y = marker.pose.orientation.z = 0.
-#     marker.pose.orientation.w = 1.
-#     marker.scale.x = 1;
-#     marker.scale.y = 0.1;
-#     marker.scale.z = 0.1;
-#     marker.color.a = 1.0;
-#     marker.color.r = 0.0;
-#     marker.color.g = 1.0;
-#     marker.color.b = 0.0;
+def SRBDViewer(I, base_frame, t, number_of_contacts):
+    marker = Marker()
+    marker.header.frame_id = base_frame
+    marker.header.stamp = t
+    marker.ns = "SRBD"
+    marker.id = 0
+    marker.type = Marker.CUBE
+    marker.action = Marker.ADD
+    marker.pose.position.x = marker.pose.position.y = marker.pose.position.z = 0.
+    marker.pose.orientation.x = marker.pose.orientation.y = marker.pose.orientation.z = 0.
+    marker.pose.orientation.w = 1.
 
+    a = I[0,0] + I[1,1] + I[2,2]
+    marker.scale.x = 0.5*(I[2,2] + I[1,1])/a
+    marker.scale.y = 0.5*(I[2,2] + I[0,0])/a
+    marker.scale.z = 0.5*(I[0,0] + I[1,1])/a
+    marker.color.a = 0.8
+    marker.color.r = 0.0
+    marker.color.g = 1.0
+    marker.color.b = 0.0
+
+    pub = rospy.Publisher('box', Marker, queue_size=10).publish(marker)
+
+    marker_array = MarkerArray()
+    for i in range(0, number_of_contacts):
+        m = Marker()
+        m.header.frame_id = "c" + str(i)
+        m.header.stamp = t
+        m.ns = "SRBD"
+        m.id = i + 1
+        m.type = Marker.SPHERE
+        m.action = Marker.ADD
+        m.pose.position.x = marker.pose.position.y = marker.pose.position.z = 0.
+        m.pose.orientation.x = marker.pose.orientation.y = marker.pose.orientation.z = 0.
+        m.pose.orientation.w = 1.
+
+        m.scale.x = 0.04
+        m.scale.y = 0.04
+        m.scale.z = 0.04
+        m.color.a = 0.8
+        m.color.r = 0.0
+        m.color.g = 0.0
+        m.color.b = 1.0
+
+        marker_array.markers.append(m)
+
+    pub2 = rospy.Publisher('contacts', MarkerArray, queue_size=10).publish(marker_array)
 
 
 
@@ -325,6 +353,7 @@ while not rospy.is_shutdown():
     SRBDTfBroadcaster(solution['r'][:, 0], solution['o'][:, 0], c0_hist, t)
     for i in range(0, 8):
         publishContactForce(t, solution['f' + str(i)][:, 0], 'c' + str(i))
+    SRBDViewer(I, "SRB", t, 8)
 
 
 
