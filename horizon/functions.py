@@ -41,6 +41,9 @@ class Function:
         all_names = [i.getName() for i in all_input]
 
         self._fun = cs.Function(name, self.vars + self.pars, [self._f], all_names, ['f'])
+        num_nodes = int(np.sum(self._nodes_array))
+        # mapping the function to use more threads
+        self._fun = self._fun.map(num_nodes, 'thread', 20)
         self._fun_impl = None
         self._project()
 
@@ -92,9 +95,7 @@ class Function:
 
         # otherwise I have to convert the input nodes to the corresponding column position:
         #     function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
-        convertNodes = lambda nodes: np.nonzero(np.in1d(np.where(self._nodes_array == 1), nodes))[0]
-
-        pos_nodes = convertNodes(nodes)
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
         # todo add guards
         # nodes = misc.checkNodes(nodes, self._nodes)

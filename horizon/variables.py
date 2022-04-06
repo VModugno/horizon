@@ -121,10 +121,6 @@ class OffsetTemplate(AbstractVariable):
 
         # offset the node of self.offset
         offset_nodes = nodes + self._offset
-
-        if np.any(offset_nodes < 0):
-            raise Exception(f'Variable not defined on requested nodes: "{offset_nodes}"')
-
         offset_nodes = misc.checkNodes(offset_nodes, self._nodes_array)
 
         var_impl = self._impl['var'][:, offset_nodes]
@@ -444,11 +440,12 @@ class Parameter(AbstractVariable):
         """
 
         if nodes is None:
-            nodes = misc.getNodesFromBinary(self._nodes_array)
+            pos_nodes = misc.getNodesFromBinary(self._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
+            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
-        nodes = misc.checkNodes(nodes, self._nodes_array)
-
-        par_impl = self._impl['par'][:, nodes]
+        par_impl = self._impl['par'][:, pos_nodes]
         # todo remove the next line, it should return a matrix!
         par_impl = cs.reshape(par_impl, len(nodes)*self._dim, 1)
 
@@ -466,8 +463,9 @@ class Parameter(AbstractVariable):
         """
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        nodes = misc.checkNodes(nodes, self._nodes_array)
         par_impl = self._impl['val'][:, nodes]
 
         return par_impl
@@ -1070,15 +1068,14 @@ class Variable(AbstractVariable):
         """
         # embed this in getVals? difference between cs.vertcat and np.hstack
         if nodes is None:
-            nodes = misc.getNodesFromBinary(self._nodes_array)
+            pos_nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
+            # function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
+            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
-        # getting all the columns specified in nodes
 
-        # todo now everything should be filtered:
-        #     function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
-        var_impl = self._impl['var'][:, nodes]
+        var_impl = self._impl['var'][:, pos_nodes]
 
         return var_impl
 
@@ -1249,10 +1246,9 @@ class VariableView(AbstractVariableView):
         """
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._parent._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
 
-        # todo do I keep this?
-        # this returns empty list if node is not in the active nodes
-        nodes = misc.checkNodes(nodes, self._parent._nodes_array)
         # getting all the columns specified in nodes
         var_impl = self._parent._impl['var'][self._indices, nodes]
 
