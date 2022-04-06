@@ -84,13 +84,13 @@ class Function:
             instance of the CASADI function at the desired node
         """
         if nodes is None:
-            pos_nodes = misc.getNodesFromBinary(self._nodes_array)
+            nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
         # otherwise I have to convert the input nodes to the corresponding column position:
         #     function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
-            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
         # todo add guards
         # nodes = misc.checkNodes(nodes, self._nodes)
