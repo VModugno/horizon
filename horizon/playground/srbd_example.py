@@ -233,14 +233,13 @@ prb.createCost("rdot_tracking", 1e3 * cs.sumsqr(rdot - rdot_ref), nodes=range(1,
 prb.createCost("w_tracking", 1e3*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
 prb.createCost("min_qddot", 1e1*cs.sumsqr(qddot), nodes=list(range(0, ns)))
 
-for i in range(0, nc):
-    prb.createCost("min_f" + str(i), 1e-3*cs.sumsqr(f[i]), nodes=list(range(0, ns)))
-
 for i in range(0, 4):
+    prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
     prb.createCost("min_cdotx" + str(i), 1e6 * cs.sumsqr(cdot[i][0]))
     prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
     prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
 for i in range(4, 8):
+    prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
     prb.createCost("min_cdotx" + str(i), 1e6 * cs.sumsqr(cdot[i][0]))
     prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
     prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
