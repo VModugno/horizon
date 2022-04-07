@@ -39,7 +39,7 @@ class Problem:
             logging_level: accepts the level of logging from package logging (INFO, DEBUG, ...)
         """
         self.opts = None
-
+        self.thread_map_num = 10
         self.default_casadi_type = casadi_type
         self.default_solver = cs.nlpsol
         self.default_solver_plugin = 'ipopt'
@@ -364,7 +364,7 @@ class Problem:
             self.logger.debug(f'Creating Constraint Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)} using vars {used_var}')
 
         # create internal representation of a constraint
-        fun = fc.Constraint(name, g, used_var, used_par, active_nodes_array, bounds)
+        fun = fc.Constraint(name, g, used_var, used_par, active_nodes_array, bounds, thread_map_num=self.thread_map_num)
 
         self.function_container.addFunction(fun)
 
@@ -441,7 +441,7 @@ class Problem:
         if self.debug_mode:
             self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.CostFunction(name, j, used_var, used_par, nodes_array)
+        fun = fc.CostFunction(name, j, used_var, used_par, nodes_array, thread_map_num=self.thread_map_num)
 
         self.function_container.addFunction(fun)
 
