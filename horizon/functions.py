@@ -7,6 +7,7 @@ import time
 from typing import Union, Iterable
 # from horizon.type_doc import BoundsDict
 
+default_thread_map = 10
 
 class Function:
 
@@ -17,7 +18,7 @@ class Function:
             This function is an abstract representation of its projection over the nodes of the optimization problem.
             An abstract function gets internally implemented at each node, using the variables at that node.
     """
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: Iterable):
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: Iterable, thread_map_num=None):
         """
         Initialize the Horizon Function.
 
@@ -35,6 +36,12 @@ class Function:
         # todo isn't there another way to get the variables from the function g?
         self.vars = used_vars
         self.pars = used_pars
+
+
+        if default_thread_map is None:
+            self.thread_map_num = default_thread_map
+        else:
+            self.thread_map_num = thread_map_num
 
         # create function of CASADI, dependent on (in order) [all_vars, all_pars]
         all_input = self.vars + self.pars
@@ -144,7 +151,7 @@ class Function:
             # if the function is not specified on any nodes, don't implement
             self._fun_impl = None
         else:
-            self._fun_map = self._fun.map(num_nodes, 'thread', 20)
+            self._fun_map = self._fun.map(num_nodes, 'thread', self.thread_map_num)
 
             used_var_impl = self._getUsedVarImpl()
             used_par_impl = self._getUsedParImpl()
@@ -278,7 +285,7 @@ class Constraint(Function):
     """
     Constraint Function of Horizon.
     """
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray, bounds =None):
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray, bounds=None, thread_map_num=None):
         """
         Initialize the Constraint Function.
 
@@ -296,7 +303,7 @@ class Constraint(Function):
         self.bounds['lb'] = np.full((f.shape[0], nodes_array.size), 0.)
         self.bounds['ub'] = np.full((f.shape[0], nodes_array.size), 0.)
 
-        super().__init__(name, f, used_vars, used_pars, nodes_array)
+        super().__init__(name, f, used_vars, used_pars, nodes_array, thread_map_num)
 
         # manage bounds
         if bounds is not None:
@@ -467,7 +474,7 @@ class CostFunction(Function):
     """
     Cost Function of Horizon.
     """
-    def __init__(self, name, f, used_vars, used_pars, nodes_array):
+    def __init__(self, name, f, used_vars, used_pars, nodes_array, thread_map_num=None):
         """
         Initialize the Cost Function.
 
@@ -478,7 +485,7 @@ class CostFunction(Function):
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes_array)
+        super().__init__(name, f, used_vars, used_pars, nodes_array, thread_map_num)
 
     def getType(self):
         """
@@ -493,7 +500,7 @@ class ResidualFunction(Function):
     """
     Residual Function of Horizon.
     """
-    def __init__(self, name, f, used_vars, used_pars, nodes_array):
+    def __init__(self, name, f, used_vars, used_pars, nodes_array, thread_map_num=None):
         """
         Initialize the Residual Function.
 
@@ -504,7 +511,7 @@ class ResidualFunction(Function):
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes_array)
+        super().__init__(name, f, used_vars, used_pars, nodes_array, thread_map_num)
 
     def getType(self):
         """
