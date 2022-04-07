@@ -140,29 +140,11 @@ class Function:
         Returns:
             the implemented function
         """
-        receding = False
-        if receding:
-            used_var_impl = list()
-            for var in self.vars:
-                var_impl = var.getImpl()
-                var_impl_matrix = cs.reshape(var_impl, (var.getDim(), len(self.getNodes())))
-                used_var_impl.append(var_impl_matrix)
-
-            used_par_impl = list()
-            for par in self.pars:
-                par_impl = par.getImpl()
-                par_impl_matrix = cs.reshape(par_impl, (par.getDim(), len(self.getNodes())))
-                used_par_impl.append(par_impl_matrix)
-
-            all_vars = used_var_impl + used_par_impl
-
-            self._fun_impl = self._fun(*all_vars)
-        else:
-            used_var_impl = self._getUsedVarImpl()
-            used_par_impl = self._getUsedParImpl()
-            all_vars = used_var_impl+used_par_impl
-            fun_eval = self._fun(*all_vars)
-            self._fun_impl = fun_eval
+        used_var_impl = self._getUsedVarImpl()
+        used_par_impl = self._getUsedParImpl()
+        all_vars = used_var_impl+used_par_impl
+        fun_eval = self._fun(*all_vars)
+        self._fun_impl = fun_eval
 
         # reshape it as a vector for solver
         # fun_eval_vector = cs.reshape(fun_eval, (self.getDim() * len(self.getNodes()), 1))
