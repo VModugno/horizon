@@ -38,7 +38,7 @@ class Function:
         self.pars = used_pars
 
 
-        if default_thread_map is None:
+        if thread_map_num is None:
             self.thread_map_num = default_thread_map
         else:
             self.thread_map_num = thread_map_num
