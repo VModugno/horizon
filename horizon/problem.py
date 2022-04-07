@@ -512,7 +512,7 @@ class Problem:
         if self.debug_mode:
             self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.ResidualFunction(name, j, used_var, used_par, nodes_array)
+        fun = fc.ResidualFunction(name, j, used_var, used_par, nodes_array, thread_map_num=self.thread_map_num)
 
         self.function_container.addFunction(fun)
 
