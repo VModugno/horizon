@@ -14,7 +14,6 @@ now the StateVariable is only abstract at the very beginning.
 Formerly
 '''
 
-# todo check the setter 'assign': np.atleast_2d(vals).T
 # todo create function checker to check if nodes are in self.nodes and if everything is ok with the input (no dict, no letters...)
 
 class AbstractVariable(ABC, cs.SX):
@@ -182,26 +181,26 @@ class SingleParameter(AbstractVariable):
         self._impl['par'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
         self._impl['val'] = np.zeros([self._dim, 1])
 
-    def assign(self, vals, indices=None):
+    def assign(self, val, indices=None):
         """
         Assign a value to the parameter. Can be assigned also after the problem is built, before solving the problem.
         If not assigned, its default value is zero.
 
         Args:
-            vals: value of the parameter
+            val: value of the parameter
         """
-        vals = misc.checkValueEntry(vals)
+        val = misc.checkValueEntry(val)
 
         if indices is None:
             indices_vec = np.array(range(self._dim)).astype(int)
         else:
             indices_vec = np.array(indices).astype(int)
 
-        # todo what if vals has no shape?
-        if vals.shape[0] != indices_vec.size:
+        val_checked = misc.checkValueEntry(val)
+        if val_checked.shape[0] != indices_vec.size:
             raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._impl['val'][indices_vec] = np.atleast_2d(vals).T
+        self._impl['val'][indices_vec] = val_checked
 
     def _getVals(self, val_type, nodes):
         """
@@ -403,6 +402,7 @@ class Parameter(AbstractVariable):
            val: value of the parameter
            nodes: nodes at which the parameter is assigned
        """
+        # nodes
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
@@ -412,23 +412,23 @@ class Parameter(AbstractVariable):
 
         val = misc.checkValueEntry(val)
 
+        # indices
         if indices is None:
             indices_vec = np.array(range(self._dim)).astype(int)
         else:
             indices_vec = np.array(indices).astype(int)
 
-        # todo what if vals has no shape?
-        if val.shape[0] != indices_vec.size:
+        val_checked = misc.checkValueEntry(val)
+        if val_checked.shape[0] != indices_vec.size:
             raise Exception('Wrong dimension of parameter values inserted.')
 
         # if a matrix of values is being provided, check cols match len(nodes)
-        multiple_vals = val.ndim == 2 and val.shape[1] != 1
+        multiple_vals = val_checked.ndim == 2 and val_checked.shape[1] != 1
 
-        if multiple_vals and val.shape[1] != len(nodes):
+        if multiple_vals and val_checked.shape[1] != len(nodes):
             raise Exception(f'Wrong dimension of parameter inserted.')
-
         # todo this is because what I receive as val is 1-dimensional array which cannot be assigned to a matrix
-        self._impl['val'][indices_vec, pos_nodes] = np.atleast_2d(val)
+        self._impl['val'][np.ix_(indices_vec, pos_nodes)] = val_checked
 
     def getImpl(self, nodes=None):
         """
@@ -599,14 +599,25 @@ class SingleVariable(AbstractVariable):
         self._impl['ub'] = np.full([self._dim, 1], np.inf)
         self._impl['w0'] = np.zeros([self._dim, 1])
 
-    def _setVals(self, val_type, input_val):
+    def _setVals(self, val_type, val, indices=None):
+        """
+        Generic setter.
 
-        val = misc.checkValueEntry(input_val)
+        Args:
+            val_type: desired type of values to set
+            val: values
+            indices: select the indices to set
+        """
+        if indices is None:
+            indices_vec = np.array(range(self._dim)).astype(int)
+        else:
+            indices_vec = np.array(indices).astype(int)
 
-        if val.shape[0] != self._dim:
-            raise Exception(f'Wrong dimension of {val_type} inserted.')
+        val_checked = misc.checkValueEntry(val)
+        if val_checked.shape[0] != indices_vec.size:
+            raise Exception('Wrong dimension of parameter values inserted.')
 
-        self._impl[val_type] = val
+        self._impl[val_type][indices_vec] = val_checked
 
     def setLowerBounds(self, bounds):
         """
@@ -794,13 +805,15 @@ class SingleVariableView(AbstractVariableView):
         super().__init__(parent, var_slice, indices)
 
     def _setVals(self, val_type, input_val):
+        """
+        Generic setter.
 
-        val = misc.checkValueEntry(input_val)
-
-        if val.shape[0] != self._dim:
-            raise Exception(f'Wrong dimension of {val_type} inserted.')
-
-        self._parent._impl[val_type][self._indices] = val
+        Args:
+            val_type: desired type of values to set
+            input_val: values
+        """
+        indices = np.array(range(self._parent._dim))[self._indices]
+        self._parent._setVals(val_type, input_val, indices=indices)
 
     def setLowerBounds(self, bounds):
         """
@@ -871,14 +884,17 @@ class Variable(AbstractVariable):
         # project the variable over the optimization nodes
         self._project()
 
-    def _setVals(self, val_type, val, nodes=None):
+    def _setVals(self, val_type, val, nodes=None, indices=None):
         """
         Generic setter.
 
         Args:
-            bounds: desired values to set
+            val_type: desired values to set
+            val: values
             nodes: which nodes the values are applied on
+            indices: which indices the values are applied on
         """
+        # nodes
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
@@ -886,7 +902,18 @@ class Variable(AbstractVariable):
 
         pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
-        self._impl[val_type][:, pos_nodes] = np.atleast_2d(val).T
+        # indices
+        if indices is None:
+            indices_vec = np.array(range(self._dim)).astype(int)
+        else:
+            indices_vec = np.array(indices).astype(int)
+
+
+        val_checked = misc.checkValueEntry(val)
+        if val_checked.shape[0] != indices_vec.size:
+            raise Exception('Wrong dimension of variable values inserted.')
+
+        self._impl[val_type][np.ix_(indices_vec, pos_nodes)] = val_checked
 
     def setLowerBounds(self, bounds, nodes=None):
         """
@@ -1175,30 +1202,8 @@ class VariableView(AbstractVariableView):
             bounds: desired values to set
             nodes: which nodes the values are applied on
         """
-        if nodes is None:
-            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
-        else:
-            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
-
-        val = misc.checkValueEntry(val)
-
-        if val.shape[0] != self._dim:
-            raise Exception(f'Wrong dimension of {val_type} inserted.')
-
-        # if a matrix of values is being provided, check cols match len(nodes)
-        multiple_vals = val.ndim == 2 and val.shape[1] != 1
-
-        if multiple_vals and val.shape[1] != len(nodes):
-            raise Exception(f'Wrong dimension of {val_type} inserted.')
-
-        # for i, node in enumerate(nodes):
-        #
-        #     if multiple_vals:
-        #         v = val[:, i]
-        #     else:
-        #         v = val
-
-        self._parent._impl[val_type][self._indices, nodes] = np.atleast_2d(val).T
+        indices = np.array(range(self._parent._dim))[self._indices]
+        self._parent._setVals(val_type, val, nodes, indices)
 
     def getImpl(self, nodes=None):
         """
@@ -1210,14 +1215,7 @@ class VariableView(AbstractVariableView):
         Returns:
             implemented instances of the variable
         """
-        if nodes is None:
-            nodes = misc.getNodesFromBinary(self._parent._nodes_array)
-        else:
-            nodes = misc.checkNodes(nodes, self._parent._nodes_array)
-
-        # getting all the columns specified in nodes
-        var_impl = self._parent._impl['var'][self._indices, nodes]
-
+        var_impl = self._parent.getImpl(nodes)[self._indices, :]
         return var_impl
 
     def getBounds(self, nodes=None):
