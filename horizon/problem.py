@@ -951,17 +951,52 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
+    N = 3
+    prb = Problem(N)
+    x1 = prb.createStateVariable('x1', 2)
+    x2 = prb.createStateVariable('x2', 3)
+    p1 = prb.createParameter('p1', 4)
+    c = prb.createConstraint('c', x1)
+
+    xlb = -np.array([1, 2, 3, 4, 5])
+    xub = -xlb
+    xlb_proj = np.repeat(np.atleast_2d(xlb).T, N + 1, axis=1)
+    xub_proj = np.repeat(np.atleast_2d(xub).T, N + 1, axis=1)
+
+    glb = -np.array([1, 2])
+    gub = -glb
+    glb_proj = np.repeat(np.atleast_2d(glb).T, N + 1, axis=1)
+    gub_proj = np.repeat(np.atleast_2d(gub).T, N + 1, axis=1)
+
+    c1 = prb.createConstraint('c1', x1[0])
+    # c.setBounds(glb, gub)
+
+    c1.getLowerBounds()
+
+    exit()
     nodes = 10
     prb = Problem(nodes)
     x = prb.createStateVariable('x', 5)
     v = prb.createStateVariable('v', 5)
-    y = prb.createInputVariable('y', 5)
+    y = prb.createParameter('y', 3)
     z = prb.createVariable('z', 5, [3, 4, 5])
     p = prb.createParameter('p', 3, [2, 4, 5])
 
-    print(z.getImpl(4))
 
-    print(p.getImpl(5))
+    v[3].getV
+    # p.assign([1, 2, 3])
+    # print(p.getValues())
+
+    # p.assign([2, 2, 4], 4)
+    # print(p.getValues())
+
+    # p.assign([2, 2], 4, indices=[0, 2])
+    # print(p.getValues())
+
+    # p.assign([2, 2], indices=[0, 2])
+
+    # p[0:2].assign([2,3], nodes=4)
+    # print(p.getValues())
 
 
     exit()

@@ -294,7 +294,7 @@ class Constraint(Function):
     """
     Constraint Function of Horizon.
     """
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: Union[int, Iterable], bounds =None):
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray, bounds =None):
         """
         Initialize the Constraint Function.
 
@@ -353,15 +353,14 @@ class Constraint(Function):
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        val = misc.checkValueEntry(val)
-
-        if val.shape[0] != self.getDim():
+        val_checked = misc.checkValueEntry(val)
+        if val_checked.shape[0] != self.getDim():
             raise Exception('Wrong dimension of upper bounds inserted.')
 
         # for node in nodes:
         #     if node in self._nodes:
         # todo guards (here it is assumed that bounds is a row)
-        val_type[:, nodes] = np.atleast_2d(val).T
+        val_type[:, nodes] = val_checked
 
 
     def setLowerBounds(self, bounds, nodes=None):
@@ -416,7 +415,7 @@ class Constraint(Function):
         if len(nodes) == 0:
             return np.zeros((self.getDim(), 0))
 
-        vals = np.atleast_2d(val_type[:, nodes])
+        vals = val_type[:, nodes]
 
         return vals
 
