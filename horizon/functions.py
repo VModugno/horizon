@@ -41,9 +41,6 @@ class Function:
         all_names = [i.getName() for i in all_input]
 
         self._fun = cs.Function(name, self.vars + self.pars, [self._f], all_names, ['f'])
-        num_nodes = int(np.sum(self._nodes_array))
-        # mapping the function to use more threads
-        self._fun = self._fun.map(num_nodes, 'thread', 20)
         self._fun_impl = None
         self._project()
 
@@ -140,15 +137,20 @@ class Function:
         Returns:
             the implemented function
         """
-        used_var_impl = self._getUsedVarImpl()
-        used_par_impl = self._getUsedParImpl()
-        all_vars = used_var_impl+used_par_impl
-        fun_eval = self._fun(*all_vars)
-        self._fun_impl = fun_eval
 
-        # reshape it as a vector for solver
-        # fun_eval_vector = cs.reshape(fun_eval, (self.getDim() * len(self.getNodes()), 1))
+        # mapping the function to use more threads
+        num_nodes = int(np.sum(self._nodes_array))
+        if num_nodes == 0:
+            # if the function is not specified on any nodes, don't implement
+            self._fun_impl = None
+        else:
+            self._fun_map = self._fun.map(num_nodes, 'thread', 20)
 
+            used_var_impl = self._getUsedVarImpl()
+            used_par_impl = self._getUsedParImpl()
+            all_vars = used_var_impl+used_par_impl
+            fun_eval = self._fun_map(*all_vars)
+            self._fun_impl = fun_eval
 
     def getNodes(self) -> list:
         """
