@@ -29,7 +29,7 @@ class Problem:
     """
 
     # todo probably better to set logger, not logging_level
-    def __init__(self, N: int, casadi_type=cs.MX, crash_if_suboptimal: bool = False, logging_level=logging.INFO):
+    def __init__(self, N: int, casadi_type=cs.MX, crash_if_suboptimal: bool = False, receding=False, logging_level=logging.INFO):
         """
         Initialize the optimization problem.
 
@@ -39,6 +39,7 @@ class Problem:
             logging_level: accepts the level of logging from package logging (INFO, DEBUG, ...)
         """
         self.opts = None
+        self.receding = receding
         self.thread_map_num = 10
         self.default_casadi_type = casadi_type
         self.default_solver = cs.nlpsol
@@ -55,7 +56,7 @@ class Problem:
         self.nodes = N + 1
         # state variable to optimize
         self.var_container = sv.VariablesContainer(self.logger)
-        self.function_container = fc.FunctionsContainer(self.logger)
+        self.function_container = fc.FunctionsContainer(self.receding, self.thread_map_num, self.logger)
 
         self.state_aggr = sv.StateAggregate()
         self.input_aggr = sv.InputAggregate()
@@ -364,9 +365,7 @@ class Problem:
             self.logger.debug(f'Creating Constraint Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)} using vars {used_var}')
 
         # create internal representation of a constraint
-        fun = fc.Constraint(name, g, used_var, used_par, active_nodes_array, bounds, thread_map_num=self.thread_map_num)
-
-        self.function_container.addFunction(fun)
+        fun = self.function_container.createConstraint(name, g, used_var, used_par, active_nodes_array, bounds)
 
         return fun
 
@@ -441,9 +440,7 @@ class Problem:
         if self.debug_mode:
             self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.CostFunction(name, j, used_var, used_par, nodes_array, thread_map_num=self.thread_map_num)
-
-        self.function_container.addFunction(fun)
+        fun = self.function_container.createCost(name, j, used_var, used_par, nodes_array)
 
         return fun
 
@@ -512,9 +509,7 @@ class Problem:
         if self.debug_mode:
             self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.ResidualFunction(name, j, used_var, used_par, nodes_array, thread_map_num=self.thread_map_num)
-
-        self.function_container.addFunction(fun)
+        fun = self.function_container.createResidual(name, j, used_var, used_par, nodes_array)
 
         return fun
 
@@ -951,191 +946,164 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
+    # nodes = 10
+    # dt = 0.01
+    # prb = Problem(nodes, crash_if_suboptimal=True, receding=True)
+    # x = prb.createStateVariable('x', 6)
+    # u = prb.createInputVariable('u', 2)
+    # p = prb.createSingleParameter('p', 6)
+    #
+    # prb.setDynamics(x)
+    # prb.setDt(dt)
+    # x.setBounds([1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2])
+    #
+    # constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
+    #
+    # constr1.setBounds([1, 1], [1, 1])
+    # solver = Solver.make_solver('ipopt', prb)
+    #
+    # all_sol = dict()
+    # for i in range(100):
+    #     p.assign(6 * [2 * i])
+    #     solver.solve()
+    #     sol = solver.getSolutionDict()
+    #     all_sol[i] = sol
+    #
+    # exit()
     N = 10
-    prb = Problem(N)
-    x1 = prb.createStateVariable('x1', 2)
-    x2 = prb.createStateVariable('x2', 3)
+    nodes_vec = np.array(range(N+1))
+    dt = 0.01
+    prb = Problem(N, receding=True)
+    x = prb.createStateVariable('x', 2)
+    # y = prb.createInputVariable('y', 3)
+    prb.setDynamics(x)
+    prb.setDt(dt)
+
     p1 = prb.createParameter('p1', 4)
-    c = prb.createConstraint('c', x1)
+    c = prb.createConstraint('c', x, nodes=[5, 6])
+
+    print(c.getLowerBounds())
+    exit()
+
     # c1 = prb.createConstraint('c1', x1[0])
 
-    xlb = -np.array([1, 2, 3, 4, 5])
-    xub = -xlb
-    xlb_proj = np.repeat(np.atleast_2d(xlb).T, N + 1, axis=1)
-    xub_proj = np.repeat(np.atleast_2d(xub).T, N + 1, axis=1)
+    x.setInitialGuess([5, 5])
+    print(x.getInitialGuess())
 
-    glb = -np.array([1, 2])
-    gub = -glb
-    glb_proj = np.repeat(np.atleast_2d(glb).T, N + 1, axis=1)
-    gub_proj = np.repeat(np.atleast_2d(gub).T, N + 1, axis=1)
-
-
+    x.setBounds([7, 7], [7, 7], nodes=2)
+    print(x.getBounds())
     print(c.getNodes())
-    print(c.getLowerBounds())
+    slvr = Solver.make_solver('ipopt', prb)
+    slvr.solve()
+    sol = slvr.getSolutionDict()
+
+    print('x:\n', sol['x'])
+    # print('y:\n', sol['y'])
+    exit()
+    old_sol = sol.copy()
+    print('=========== receding the horizon: ==============')
+
+    print('old initial guess: ')
+    print(x.getInitialGuess())
+    new_ig_elem = [3,2]
+    x.setInitialGuess(sol['x'][:, 1:], nodes=nodes_vec[:-1])
+    x.setInitialGuess(new_ig_elem, nodes=N)
+    print('new initial guess: ')
+    print(x.getInitialGuess())
+
+    print('old bounds: ')
+    print(x.getLowerBounds())
+    print(x.getUpperBounds())
+
+    # === shifting algorithm ===
+    shifted_lb = x.getLowerBounds()[:, 1:]
+    shifted_ub = x.getUpperBounds()[:, 1:]
+    new_lb_elem = np.array([3, 3])
+    new_ub_elem = np.array([3, 3])
+
+    print('new bounds: ')
+    x.setLowerBounds(shifted_lb, nodes=nodes_vec[:-1])
+    x.setUpperBounds(shifted_ub, nodes=nodes_vec[:-1])
+    x.setLowerBounds(new_lb_elem, nodes=N)
+    x.setUpperBounds(new_ub_elem, nodes=N)
+
+    print(x.getLowerBounds())
+    print(x.getUpperBounds())
+
+    print('manage constraints')
+    print('old nodes:')
+    nodes_cnsrt = c.getNodes()
+    print(nodes_cnsrt)
     print(c.getImpl())
-    c.setNodes([3,4,5], erasing=True)
+    c.setNodes(nodes_cnsrt-1, erasing=True)
+    print('new nodes:')
     print(c.getNodes())
-    print(c.getLowerBounds())
+
     print(c.getImpl())
-    c.setNodes([6,7,8,9], erasing=True)
-    print(c.getNodes())
-    print(c.getLowerBounds())
-    print(c.getImpl())
+    print(x.setBounds([2, 2], [2, 2], 6))
+    slvr.solve()
+    sol = slvr.getSolutionDict()
+
+    print('old x:\n', old_sol['x'])
+    print('x:\n', sol['x'])
+    # print('y:\n', sol['y'])
 
 
-    exit()
-    nodes = 10
-    prb = Problem(nodes)
-    x = prb.createStateVariable('x', 5)
-    v = prb.createStateVariable('v', 5)
-    y = prb.createParameter('y', 3)
-    z = prb.createVariable('z', 5, [3, 4, 5])
-    p = prb.createParameter('p', 3, [2, 4, 5])
 
 
-    v[3].getV
-    # p.assign([1, 2, 3])
-    # print(p.getValues())
 
-    # p.assign([2, 2, 4], 4)
-    # print(p.getValues())
-
-    # p.assign([2, 2], 4, indices=[0, 2])
-    # print(p.getValues())
-
-    # p.assign([2, 2], indices=[0, 2])
-
-    # p[0:2].assign([2,3], nodes=4)
-    # print(p.getValues())
-
-
+    # np.concatenate((shifted_lb, np.reshape(new_lb, (2, 1))))
+    # x.getUpperBounds()[1:]
+    # x.setBounds(, )
     exit()
 
-    par = prob.createParameter('par', 3)
-    print(par.getImpl())
-    # # print(par.getValues())
-    # # par.assign([2, 2, 2], [3, 5])
-    # 
-    # # par[2].assign(2, [0, 4])
-    # # print(par[2].getValues())
-    # # print(par.getValues())
-    # single_var = prob.createSingleVariable('single_var', 4)
-    # 
-    # # print(x.getImpl())
-    # 
-    # # print(x[2].getImpl(2))
-    # # x[2].setLowerBounds(2, 6)
-    # # print(x.getLowerBounds())
-    # 
-    # # print(single_var)
-    # # print(single_var.getImpl().dim())
-    # # print(single_var.getImpl([2, 5]))
-    # # print(single_var.getBounds())
-    # # print(single_var.getLowerBounds([4, 5]))
-    # # print(single_var.getLowerBounds())
-    # 
-    # single_par = prob.createSingleParameter('single_par', 3)
-    # 
-    # print(single_par)
-    # print(single_par.getImpl())
-    # # print(single_par.getImpl().dim())
-    # print(single_par.getImpl([2, 5]))
-    # print(single_par.getValues([2, 3]))
-    # single_par[1].assign(3)
-    # print(single_par.getValues(2))
-    # print(x.getNodes())
-    # exit()
-    # 
-    # print(x[0:3])
-    # x[0:3].setLowerBounds([1,2,3])
-    # print(x.getLowerBounds())
-    # y = prob.createInputVariable('y', 5)
-    # x_prev = x.getVarOffset(-1)
-    # 
-    # xdot = cs.vertcat(x)
-    # prob.setDynamics(xdot)
-    # cnsrt = prob.createConstraint('cnsrt', x_prev + y, nodes=range(5, 9), bounds=dict(lb=[0, 0, 0, 0, 0], ub=[10, 10, 10, 10, 10]))
-    # 
-    # print(cnsrt.getBounds())
-    # 
-    # cnsrt.setNodes([1], erasing=True)
-    # print(cnsrt.getImpl([1]))
-    # 
-    # cost = prob.createIntermediateCost('cost', x*y)
-    # 
-    # 
-    # exit()
-
-    N = 3
-    prb = Problem(N)
-    x1 = prb.createStateVariable('x1', 2)
-    x2 = prb.createStateVariable('x2', 3)
-    p1 = prb.createParameter('p1', 4)
-    c = prb.createConstraint('c', x1)
-
-    xini = -np.array([1, 2, 3, 4, 5])
-    xini_proj = np.repeat(np.atleast_2d(xini).T, N + 1, axis=1)
-
-    prb.getState().setInitialGuess(xini)
-    xini_output = prb.getState().getInitialGuess()
-
-    nx = prb.getState().getVars().size1()
-
-
-    xini_output = x1.getInitialGuess()
-
-
-    xini_output = x2.getInitialGuess()
-
-
-    exit()
     # print('before', prob.var_container._vars)
     # print('before', prob.var_container._pars)
     # print('before:', [elem.getFunction() for elem in prob.function_container._cnstr_container.values()])
     # print('before:', [elem.getFunction() for elem in prob.function_container._costfun_container.values()])
 
-    for fun in prob.function_container._cnstr_container.values():
-        print(f"does {fun._f} depends on {prob.var_container._vars['y']}: {cs.depends_on(fun._f, prob.var_container._vars['y'])}")
-
-    prob.serialize()
-    print('===PICKLING===')
-    prob_serialized = pickle.dumps(prob)
-    print('===DEPICKLING===')
-    prob_new = pickle.loads(prob_serialized)
-    prb = prob_new.deserialize()
-
-    for fun in prb.function_container._cnstr_container.values():
-        print(f"does {fun._f} depends on {prb.var_container._vars['y']}: {cs.depends_on(fun._f, prb.var_container._vars['y'])}")
-
-    exit()
-
-    transcriptor.Transcriptor.make_method('multiple_shooting', prb, dt)
-    sol = Solver.make_solver('ipopt', prb, dt)
-    sol.solve()
-    solution = sol.getSolutionDict()
-
-
-    exit()
-
-    N = 10
-    dt = 0.01
-    prob = Problem(10)
-    x = prob.createStateVariable('x', 1)
-    y = prob.createVariable('y', 1, nodes=range(5, 11))
-
-    cnsrt = prob.createConstraint('cnsrt', x+y, nodes=range(5, 11))
-
-    xdot = cs.vertcat(x)
-    prob.setDynamics(xdot)
-
-    sol = Solver.make_solver('ipopt', prob, dt)
-    sol.solve()
-    solution = sol.getSolutionDict()
-
-    print(solution)
-    hplt = plotter.PlotterHorizon(prob, solution)
-    hplt.plotVariables()
-    hplt.plotFunctions()
-
-    plt.show()
+    # for fun in prob.function_container._cnstr_container.values():
+    #     print(f"does {fun._f} depends on {prob.var_container._vars['y']}: {cs.depends_on(fun._f, prob.var_container._vars['y'])}")
+    #
+    # prob.serialize()
+    # print('===PICKLING===')
+    # prob_serialized = pickle.dumps(prob)
+    # print('===DEPICKLING===')
+    # prob_new = pickle.loads(prob_serialized)
+    # prb = prob_new.deserialize()
+    #
+    # for fun in prb.function_container._cnstr_container.values():
+    #     print(f"does {fun._f} depends on {prb.var_container._vars['y']}: {cs.depends_on(fun._f, prb.var_container._vars['y'])}")
+    #
+    # exit()
+    #
+    # transcriptor.Transcriptor.make_method('multiple_shooting', prb, dt)
+    # sol = Solver.make_solver('ipopt', prb, dt)
+    # sol.solve()
+    # solution = sol.getSolutionDict()
+    #
+    #
+    # exit()
+    #
+    # N = 10
+    # dt = 0.01
+    # prob = Problem(10)
+    # x = prob.createStateVariable('x', 1)
+    # y = prob.createVariable('y', 1, nodes=range(5, 11))
+    #
+    # cnsrt = prob.createConstraint('cnsrt', x+y, nodes=range(5, 11))
+    #
+    # xdot = cs.vertcat(x)
+    # prob.setDynamics(xdot)
+    #
+    # sol = Solver.make_solver('ipopt', prob, dt)
+    # sol.solve()
+    # solution = sol.getSolutionDict()
+    #
+    # print(solution)
+    # hplt = plotter.PlotterHorizon(prob, solution)
+    # hplt.plotVariables()
+    # hplt.plotFunctions()
+    #
+    # plt.show()
 
