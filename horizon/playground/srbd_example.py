@@ -20,6 +20,86 @@ from geometry_msgs.msg import WrenchStamped
 from sensor_msgs.msg import Joy
 from numpy import linalg as LA
 from visualization_msgs.msg import Marker, MarkerArray
+from abc import ABCMeta, abstractmethod
+
+# Create horizon problem
+ns = 20
+prb = problem.Problem(ns)
+T = 1.
+
+
+class action_class(metaclass = ABCMeta):
+    @abstractmethod
+    def action(self, nodes):
+        pass
+
+class action_D(action_class):
+    def __init__(self, f, cdot):
+        self.f = f
+        self.cdot = cdot
+
+    def action(self, nodes):
+        for key, var in self.f.items():
+            var.setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=nodes)
+        for key, var in self.cdot.items():
+            var.setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
+
+class action_L(action_class):
+    def __init__(self, f, cdot):
+        self.f = f
+        self.cdot = cdot
+
+    def action(self, nodes):
+        for i in range(0, 4):
+            self.f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=nodes)
+            self.cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
+        for i in range(4, 8):
+            self.f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
+            self.cdot[i].setBounds([-10., -10., -10.], [10., 10., 10.], nodes=nodes)
+
+class action_R(action_class):
+    def __init__(self, f, cdot):
+        self.f = f
+        self.cdot = cdot
+
+    def action(self, nodes):
+        for i in range(4, 8):
+            self.f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=nodes)
+            self.cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
+        for i in range(0, 4):
+            self.f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
+            self.cdot[i].setBounds([-10., -10., -10.], [10., 10., 10.], nodes=nodes)
+
+class action_scheduler:
+    def __init__(self, action_dict, batch_dict):
+        self._action_dict = action_dict
+        self._batch_dict = batch_dict
+
+        self._batch = list()
+        self._initial_batch = list()
+        self._next_batch = list()
+
+    def setInitialBatch(self, key):
+        self._batch = self._batch_dict[key].copy()
+        self._initial_batch = self._batch_dict[key].copy()
+
+    def setNextBatch(self, key):
+        if not self._next_batch:
+            self._next_batch = self._batch_dict[key].copy()
+
+    def execute(self):
+        n = 0
+        for action in self._batch:
+            self._action_dict[action].action(n)
+            n = n + 1
+
+        if not self._next_batch:
+            self._next_batch = self._initial_batch.copy()
+
+        self._batch.pop(0)
+        self._batch.append(self._next_batch.pop(0))
+
+
 
 def joy_cb(msg):
     global joy_msg
@@ -109,12 +189,6 @@ if urdf == "":
     exit()
 
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
-
-
-# Create horizon problem
-ns = 20
-prb = problem.Problem(ns)
-T = 1.
 
 # Creates problem STATE variables
 r = prb.createStateVariable("r", 3) # CoM position
@@ -229,18 +303,16 @@ prb.createCost("rz_tracking", 2e3 * cs.sumsqr(r[2] - com[2]), nodes=range(1, ns+
 Wo = prb.createParameter('Wo', 1)
 Wo.assign(0.)
 prb.createCost("o_tracking", Wo * cs.sumsqr(o - joint_init[3:7]), nodes=range(1, ns+1))
-prb.createCost("rdot_tracking", 1e3 * cs.sumsqr(rdot - rdot_ref), nodes=range(1, ns+1))
-prb.createCost("w_tracking", 1e3*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
+prb.createCost("rdot_tracking", 1e6 * cs.sumsqr(rdot - rdot_ref), nodes=range(1, ns+1))
+prb.createCost("w_tracking", 1e6*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
 prb.createCost("min_qddot", 1e1*cs.sumsqr(qddot), nodes=list(range(0, ns)))
 
 for i in range(0, 4):
     prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
-    prb.createCost("min_cdotx" + str(i), 1e6 * cs.sumsqr(cdot[i][0]))
     prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
     prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
 for i in range(4, 8):
     prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
-    prb.createCost("min_cdotx" + str(i), 1e6 * cs.sumsqr(cdot[i][0]))
     prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
     prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
 
@@ -306,6 +378,32 @@ rate = rospy.Rate(10)  # 10hz
 rospy.Subscriber('/joy', Joy, joy_cb)
 global joy_msg
 joy_msg = rospy.wait_for_message("joy", Joy)
+
+
+D = action_D(f, cdot)
+L = action_L(f, cdot)
+R = action_R(f, cdot)
+actions = {"D": D, "L": L, "R": R}
+
+REST = list()
+for i in range(0, ns):
+    REST.append("D")
+
+STEP = list()
+for i in range(0, 3):
+    STEP.append("D")
+for i in range(3, 10):
+    STEP.append("L")
+for i in range(10, 13):
+    STEP.append("D")
+for i in range(13, ns):
+    STEP.append("R")
+
+batch = {"REST": REST, "STEP": STEP}
+
+scheduler = action_scheduler(actions, batch)
+scheduler.setInitialBatch("REST")
+
 while not rospy.is_shutdown():
     mat_storer.setInitialGuess(variables_dict, solution)
     #open loop
@@ -327,24 +425,14 @@ while not rospy.is_shutdown():
     else:
         Wo.assign(0.)
 
-    def setForceLimits(id_start, id_end, f, triggered):
-        if triggered:
-            for i in range(id_start, id_end):
-                f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=range(5, ns))
-                if LA.norm(solution['f' + str(i)][:, 0]) <= 25.:
-                    f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=range(0, 5))
-        else:
-            for i in range(id_start, id_end):
-                f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=range(0, ns))
+
+    scheduler.execute()
 
     if joy_msg.buttons[4]:
-        setForceLimits(0, 4, f, True)
-    else:
-        setForceLimits(0,4, f, False)
-    if joy_msg.buttons[5]:
-        setForceLimits(4, 8, f, True)
-    else:
-        setForceLimits(4, 8, f, False)
+        scheduler.setNextBatch("STEP")
+        print("STEP")
+    #else:
+    #    setForceLimits(0,4, f, False)
 
     ##
 
@@ -364,6 +452,8 @@ while not rospy.is_shutdown():
     for i in range(0, 8):
         publishContactForce(t, solution['f' + str(i)][:, 0], 'c' + str(i))
     SRBDViewer(I, "SRB", t, 8)
+
+
 
 
 
