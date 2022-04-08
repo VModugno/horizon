@@ -5,12 +5,13 @@ from collections import OrderedDict
 import pickle
 import time
 from typing import Union, Iterable
+
 # from horizon.type_doc import BoundsDict
 
 default_thread_map = 10
 
-class Function:
 
+class Function:
     """
         Function of Horizon: generic function of SX values from CASADI.
 
@@ -18,7 +19,9 @@ class Function:
             This function is an abstract representation of its projection over the nodes of the optimization problem.
             An abstract function gets internally implemented at each node, using the variables at that node.
     """
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: Iterable, thread_map_num=None):
+
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray, receding=False,
+                 thread_map_num=None):
         """
         Initialize the Horizon Function.
 
@@ -29,7 +32,7 @@ class Function:
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-
+        self.receding = receding
         self._f = f
         self._name = name
         self._nodes_array = nodes_array
@@ -37,6 +40,18 @@ class Function:
         self.vars = used_vars
         self.pars = used_pars
 
+
+        temp_var_nodes = np.array(range(self._nodes_array.size))
+        for var in self.vars:
+            print('name', var.getName())
+            var_nodes = var.getNodes()
+            print('offset', var.getOffset())
+            print('var_nodes', var_nodes)
+            temp_var_nodes = np.intersect1d(temp_var_nodes, var.getNodes())
+        for par in self.pars:
+            temp_var_nodes = np.intersect1d(temp_var_nodes, par.getNodes())
+
+        self._temp_var_nodes = temp_var_nodes
 
         if thread_map_num is None:
             self.thread_map_num = default_thread_map
@@ -78,7 +93,7 @@ class Function:
         """
         return self._fun
 
-    def getImpl(self, nodes = None):
+    def getImpl(self, nodes=None):
         """
         Getter for the CASADI function implemented at the desired node
         Args:
@@ -87,6 +102,10 @@ class Function:
         Returns:
             instance of the CASADI function at the desired node
         """
+        if self.receding:
+            # if receding is True, always return a vector with the implemented function on all the nodes
+            return cs.vertcat(*[self._fun_impl])
+
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
@@ -103,36 +122,29 @@ class Function:
 
         return fun_impl
 
+    def _getUsedElemImpl(self, elem_container):
+        # todo throw with a meaningful error when nodes inserted are wrong
+
+        used_elem_impl = list()
+        for elem in elem_container:
+            if self.receding:
+                # get only the nodes of the function where all the variables of the function are defined:
+                impl_nodes = self._temp_var_nodes
+            else:
+                impl_nodes = self.getNodes()
+
+            elem_impl = elem.getImpl(impl_nodes)
+            print(elem_impl.shape)
+            print(elem.getName(), ':', elem_impl.shape)
+            print(impl_nodes)
+            used_elem_impl.append(elem_impl)
+        return used_elem_impl
 
     def _getUsedVarImpl(self):
-        # todo throw with a meaningful error when nodes inserted are wrong
-        used_var_impl = list()
-        for var in self.vars:
-            var_impl = var.getImpl(self.getNodes())
-            # print('(getUsedVarImpl) var_impl:', var_impl)
-            var_dim = var.getDim()
-            # reshape them for all-in-one evaluation of function
-            # this is getting all the generic variable x, even if the function has a slice of it x[0:2].
-            # It will work. The casadi function takes from x only the right slices afterwards.
-            # print(var_impl)
-            var_impl_matrix = cs.reshape(var_impl, (var_dim, len(self.getNodes())))
-            # generic input --> row: dim // column: nodes
-            # [[x_0_0, x_1_0, ... x_N_0],
-            #  [x_0_1, x_1_1, ... x_N_1]]
-            used_var_impl.append(var_impl_matrix)
-
-        return used_var_impl
+        return self._getUsedElemImpl(self.vars)
 
     def _getUsedParImpl(self):
-
-        used_par_impl = list()
-        for par in self.pars:
-            par_impl = par.getImpl(self.getNodes())
-            par_dim = par.getDim()
-            par_impl_matrix = cs.reshape(par_impl, (par_dim, len(self.getNodes())))
-            used_par_impl.append(par_impl_matrix)
-
-        return used_par_impl
+        return self._getUsedElemImpl(self.pars)
 
     def _project(self):
         """
@@ -144,18 +156,24 @@ class Function:
         Returns:
             the implemented function
         """
+        if self.receding:
+            # num_nodes = self._nodes_array.size
+            # get only the nodes of the function where all the variables of the function are defined:
+            num_nodes = self._temp_var_nodes.size
+        else:
+            num_nodes = int(np.sum(self._nodes_array))
+            print(num_nodes)
 
-        # mapping the function to use more threads
-        num_nodes = int(np.sum(self._nodes_array))
         if num_nodes == 0:
             # if the function is not specified on any nodes, don't implement
             self._fun_impl = None
         else:
+            # mapping the function to use more cpu threads
             self._fun_map = self._fun.map(num_nodes, 'thread', self.thread_map_num)
-
             used_var_impl = self._getUsedVarImpl()
             used_par_impl = self._getUsedParImpl()
-            all_vars = used_var_impl+used_par_impl
+            all_vars = used_var_impl + used_par_impl
+            exit()
             fun_eval = self._fun_map(*all_vars)
             self._fun_impl = fun_eval
 
@@ -206,7 +224,6 @@ class Function:
             for var in self.vars:
                 if var.getOffset() == 0:
                     ret.append(var)
-
 
         return ret
 
@@ -285,7 +302,9 @@ class Constraint(Function):
     """
     Constraint Function of Horizon.
     """
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray, bounds=None, thread_map_num=None):
+
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray,
+                 bounds=None, receding=False, thread_map_num=None, ):
         """
         Initialize the Constraint Function.
 
@@ -299,11 +318,25 @@ class Constraint(Function):
         """
         self.bounds = dict()
 
-        # constraints are initialize to 0.: 0. <= x <= 0.
-        self.bounds['lb'] = np.full((f.shape[0], nodes_array.size), 0.)
-        self.bounds['ub'] = np.full((f.shape[0], nodes_array.size), 0.)
+        self.receding = receding
+        # todo the bounds vector should be dim x active_nodes if not receding
+        if receding:
+            temp_lb = -np.inf * np.ones([f.shape[0], nodes_array.size])
+            temp_ub = np.inf * np.ones([f.shape[0], nodes_array.size])
 
-        super().__init__(name, f, used_vars, used_pars, nodes_array, thread_map_num)
+            temp_lb[:, misc.getNodesFromBinary(nodes_array)] = 0.
+            temp_ub[:, misc.getNodesFromBinary(nodes_array)] = 0.
+
+            self.bounds['lb'] = temp_lb
+            self.bounds['ub'] = temp_ub
+
+        else:
+        # constraints are initialize to 0.: 0. <= x <= 0.
+            num_nodes = int(np.sum(nodes_array))
+            self.bounds['lb'] = np.full((f.shape[0], num_nodes), 0.)
+            self.bounds['ub'] = np.full((f.shape[0], num_nodes), 0.)
+
+        super().__init__(name, f, used_vars, used_pars, nodes_array, receding, thread_map_num)
 
         # manage bounds
         if bounds is not None:
@@ -348,11 +381,11 @@ class Constraint(Function):
         if val_checked.shape[0] != self.getDim():
             raise Exception('Wrong dimension of upper bounds inserted.')
 
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
         # for node in nodes:
         #     if node in self._nodes:
         # todo guards (here it is assumed that bounds is a row)
-        val_type[:, nodes] = val_checked
-
+        val_type[:, pos_nodes] = val_checked
 
     def setLowerBounds(self, bounds, nodes=None):
         """
@@ -363,7 +396,6 @@ class Constraint(Function):
             nodes: nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.
         """
         self._setVals(self.bounds['lb'], bounds, nodes)
-
 
     def setUpperBounds(self, bounds, nodes=None):
         """
@@ -398,20 +430,26 @@ class Constraint(Function):
         Returns:
             value/s of the desired argument
         """
+
+        if self.receding:
+            return val_type
+
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
+        else:
+            nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        nodes = misc.checkNodes(nodes, self._nodes_array)
+        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
+        # todo what is this???
         if len(nodes) == 0:
             return np.zeros((self.getDim(), 0))
 
-        vals = val_type[:, nodes]
+        vals = val_type[:, pos_nodes]
 
         return vals
 
-
-    def getLowerBounds(self, node: int =None):
+    def getLowerBounds(self, node: int = None):
         """
         Getter for the lower bounds of the function.
 
@@ -425,7 +463,7 @@ class Constraint(Function):
         lb = self._getVals(self.bounds['lb'], node)
         return lb
 
-    def getUpperBounds(self, node: int =None):
+    def getUpperBounds(self, node: int = None):
         """
         Getter for the upper bounds of the function.
 
@@ -463,18 +501,26 @@ class Constraint(Function):
             self._nodes_array[:] = 0
 
         # adding to function nodes
-        self._nodes_array[nodes] = 1
+        if self.receding:
+            pos_nodes = nodes
+        else:
+            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+
+        self._nodes_array[pos_nodes] = 1
+
         # for all the "new nodes" that weren't there, add default bounds
-        self.bounds['lb'][:, nodes] = np.zeros([self._f.shape[0], 1])
-        self.bounds['ub'][:, nodes] = np.zeros([1, self._f.shape[0], 1])
+        self.bounds['lb'][:, pos_nodes] = np.zeros([self._f.shape[0], 1])
+        self.bounds['ub'][:, pos_nodes] = np.zeros([self._f.shape[0], 1])
 
         self._project()
+
 
 class CostFunction(Function):
     """
     Cost Function of Horizon.
     """
-    def __init__(self, name, f, used_vars, used_pars, nodes_array, thread_map_num=None):
+
+    def __init__(self, name, f, used_vars, used_pars, nodes_array,  receding=False, thread_map_num=None):
         """
         Initialize the Cost Function.
 
@@ -485,7 +531,7 @@ class CostFunction(Function):
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes_array, thread_map_num)
+        super().__init__(name, f, used_vars, used_pars, nodes_array, receding, thread_map_num)
 
     def getType(self):
         """
@@ -496,11 +542,13 @@ class CostFunction(Function):
         """
         return 'costfunction'
 
+
 class ResidualFunction(Function):
     """
     Residual Function of Horizon.
     """
-    def __init__(self, name, f, used_vars, used_pars, nodes_array, thread_map_num=None):
+
+    def __init__(self, name, f, used_vars, used_pars, nodes_array, receding=False, thread_map_num=None):
         """
         Initialize the Residual Function.
 
@@ -511,7 +559,7 @@ class ResidualFunction(Function):
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes_array, thread_map_num)
+        super().__init__(name, f, used_vars, used_pars, nodes_array, receding, thread_map_num)
 
     def getType(self):
         """
@@ -522,6 +570,7 @@ class ResidualFunction(Function):
         """
         return 'residualfunction'
 
+
 class FunctionsContainer:
     """
     Container of all the function of Horizon.
@@ -530,20 +579,48 @@ class FunctionsContainer:
     Methods:
         build: builds the container with the updated functions.
     """
-    def __init__(self, logger=None):
+
+    def __init__(self, receding, thread_map_num, logger=None):
         """
         Initialize the Function Container.
 
         Args:
+            receding: activate receding horizon
+            thread_map_num: number of cpu threads used when implementing casadi map
             logger: a logger reference to log data
         """
         self._logger = logger
+        self.receding = receding
+        self.thread_map_num = thread_map_num
 
         # containers for the constraint functions
         self._cnstr_container = OrderedDict()
 
         # containers for the cost functions
         self._cost_container = OrderedDict()
+
+    def createConstraint(self, name, g, used_var, used_par, active_nodes_array, bounds):
+
+        fun = Constraint(name, g, used_var, used_par, active_nodes_array, bounds,
+                         receding=self.receding, thread_map_num=self.thread_map_num)
+        self.addFunction(fun)
+
+        return fun
+
+    def createCost(self, name, j, used_var, used_par, nodes_array):
+
+        fun = CostFunction(name, j, used_var, used_par, nodes_array,
+                           receding=self.receding, thread_map_num=self.thread_map_num)
+        self.addFunction(fun)
+
+        return fun
+
+    def createResidual(self, name, j, used_var, used_par, nodes_array):
+
+        fun = ResidualFunction(name, j, used_var, used_par, nodes_array,
+                               receding=self.receding, thread_map_num=self.thread_map_num)
+        self.addFunction(fun)
+        return fun
 
     def addFunction(self, fun: Function):
         """
@@ -666,7 +743,8 @@ class FunctionsContainer:
             available_nodes = set(range(n_nodes))
             # get only the variable it depends (not all the offsetted variables)
             for var in cnstr.getVariables(offset=False):
-                if not var.getNodes() == [-1]:  # todo very bad hack to check if the variable is a SingleVariable (i know it returns [-1]
+                if not var.getNodes() == [
+                    -1]:  # todo very bad hack to check if the variable is a SingleVariable (i know it returns [-1]
                     available_nodes.intersection_update(var.getNodes())
 
             cnstr.setNodes([i for i in cnstr.getNodes() if i in available_nodes], erasing=True)
@@ -690,11 +768,8 @@ class FunctionsContainer:
         for name, item in self._cnstr_container.items():
             self._cnstr_container[name] = item.serialize()
 
-
         for name, item in self._cost_container.items():
             self._cost_container[name] = item.serialize()
-
-
 
     def deserialize(self):
         """
@@ -714,23 +789,18 @@ class FunctionsContainer:
 
         exit()
 
-
         for name, item in self._cnstr_container.items():
             self._cnstr_container[name] = item.deserialize()
-
 
         # these are CASADI functions
         for name, item in self._cost_container.items():
             self._cost_container[name] = item.deserialize()
 
 
-
-
 if __name__ == '__main__':
-
     x = cs.SX.sym('x', 2)
     y = cs.SX.sym('y', 2)
-    fun = x+y
+    fun = x + y
     used_var = dict(x=x, y=y)
     funimpl = Function('dan', fun, used_var, 1)
 

@@ -143,7 +143,7 @@ class OffsetTemplate(AbstractVariable):
         Returns:
             list of active nodes
         """
-        return self._nodes
+        return misc.getNodesFromBinary(self._nodes_array)
 
     def __reduce__(self):
 
@@ -235,15 +235,7 @@ class SingleParameter(AbstractVariable):
         Returns:
             instance of the implemented parameter
         """
-        # todo remove this temp, should return a matrix: return self._getVals('par', nodes)
-        # ==============================================
-        temp = self._getVals('par', nodes)
-        if nodes is None:
-            return temp
-        else:
-            num_nodes = int(np.sum(self._nodes_array[nodes]))
-        # ==============================================
-        return cs.reshape(temp, (self._dim * num_nodes, 1))
+        return self._getVals('par', nodes)
 
     def getNodes(self):
         """
