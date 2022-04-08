@@ -29,7 +29,7 @@ class Problem:
     """
 
     # todo probably better to set logger, not logging_level
-    def __init__(self, N: int, casadi_type=cs.SX, crash_if_suboptimal: bool = False, logging_level=logging.INFO):
+    def __init__(self, N: int, casadi_type=cs.MX, crash_if_suboptimal: bool = False, logging_level=logging.INFO):
         """
         Initialize the optimization problem.
 
@@ -951,12 +951,13 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
-    N = 3
+    N = 10
     prb = Problem(N)
     x1 = prb.createStateVariable('x1', 2)
     x2 = prb.createStateVariable('x2', 3)
     p1 = prb.createParameter('p1', 4)
     c = prb.createConstraint('c', x1)
+    # c1 = prb.createConstraint('c1', x1[0])
 
     xlb = -np.array([1, 2, 3, 4, 5])
     xub = -xlb
@@ -968,10 +969,19 @@ if __name__ == '__main__':
     glb_proj = np.repeat(np.atleast_2d(glb).T, N + 1, axis=1)
     gub_proj = np.repeat(np.atleast_2d(gub).T, N + 1, axis=1)
 
-    c1 = prb.createConstraint('c1', x1[0])
-    # c.setBounds(glb, gub)
 
-    c1.getLowerBounds()
+    print(c.getNodes())
+    print(c.getLowerBounds())
+    print(c.getImpl())
+    c.setNodes([3,4,5], erasing=True)
+    print(c.getNodes())
+    print(c.getLowerBounds())
+    print(c.getImpl())
+    c.setNodes([6,7,8,9], erasing=True)
+    print(c.getNodes())
+    print(c.getLowerBounds())
+    print(c.getImpl())
+
 
     exit()
     nodes = 10
