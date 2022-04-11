@@ -440,7 +440,27 @@ class Problem:
         if self.debug_mode:
             self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = self.function_container.createCost(name, j, used_var, used_par, nodes_array)
+        # if receding, add a weight for activating/disabling the node
+        if self.receding:
+            active_nodes = range(self.nodes)
+
+            weight_mask = self.createParameter(f'{name}_weight_mask', j.shape[0], active_nodes, casadi_type=self.default_casadi_type)
+            nodes_mask = np.zeros([j.shape[0], int(np.sum(np.ones(nodes_array.size)))])
+            nodes_mask[:, misc.getNodesFromBinary(nodes_array)] = 1.
+            weight_mask.assign(nodes_mask)
+
+            j_new = weight_mask * j
+            used_par.append(weight_mask)
+
+        else:
+            j_new = j
+
+        fun = self.function_container.createCost(name, j_new, used_var, used_par, nodes_array)
+
+        #hack
+        if self.receding:
+            setattr(fun, 'weight_mask', weight_mask)
+
 
         return fun
 
@@ -797,7 +817,7 @@ class Problem:
 
 
     def scopeNodeVars(self, node: int):
-        """
+        """np.where(pos_nodes
         Scope the variables active at the desired node of the optimization problem.
 
         Args:
@@ -970,29 +990,44 @@ if __name__ == '__main__':
     #     all_sol[i] = sol
     #
     # exit()
-    N = 10
+    N = 3
     nodes_vec = np.array(range(N+1))
     dt = 0.01
-    prb = Problem(N, receding=True)
+    prb = Problem(N, receding=True, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
+    y = prb.createInputVariable('y', 2)
+    y_prev = y.getVarOffset(-1)
     # y = prb.createInputVariable('y', 3)
     prb.setDynamics(x)
     prb.setDt(dt)
 
-    p1 = prb.createParameter('p1', 4)
-    c = prb.createConstraint('c', x, nodes=[5, 6])
 
-    print(c.getLowerBounds())
-    exit()
+    # p1 = prb.createParameter('p1', 4)
+    cnsrt = prb.createConstraint('cnsrt', x - y_prev, nodes=[1])
+    # cost = prb.createCost('cost', x, nodes=[3])
+
+    cnsrt.setLowerBounds([-cs.inf, -cs.inf])
+    cnsrt.setUpperBounds([cs.inf, cs.inf])
+
+    # print(cost.weight_mask.getValues())
+    print(cnsrt.getImpl())
+    print(cnsrt.getNodes())
+    # both getVal and getImpl return the constraint on ALL the nodes (methods used by the solver)
+    # print(cnsrt.setLowerBounds([-2, -2]))
+    print(cnsrt.getLowerBounds())
+    print(cnsrt.getUpperBounds())
+
 
     # c1 = prb.createConstraint('c1', x1[0])
 
     x.setInitialGuess([5, 5])
-    print(x.getInitialGuess())
+    # print(x.getInitialGuess())
 
+    x.setBounds([-10, -10], [10, 10])
     x.setBounds([7, 7], [7, 7], nodes=2)
-    print(x.getBounds())
-    print(c.getNodes())
+    # print(x.getLowerBounds())
+    # print(x.getUpperBounds())
+
     slvr = Solver.make_solver('ipopt', prb)
     slvr.solve()
     sol = slvr.getSolutionDict()

@@ -1,6 +1,7 @@
 import casadi as cs
 import numpy as np
 from horizon import misc_function as misc
+from horizon import variables as horizon_var
 from collections import OrderedDict
 import pickle
 import time
@@ -20,7 +21,7 @@ class Function:
             An abstract function gets internally implemented at each node, using the variables at that node.
     """
 
-    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray, receding=False,
+    def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray, is_receding=False,
                  thread_map_num=None):
         """
         Initialize the Horizon Function.
@@ -32,7 +33,7 @@ class Function:
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-        self.receding = receding
+        self.is_receding = is_receding
         self._f = f
         self._name = name
         self._nodes_array = nodes_array
@@ -42,16 +43,34 @@ class Function:
 
 
         temp_var_nodes = np.array(range(self._nodes_array.size))
-        for var in self.vars:
-            print('name', var.getName())
-            var_nodes = var.getNodes()
-            print('offset', var.getOffset())
-            print('var_nodes', var_nodes)
-            temp_var_nodes = np.intersect1d(temp_var_nodes, var.getNodes())
-        for par in self.pars:
-            temp_var_nodes = np.intersect1d(temp_var_nodes, par.getNodes())
 
-        self._temp_var_nodes = temp_var_nodes
+        # IF RECEDING, it is important to define two concepts:
+        # - function EXISTS: the function exists only on the nodes where ALL the variables of the function are defined.
+        # - function is ACTIVE: the function can be activated/disabled on the nodes where it exists
+        for var in self.vars:
+            # getNodes() in a OffsetVariable returns the nodes of the base variable.
+            # here I want the nodes where the variable is actually defined, so I need to consider also the offset
+            # when getting the nodes:
+
+            # #todo very bad hack to remove SingleVariables and SingleParameters
+            if -1 in var.getNodes():
+                continue
+            var_nodes = np.array(var.getNodes()) - var.getOffset()
+            temp_var_nodes = np.intersect1d(temp_var_nodes, var_nodes)
+        for par in self.pars:
+            if -1 in par.getNodes():
+                continue
+            par_nodes = np.array(par.getNodes()) - par.getOffset()
+            temp_var_nodes = np.intersect1d(temp_var_nodes, par_nodes)
+
+        self._var_nodes = temp_var_nodes
+        self._var_nodes_array = misc.getBinaryFromNodes(self._nodes_array.size, self._var_nodes)
+
+        # if the function is active (self._nodes_array) in some nodes where the variables it involves are not defined (self._var_nodes) throw an error.
+        # this is true for the offset variables also: an offset variable of a variable defined on [0, 1, 2] is only valid at [1, 2].
+        check_feas_nodes = self._var_nodes_array - self._nodes_array
+        if (check_feas_nodes < 0).any():
+            raise ValueError(f'Function "{self.getName()}" cannot be active on nodes: {np.where(check_feas_nodes < 0)}')
 
         if thread_map_num is None:
             self.thread_map_num = default_thread_map
@@ -102,7 +121,7 @@ class Function:
         Returns:
             instance of the CASADI function at the desired node
         """
-        if self.receding:
+        if self.is_receding:
             # if receding is True, always return a vector with the implemented function on all the nodes
             return cs.vertcat(*[self._fun_impl])
 
@@ -127,16 +146,13 @@ class Function:
 
         used_elem_impl = list()
         for elem in elem_container:
-            if self.receding:
+            if self.is_receding:
                 # get only the nodes of the function where all the variables of the function are defined:
-                impl_nodes = self._temp_var_nodes
+                impl_nodes = self._var_nodes
             else:
                 impl_nodes = self.getNodes()
 
             elem_impl = elem.getImpl(impl_nodes)
-            print(elem_impl.shape)
-            print(elem.getName(), ':', elem_impl.shape)
-            print(impl_nodes)
             used_elem_impl.append(elem_impl)
         return used_elem_impl
 
@@ -156,13 +172,12 @@ class Function:
         Returns:
             the implemented function
         """
-        if self.receding:
+        if self.is_receding:
             # num_nodes = self._nodes_array.size
             # get only the nodes of the function where all the variables of the function are defined:
-            num_nodes = self._temp_var_nodes.size
+            num_nodes = self._var_nodes.size
         else:
             num_nodes = int(np.sum(self._nodes_array))
-            print(num_nodes)
 
         if num_nodes == 0:
             # if the function is not specified on any nodes, don't implement
@@ -173,7 +188,6 @@ class Function:
             used_var_impl = self._getUsedVarImpl()
             used_par_impl = self._getUsedParImpl()
             all_vars = used_var_impl + used_par_impl
-            exit()
             fun_eval = self._fun_map(*all_vars)
             self._fun_impl = fun_eval
 
@@ -200,8 +214,13 @@ class Function:
         if erasing:
             self._nodes_array[:] = 0
 
-        # adding active nodes to function nodes
-        self._nodes_array[nodes] = 1
+        # adding to function nodes
+        if self.is_receding:
+            pos_nodes = nodes
+        else:
+            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+
+        self._nodes_array[pos_nodes] = 1
 
         # todo this is redundant. If the implemented variables do not change, this is not required, right?
         #   How do I understand when the var impl changed?
@@ -297,6 +316,13 @@ class Function:
 
         return self
 
+# class RecedingFunction(Function):
+#
+#     def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray,
+#                  thread_map_num=None):
+#
+#         super().__init__(name, f, used_vars, used_pars, nodes_array, thread_map_num)
+
 
 class Constraint(Function):
     """
@@ -304,7 +330,7 @@ class Constraint(Function):
     """
 
     def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, nodes_array: np.ndarray,
-                 bounds=None, receding=False, thread_map_num=None, ):
+                 bounds=None, is_receding=False, thread_map_num=None):
         """
         Initialize the Constraint Function.
 
@@ -316,16 +342,24 @@ class Constraint(Function):
             nodes_array: nodes the function is active on
             bounds: bounds of the constraint. If not specified, the bounds are set to zero.
         """
+
+        super().__init__(name, f, used_vars, used_pars, nodes_array, is_receding, thread_map_num)
         self.bounds = dict()
 
-        self.receding = receding
+        self.receding = is_receding
         # todo the bounds vector should be dim x active_nodes if not receding
-        if receding:
-            temp_lb = -np.inf * np.ones([f.shape[0], nodes_array.size])
-            temp_ub = np.inf * np.ones([f.shape[0], nodes_array.size])
+        if is_receding:
 
-            temp_lb[:, misc.getNodesFromBinary(nodes_array)] = 0.
-            temp_ub[:, misc.getNodesFromBinary(nodes_array)] = 0.
+            num_nodes = int(np.sum(self._var_nodes_array))
+            temp_lb = -np.inf * np.ones([f.shape[0], num_nodes])
+            temp_ub = np.inf * np.ones([f.shape[0], num_nodes])
+
+            # this is zero only on the nodes where the function is ACTIVE (which are generally different from the nodes where the function EXISTS)
+            active_nodes = np.where(self._nodes_array == 1)[0]
+            pos_nodes = misc.convertNodestoPos(active_nodes, self._var_nodes_array)
+
+            temp_lb[:, pos_nodes] = 0.
+            temp_ub[:, pos_nodes] = 0.
 
             self.bounds['lb'] = temp_lb
             self.bounds['ub'] = temp_ub
@@ -336,7 +370,7 @@ class Constraint(Function):
             self.bounds['lb'] = np.full((f.shape[0], num_nodes), 0.)
             self.bounds['ub'] = np.full((f.shape[0], num_nodes), 0.)
 
-        super().__init__(name, f, used_vars, used_pars, nodes_array, receding, thread_map_num)
+
 
         # manage bounds
         if bounds is not None:
@@ -381,7 +415,11 @@ class Constraint(Function):
         if val_checked.shape[0] != self.getDim():
             raise Exception('Wrong dimension of upper bounds inserted.')
 
-        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+        if self.receding:
+            pos_nodes = misc.convertNodestoPos(nodes, self._var_nodes_array)
+        else:
+            pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+
         # for node in nodes:
         #     if node in self._nodes:
         # todo guards (here it is assumed that bounds is a row)
@@ -497,30 +535,23 @@ class Constraint(Function):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
-        if erasing:
-            self._nodes_array[:] = 0
+        super().setNodes(nodes, erasing)
 
-        # adding to function nodes
-        if self.receding:
+        if self.is_receding:
             pos_nodes = nodes
         else:
             pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
-        self._nodes_array[pos_nodes] = 1
-
         # for all the "new nodes" that weren't there, add default bounds
         self.bounds['lb'][:, pos_nodes] = np.zeros([self._f.shape[0], 1])
         self.bounds['ub'][:, pos_nodes] = np.zeros([self._f.shape[0], 1])
-
-        self._project()
-
 
 class CostFunction(Function):
     """
     Cost Function of Horizon.
     """
 
-    def __init__(self, name, f, used_vars, used_pars, nodes_array,  receding=False, thread_map_num=None):
+    def __init__(self, name, f, used_vars, used_pars, nodes_array, is_receding=False, thread_map_num=None):
         """
         Initialize the Cost Function.
 
@@ -531,7 +562,18 @@ class CostFunction(Function):
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes_array, receding, thread_map_num)
+
+        super().__init__(name, f, used_vars, used_pars, nodes_array, is_receding, thread_map_num)
+
+    def setNodes(self, nodes, erasing=False):
+
+        super().setNodes(nodes, erasing)
+
+        if self.is_receding:
+            # eliminate/enable cost functions by setting their weight
+            nodes_mask = np.zeros([self.getDim(), np.zeros(int(np.sum(self._var_nodes_array)))])
+            nodes_mask[:, nodes] = 1.
+            self.weight_mask.assign(nodes_mask)
 
     def getType(self):
         """
@@ -548,7 +590,7 @@ class ResidualFunction(Function):
     Residual Function of Horizon.
     """
 
-    def __init__(self, name, f, used_vars, used_pars, nodes_array, receding=False, thread_map_num=None):
+    def __init__(self, name, f, used_vars, used_pars, nodes_array, is_receding=False, thread_map_num=None):
         """
         Initialize the Residual Function.
 
@@ -559,7 +601,7 @@ class ResidualFunction(Function):
             used_pars: parameters used in the function
             nodes_array: binary array specifying the nodes the function is active on
         """
-        super().__init__(name, f, used_vars, used_pars, nodes_array, receding, thread_map_num)
+        super().__init__(name, f, used_vars, used_pars, nodes_array, is_receding, thread_map_num)
 
     def getType(self):
         """
@@ -602,7 +644,7 @@ class FunctionsContainer:
     def createConstraint(self, name, g, used_var, used_par, active_nodes_array, bounds):
 
         fun = Constraint(name, g, used_var, used_par, active_nodes_array, bounds,
-                         receding=self.receding, thread_map_num=self.thread_map_num)
+                         is_receding=self.receding, thread_map_num=self.thread_map_num)
         self.addFunction(fun)
 
         return fun
@@ -610,7 +652,7 @@ class FunctionsContainer:
     def createCost(self, name, j, used_var, used_par, nodes_array):
 
         fun = CostFunction(name, j, used_var, used_par, nodes_array,
-                           receding=self.receding, thread_map_num=self.thread_map_num)
+                           is_receding=self.receding, thread_map_num=self.thread_map_num)
         self.addFunction(fun)
 
         return fun
@@ -618,7 +660,7 @@ class FunctionsContainer:
     def createResidual(self, name, j, used_var, used_par, nodes_array):
 
         fun = ResidualFunction(name, j, used_var, used_par, nodes_array,
-                               receding=self.receding, thread_map_num=self.thread_map_num)
+                               is_receding=self.receding, thread_map_num=self.thread_map_num)
         self.addFunction(fun)
         return fun
 
