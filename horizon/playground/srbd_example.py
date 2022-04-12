@@ -37,6 +37,38 @@ class steps_phase:
         self.nodes = nodes
         self.step_counter = 0
 
+        #JUMP
+        self.l_jump = []
+        self.l_jump_cdot_bounds = []
+        self.l_jump_f_bounds = []
+        self.r_jump = []
+        self.r_jump_cdot_bounds = []
+        self.r_jump_f_bounds = []
+        sin = 0.1 * np.sin(np.linspace(0, np.pi, 8))
+        for k in range(0, 7):  # 7 nodes down
+            self.l_jump.append(c_init_z)
+            self.r_jump.append(c_init_z)
+            self.l_jump_cdot_bounds.append([0., 0., 0.])
+            self.r_jump_cdot_bounds.append([0., 0., 0.])
+            self.l_jump_f_bounds.append([1000., 1000., 1000.])
+            self.r_jump_f_bounds.append([1000., 1000., 1000.])
+        for k in range(0, 8):  # 8 nodes jump
+            self.l_jump.append(c_init_z + sin[k])
+            self.r_jump.append(c_init_z + sin[k])
+            self.l_jump_cdot_bounds.append([10., 10., 10.])
+            self.r_jump_cdot_bounds.append([10., 10., 10.])
+            self.l_jump_f_bounds.append([0., 0., 0.])
+            self.r_jump_f_bounds.append([0., 0., 0.])
+        for k in range(0, 7):  # 6 nodes down
+            self.l_jump.append(c_init_z)
+            self.r_jump.append(c_init_z)
+            self.l_jump_cdot_bounds.append([0., 0., 0.])
+            self.r_jump_cdot_bounds.append([0., 0., 0.])
+            self.l_jump_f_bounds.append([1000., 1000., 1000.])
+            self.r_jump_f_bounds.append([1000., 1000., 1000.])
+
+
+
         #NO STEP
         self.stance = []
         self.cdot_bounds = []
@@ -97,26 +129,16 @@ class steps_phase:
         self.r_cdot_bounds.append([0., 0., 0.])
         self.r_f_bounds.append([1000., 1000., 1000.])
 
-
-        #plt.figure()
-        #plt.plot(self.l_cycle)
-        #plt.plot(self.r_cycle)
-
-        #plt.figure()
-        #plt.plot(self.l_cdot_bounds)
-        #plt.plot(self.r_cdot_bounds)
-
-        #plt.show()
-
-        #self.f_max = []
-        #self.f_min = []
-
+        self.action = ""
 
     def set(self, action):
         t = self.nodes - self.step_counter # this goes FROM nodes TO 0
 
         for k in range(max(t, 0), self.nodes + 1):
             ref_id = (k - t)%self.nodes
+
+            if(ref_id == 0):
+                self.action = action
 
             if action == "step":
                 for i in range(0, 4):
@@ -129,6 +151,19 @@ class steps_phase:
                     self.cdot[i].setBounds(-1.*np.array(self.r_cdot_bounds[ref_id]), np.array(self.r_cdot_bounds[ref_id]), nodes=k)
                     if k < self.nodes:
                         self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
+
+            elif action == "jump":
+                for i in range(0, 4):
+                    self.c_ref[i].assign(self.l_jump[ref_id], nodes = k)
+                    self.cdot[i].setBounds(-1.*np.array(self.l_jump_cdot_bounds[ref_id]), np.array(self.l_jump_cdot_bounds[ref_id]), nodes=k)
+                    if k < self.nodes:
+                        self.f[i].setBounds(-1.*np.array(self.l_jump_f_bounds[ref_id]), np.array(self.l_jump_f_bounds[ref_id]), nodes=k)
+                for i in range(4, 8):
+                    self.c_ref[i].assign(self.r_jump[ref_id], nodes = k)
+                    self.cdot[i].setBounds(-1.*np.array(self.r_jump_cdot_bounds[ref_id]), np.array(self.r_jump_cdot_bounds[ref_id]), nodes=k)
+                    if k < self.nodes:
+                        self.f[i].setBounds(-1.*np.array(self.r_jump_f_bounds[ref_id]), np.array(self.r_jump_f_bounds[ref_id]), nodes=k)
+
             else:
                 for i in range(0, 8):
                     self.c_ref[i].assign(self.stance[ref_id], nodes=k)
@@ -291,7 +326,7 @@ print(f"qddot : {qddot}")
 x, xdot = utils.double_integrator_with_floating_base(q, qdot, qddot)
 prb.setDynamics(xdot)
 dae = {'x': x, 'p': qddot, 'ode': xdot, 'quad': 0}
-F_integrator = integrators.RK2(dae, opts=None)
+F_integrator = integrators.EULER(dae, opts=None)
 
 #Limits
 joint_init = [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,  # px, py, pz, qx, qy, qz, qw
@@ -348,11 +383,13 @@ prb.createCost("rdot_tracking", 1e4 * cs.sumsqr(rdot - rdot_ref), nodes=range(1,
 
 prb.createCost("w_tracking", 1e6*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
 
-prb.createCost("min_qddot", 1e1*cs.sumsqr(qddot), nodes=list(range(0, ns)))
+prb.createCost("min_qddot", 1e0*cs.sumsqr(qddot), nodes=list(range(0, ns)))
 
 #these are the relative distance in y between the feet (needs to be rotated!)
-prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= -(initial_foot_position[1][1] - initial_foot_position[4][1]), lb=-1.))
-prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= -(initial_foot_position[3][1] - initial_foot_position[6][1]), lb=-1.))
+d_initial_1 = -(initial_foot_position[1][1] - initial_foot_position[4][1])
+relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= d_initial_1, lb=d_initial_1-0.5))
+d_initial_2 = -(initial_foot_position[3][1] - initial_foot_position[6][1])
+relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= d_initial_2, lb=d_initial_2-0.5))
 
 
 c_ref = dict()
@@ -454,10 +491,9 @@ while not rospy.is_shutdown():
 
     #JOYSTICK
     alphaX = alphaY = 0.1
-    if joy_msg.buttons[4]:
+    if joy_msg.buttons[4] or joy_msg.buttons[5]:
         alphaX = 0.4
         alphaY = 0.3
-        print("STEP")
 
     rdot_ref.assign([alphaX * joy_msg.axes[1], -alphaY * joy_msg.axes[0], 0.1 * joy_msg.axes[7]], nodes=range(1, ns+1)) #com velocities
     w_ref.assign([1. * joy_msg.axes[6], -1. * joy_msg.axes[4], 1. * joy_msg.axes[3]], nodes=range(1, ns + 1)) #base angular velocities
@@ -469,8 +505,17 @@ while not rospy.is_shutdown():
 
     if(joy_msg.buttons[4]):
         wpg.set("step")
+        relative_pos_y_1_4.setBounds(ub=d_initial_1, lb=d_initial_1 - 0.5)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2, lb=d_initial_2 - 0.5)
+    elif (joy_msg.buttons[5]):
+        wpg.set("jump")
+        relative_pos_y_1_4.setBounds(ub=d_initial_1, lb=d_initial_1)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2, lb=d_initial_2)
     else:
         wpg.set("cazzi")
+        relative_pos_y_1_4.setBounds(ub=d_initial_1, lb=d_initial_1 - 0.5)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2, lb=d_initial_2 - 0.5)
+
 
 
 
