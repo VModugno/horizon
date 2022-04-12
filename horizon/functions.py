@@ -87,6 +87,9 @@ class Function:
         Returns:
             instance of the CASADI function at the desired node
         """
+        if self._fun_impl is None:
+            return None
+
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
@@ -177,7 +180,6 @@ class Function:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
-
         # todo this method is very important. It projects the abstract functions on the nodes specified using the implemented variables
         if erasing:
             self._nodes_array[:] = 0
