@@ -565,6 +565,9 @@ class CostFunction(Function):
 
         super().__init__(name, f, used_vars, used_pars, nodes_array, is_receding, thread_map_num)
 
+        # if is_receding:
+        #     self.weight_mask = None
+
     def setNodes(self, nodes, erasing=False):
 
         super().setNodes(nodes, erasing)
@@ -584,6 +587,8 @@ class CostFunction(Function):
         """
         return 'costfunction'
 
+    # def recede(self):
+
 
 class ResidualFunction(Function):
     """
@@ -602,6 +607,16 @@ class ResidualFunction(Function):
             nodes_array: binary array specifying the nodes the function is active on
         """
         super().__init__(name, f, used_vars, used_pars, nodes_array, is_receding, thread_map_num)
+
+    def setNodes(self, nodes, erasing=False):
+
+        super().setNodes(nodes, erasing)
+
+        if self.is_receding:
+            # eliminate/enable cost functions by setting their weight
+            nodes_mask = np.zeros([self.getDim(), np.zeros(int(np.sum(self._var_nodes_array)))])
+            nodes_mask[:, nodes] = 1.
+            self.weight_mask.assign(nodes_mask)
 
     def getType(self):
         """
@@ -641,9 +656,9 @@ class FunctionsContainer:
         # containers for the cost functions
         self._cost_container = OrderedDict()
 
-    def createConstraint(self, name, g, used_var, used_par, active_nodes_array, bounds):
+    def createConstraint(self, name, g, used_var, used_par, nodes_array, bounds):
 
-        fun = Constraint(name, g, used_var, used_par, active_nodes_array, bounds,
+        fun = Constraint(name, g, used_var, used_par, nodes_array, bounds,
                          is_receding=self.receding, thread_map_num=self.thread_map_num)
         self.addFunction(fun)
 

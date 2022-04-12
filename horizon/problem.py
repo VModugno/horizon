@@ -39,7 +39,7 @@ class Problem:
             logging_level: accepts the level of logging from package logging (INFO, DEBUG, ...)
         """
         self.opts = None
-        self.receding = receding
+        self.is_receding = receding
         self.thread_map_num = 10
         self.default_casadi_type = casadi_type
         self.default_solver = cs.nlpsol
@@ -56,7 +56,7 @@ class Problem:
         self.nodes = N + 1
         # state variable to optimize
         self.var_container = sv.VariablesContainer(self.logger)
-        self.function_container = fc.FunctionsContainer(self.receding, self.thread_map_num, self.logger)
+        self.function_container = fc.FunctionsContainer(self.is_receding, self.thread_map_num, self.logger)
 
         self.state_aggr = sv.StateAggregate()
         self.input_aggr = sv.InputAggregate()
@@ -441,9 +441,8 @@ class Problem:
             self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
         # if receding, add a weight for activating/disabling the node
-        if self.receding:
+        if self.is_receding:
             active_nodes = range(self.nodes)
-
             weight_mask = self.createParameter(f'{name}_weight_mask', j.shape[0], active_nodes, casadi_type=self.default_casadi_type)
             nodes_mask = np.zeros([j.shape[0], int(np.sum(np.ones(nodes_array.size)))])
             nodes_mask[:, misc.getNodesFromBinary(nodes_array)] = 1.
@@ -458,7 +457,7 @@ class Problem:
         fun = self.function_container.createCost(name, j_new, used_var, used_par, nodes_array)
 
         #hack
-        if self.receding:
+        if self.is_receding:
             setattr(fun, 'weight_mask', weight_mask)
 
 
@@ -966,7 +965,9 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
-    # nodes = 10
+
+    N = 3
+    nodes_vec = np.array(range(N+1))    # nodes = 10
     # dt = 0.01
     # prb = Problem(nodes, crash_if_suboptimal=True, receding=True)
     # x = prb.createStateVariable('x', 6)
@@ -990,10 +991,8 @@ if __name__ == '__main__':
     #     all_sol[i] = sol
     #
     # exit()
-    N = 3
-    nodes_vec = np.array(range(N+1))
     dt = 0.01
-    prb = Problem(N, receding=True, casadi_type=cs.SX)
+    prb = Problem(N, receding=False, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
     y = prb.createInputVariable('y', 2)
     y_prev = y.getVarOffset(-1)
@@ -1004,7 +1003,8 @@ if __name__ == '__main__':
 
     # p1 = prb.createParameter('p1', 4)
     cnsrt = prb.createConstraint('cnsrt', x - y_prev, nodes=[1])
-    # cost = prb.createCost('cost', x, nodes=[3])
+    cost1 = prb.createCost('cost_x', 1e-3 * cs.sumsqr(x))
+    cost2 = prb.createIntermediateCost('cost_y', 1e-3 * cs.sumsqr(y))
 
     cnsrt.setLowerBounds([-cs.inf, -cs.inf])
     cnsrt.setUpperBounds([cs.inf, cs.inf])
@@ -1027,8 +1027,10 @@ if __name__ == '__main__':
     x.setBounds([7, 7], [7, 7], nodes=2)
     # print(x.getLowerBounds())
     # print(x.getUpperBounds())
-
-    slvr = Solver.make_solver('ipopt', prb)
+    opts = dict()
+    opts['ipopt.tol'] = 1e-12
+    opts['ipopt.constr_viol_tol'] = 1e-12
+    slvr = Solver.make_solver('ipopt', prb, opts=opts)
     slvr.solve()
     sol = slvr.getSolutionDict()
 
