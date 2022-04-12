@@ -49,7 +49,7 @@ class replay_trajectory:
         self.slow_down_rate = 1.
         self.frame_fk = dict()
 
-        if frame_force_mapping:
+        if frame_force_mapping is not None:
             self.frame_force_mapping = deepcopy(frame_force_mapping)
 
         # WE CHECK IF WE HAVE TO ROTATE CONTACT FORCES:

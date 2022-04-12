@@ -97,13 +97,18 @@ double IterativeLQR::compute_merit_slope(double mu_f, double mu_c,
 
     double der = 0.;
 
+    Eigen::VectorXd dx_old;
+    dx_old.setZero(_nx);
+
     for(int i = 0; i < _N; i++)
     {
         auto& hu = _tmp[i].hu;
-        auto& du = _bp_res[i].lu;
-        auto dx = _dyn[i].B()*du + _dyn[i].d;
+        Eigen::VectorXd du = _bp_res[i].lu + _bp_res[i].Lu*dx_old;
+        Eigen::VectorXd dx = _dyn[i].A()*dx_old + _dyn[i].B()*du + _dyn[i].d;
 
-        der += _cost[i].r().dot(du) + _cost[i].q().dot(dx);
+        der += _cost[i].r().dot(du) + _cost[i+1].q().dot(dx);
+
+        dx_old = dx;
     }
 
     return der - mu_f*defect_norm - mu_c*constr_viol;
@@ -277,8 +282,9 @@ void IterativeLQR::line_search(int iter)
 
     _fp_res->merit_der = merit_der;
 
-    if(iter == 0)
+    if(iter == 0 && !_rti)
     {
+        _it_filt.memory = 0;
         IterateFilter::Pair test_pair;
         test_pair.f = std::numeric_limits<double>::lowest();
         test_pair.h = _fp_res->defect_norm + _fp_res->constraint_violation;
@@ -288,6 +294,11 @@ void IterativeLQR::line_search(int iter)
         _fp_res->accepted = true;
         _fp_res->merit = merit;
         report_result(*_fp_res);
+    }
+
+    if(iter > _line_search_memory)
+    {
+        _it_filt.memory = std::min(iter - _line_search_memory, _line_search_memory); //std::max(0, std::min(_line_search_memory, iter - 5));
     }
 
     // run line search
@@ -309,7 +320,6 @@ void IterativeLQR::line_search(int iter)
             test_pair.f = _fp_res->cost;
             test_pair.h = _fp_res->defect_norm + _fp_res->constraint_violation;
             _fp_res->accepted = _it_filt.add(test_pair);
-            if(_fp_res->accepted && _verbose) _it_filt.print();
         }
         else
         {
@@ -346,24 +356,39 @@ void IterativeLQR::line_search(int iter)
         alpha *= step_reduction_factor;
     }
 
+    // handle line search failure
     if(!_fp_res->accepted)
     {
-        report_result(*_fp_res);
-        if(_verbose) std::cout << "[ilqr] line search failed, increasing regularization..\n";
-        increase_regularization();
         _fp_accepted = 0;
-        return;
+
+        if(_hxx_reg < 1e6)
+        {
+            if(_verbose) std::cout << "[ilqr] line search failed, increasing regularization\n";
+            report_result(*_fp_res);
+            increase_regularization();
+            return;
+        }
+        else
+        {
+            if(_verbose) std::cout << "[ilqr] line search failed, accepting alpha_min as regularization too large \n";
+            _fp_res->accepted = true;
+            report_result(*_fp_res);
+        }
     }
 
     
     if(_fp_accepted > 5 && _enable_line_search)
     {
+        if(_verbose) std::cout << "[ilqr] reducing regularization\n";
         reduce_regularization();
         _fp_accepted = 0;
     }
 
     _xtrj = _fp_res->xtrj;
     _utrj = _fp_res->utrj;
+
+    THROW_NAN(_xtrj);
+    THROW_NAN(_utrj);
 }
 
 bool IterativeLQR::should_stop()
@@ -392,15 +417,14 @@ bool IterativeLQR::should_stop()
 
     // exit if merit function directional derivative (normalized)
     // is too close to zero
-    if(_fp_res->merit_der < 0 &&
-            _fp_res->merit_der/_fp_res->merit > - merit_der_threshold)
+    if(std::fabs(_fp_res->merit_der) <= merit_der_threshold*(1 + _fp_res->merit))
     {
         std::cout << "exiting due to small merit derivative \n";
         return true;
     }
 
     // exit if step size (normalized) is too short
-    if(_fp_res->step_length/_utrj.norm() < step_length_threshold)
+    if(_fp_res->step_length <= step_length_threshold*(1 + _utrj.norm()))
     {
         std::cout << "exiting due to small control increment \n";
         return true;
