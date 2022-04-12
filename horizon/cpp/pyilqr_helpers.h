@@ -50,10 +50,9 @@ auto set_final_constraint_wrapper(IterativeLQR& self, py::object pyfn)
 
 auto set_inter_constraint_wrapper_single(IterativeLQR& self,
                                          std::vector<int> k,
-                                         py::object f,
-                                         std::vector<Eigen::VectorXd> tgt)
+                                         py::object f)
 {
-    self.setConstraint(k, to_cpp(f), tgt);
+    self.setConstraint(k, to_cpp(f));
 }
 
 #endif // PYILQR_HELPERS_H
