@@ -3,6 +3,7 @@
 
 #include "ilqr.h"
 #include "wrapped_function.h"
+#include <eigen3/unsupported/Eigen/CXX11/Tensor>
 
 using namespace horizon;
 using namespace casadi_utils;
@@ -10,6 +11,27 @@ using namespace casadi_utils;
 namespace cs = casadi;
 
 extern utils::Timer::TocCallback on_timer_toc;
+
+typedef Eigen::Tensor<double, 1> Tensor1d;
+typedef Eigen::TensorMap<Tensor1d> TensorMap1d;
+typedef Eigen::TensorMap<Eigen::Tensor<const double, 1>> TensorConstMap1d;
+typedef Eigen::TensorRef<const Tensor1d> TensorConstRef1d;
+
+typedef Eigen::Tensor<double, 2> Tensor2d;
+typedef Eigen::TensorMap<Tensor2d> TensorMap2d;
+typedef Eigen::TensorRef<const Tensor2d> TensorConstRef2d;
+
+typedef Eigen::Tensor<double, 3> Tensor3d;
+typedef Eigen::TensorMap<Tensor3d> TensorMap3d;
+typedef Eigen::TensorMap<Eigen::Tensor<const double, 3>> TensorConstMap3d;
+typedef Eigen::TensorRef<const Tensor3d> TensorConstRef3d;
+
+namespace horizon {
+namespace tensor {
+    void s_transpose_H(const Eigen::VectorXd& s,
+                       TensorConstMap3d H,
+                       Eigen::MatrixXd& res);
+} }
 
 struct IterativeLQR::Dynamics
 {
@@ -22,6 +44,9 @@ public:
     // dynamics jacobian
     casadi_utils::WrappedFunction df;
 
+    // dynamics hessian
+    casadi_utils::WrappedFunction ddf;
+
     // parameters
     ParameterMapPtr param;
 
@@ -31,6 +56,15 @@ public:
     // df/du
     const Eigen::MatrixXd& B() const;
 
+    // ddf/ddx
+    TensorConstMap3d Fxx() const;
+
+    // ddf/ddu
+    TensorConstMap3d Fuu() const;
+
+    // ddf/dudx
+    TensorConstMap3d Fux() const;
+
     // defect (or gap)
     Eigen::VectorXd d;
 
@@ -39,6 +73,10 @@ public:
     VecConstRef integrate(VecConstRef x,
                           VecConstRef u,
                           int k);
+
+    void quadratize(VecConstRef x,
+                    VecConstRef u,
+                    int k);
 
     void linearize(VecConstRef x,
                    VecConstRef u,
@@ -50,9 +88,13 @@ public:
                        int k,
                        Eigen::VectorXd& d);
 
-    void setDynamics(casadi::Function f);
-
     static casadi::Function Jacobian(const casadi::Function& f);
+
+    static casadi::Function Hessian(const casadi::Function& df);
+
+private:
+
+    const int _nx, _nu;
 
 };
 
@@ -65,6 +107,9 @@ struct IterativeLQR::ConstraintEntity
 
     // constraint jacobian
     casadi_utils::WrappedFunction df;
+
+    // constraint hessian
+    casadi_utils::WrappedFunction ddf;
 
     // parameter map
     ParameterMapPtr param;
@@ -86,6 +131,8 @@ struct IterativeLQR::ConstraintEntity
 
     ConstraintEntity();
 
+    void quadratize(VecConstRef x, VecConstRef u, int k);
+
     void linearize(VecConstRef x, VecConstRef u, int k);
 
     void evaluate(VecConstRef x, VecConstRef u, int k);
@@ -94,14 +141,11 @@ struct IterativeLQR::ConstraintEntity
 
     void setConstraint(casadi::Function h, casadi::Function dh);
 
-    void setTargetValue(const Eigen::VectorXd& hdes);
-
     static casadi::Function Jacobian(const casadi::Function& h);
 
-private:
+    static casadi::Function Hessian(const casadi::Function& dh);
 
-    // desired value
-    Eigen::VectorXd _hdes;
+private:
 
     // computed value
     Eigen::VectorXd _hvalue;
@@ -239,11 +283,13 @@ struct IterativeLQR::Temporaries
     // temporary for kkt rhs
     Eigen::MatrixXd kkt;
     Eigen::MatrixXd kx0;
+    Eigen::MatrixXd M;
 
     // lu for kkt matrix
     Eigen::PartialPivLU<Eigen::MatrixXd> lu;
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr;
-    Eigen::LDLT<Eigen::MatrixXd> ldlt;
+    Eigen::LDLT<Eigen::MatrixXd> llt_hess;
+    Eigen::LDLT<Eigen::MatrixXd> llt_constr;
 
     // kkt solution
     Eigen::MatrixXd u_lam;
