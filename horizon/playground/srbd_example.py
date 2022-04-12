@@ -27,77 +27,115 @@ ns = 20
 prb = problem.Problem(ns)
 T = 1.
 
-
-class action_class(metaclass = ABCMeta):
-    @abstractmethod
-    def action(self, nodes):
-        pass
-
-class action_D(action_class):
-    def __init__(self, f, cdot):
+class steps_phase:
+    def __init__(self, f, c, cdot, c_init_z, c_ref, nodes):
         self.f = f
+        self.c = c
         self.cdot = cdot
+        self.c_ref = c_ref
 
-    def action(self, nodes):
-        for key, var in self.f.items():
-            var.setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=nodes)
-        for key, var in self.cdot.items():
-            var.setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
+        self.nodes = nodes
+        self.step_counter = 0
 
-class action_L(action_class):
-    def __init__(self, f, cdot):
-        self.f = f
-        self.cdot = cdot
+        #NO STEP
+        self.stance = []
+        self.cdot_bounds = []
+        self.f_bounds = []
+        for k in range(0, nodes):
+            self.stance.append([c_init_z])
+            self.cdot_bounds.append([0., 0., 0.])
+            self.f_bounds.append([1000., 1000., 1000.])
 
-    def action(self, nodes):
-        for i in range(0, 4):
-            self.f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=nodes)
-            self.cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
-        for i in range(4, 8):
-            self.f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
-            self.cdot[i].setBounds([-10., -10., -10.], [10., 10., 10.], nodes=nodes)
 
-class action_R(action_class):
-    def __init__(self, f, cdot):
-        self.f = f
-        self.cdot = cdot
+        #STEP
+        sin = 0.1 * np.sin(np.linspace(0, np.pi, 8))
+        #left step cycle
+        self.l_cycle = []
+        self.l_cdot_bounds = []
+        self.l_f_bounds = []
+        for k in range(0,2): # 2 nodes down
+            self.l_cycle.append(c_init_z)
+            self.l_cdot_bounds.append([0., 0., 0.])
+            self.l_f_bounds.append([1000., 1000., 1000.])
+        for k in range(0, 8):  # 8 nodes step
+            self.l_cycle.append(c_init_z + sin[k])
+            self.l_cdot_bounds.append([10., 10., 10.])
+            self.l_f_bounds.append([0., 0., 0.])
+        for k in range(0, 2):  # 2 nodes down
+            self.l_cycle.append(c_init_z)
+            self.l_cdot_bounds.append([0., 0., 0.])
+            self.l_f_bounds.append([1000., 1000., 1000.])
+        for k in range(0, 8):  # 8 nodes down (other step)
+            self.l_cycle.append(c_init_z)
+            self.l_cdot_bounds.append([0., 0., 0.])
+            self.l_f_bounds.append([1000., 1000., 1000.])
+        self.l_cycle.append(c_init_z) # last node down
+        self.l_cdot_bounds.append([0., 0., 0.])
+        self.l_f_bounds.append([1000., 1000., 1000.])
 
-    def action(self, nodes):
-        for i in range(4, 8):
-            self.f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.], nodes=nodes)
-            self.cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
-        for i in range(0, 4):
-            self.f[i].setBounds([0., 0., 0.], [0., 0., 0.], nodes=nodes)
-            self.cdot[i].setBounds([-10., -10., -10.], [10., 10., 10.], nodes=nodes)
+        # right step cycle
+        self.r_cycle = []
+        self.r_cdot_bounds = []
+        self.r_f_bounds = []
+        for k in range(0, 2):  # 2 nodes down
+            self.r_cycle.append(c_init_z)
+            self.r_cdot_bounds.append([0., 0., 0.])
+            self.r_f_bounds.append([1000., 1000., 1000.])
+        for k in range(0, 8):  # 8 nodes down (other step)
+            self.r_cycle.append(c_init_z)
+            self.r_cdot_bounds.append([0., 0., 0.])
+            self.r_f_bounds.append([1000., 1000., 1000.])
+        for k in range(0, 2):  # 2 nodes down
+            self.r_cycle.append(c_init_z)
+            self.r_cdot_bounds.append([0., 0., 0.])
+            self.r_f_bounds.append([1000., 1000., 1000.])
+        for k in range(0, 8):  # 8 nodes step
+            self.r_cycle.append(c_init_z + sin[k])
+            self.r_cdot_bounds.append([10., 10., 10.])
+            self.r_f_bounds.append([0., 0., 0.])
+        self.r_cycle.append(c_init_z)  # last node down
+        self.r_cdot_bounds.append([0., 0., 0.])
+        self.r_f_bounds.append([1000., 1000., 1000.])
 
-class action_scheduler:
-    def __init__(self, action_dict, batch_dict):
-        self._action_dict = action_dict
-        self._batch_dict = batch_dict
 
-        self._batch = list()
-        self._initial_batch = list()
-        self._next_batch = list()
+        #plt.figure()
+        #plt.plot(self.l_cycle)
+        #plt.plot(self.r_cycle)
 
-    def setInitialBatch(self, key):
-        self._batch = self._batch_dict[key].copy()
-        self._initial_batch = self._batch_dict[key].copy()
+        #plt.figure()
+        #plt.plot(self.l_cdot_bounds)
+        #plt.plot(self.r_cdot_bounds)
 
-    def setNextBatch(self, key):
-        if not self._next_batch:
-            self._next_batch = self._batch_dict[key].copy()
+        #plt.show()
 
-    def execute(self):
-        n = 0
-        for action in self._batch:
-            self._action_dict[action].action(n)
-            n = n + 1
+        #self.f_max = []
+        #self.f_min = []
 
-        if not self._next_batch:
-            self._next_batch = self._initial_batch.copy()
 
-        self._batch.pop(0)
-        self._batch.append(self._next_batch.pop(0))
+    def set(self, action):
+        t = self.nodes - self.step_counter # this goes FROM nodes TO 0
+
+        for k in range(max(t, 0), self.nodes + 1):
+            ref_id = (k - t)%self.nodes
+
+            if action == "step":
+                for i in range(0, 4):
+                    self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
+                    self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
+                    self.f[i].setBounds(-1.*np.array(self.l_f_bounds[ref_id]), np.array(self.l_f_bounds[ref_id]), nodes=k)
+                for i in range(4, 8):
+                    self.c_ref[i].assign(self.r_cycle[ref_id], nodes = k)
+                    self.cdot[i].setBounds(-1.*np.array(self.r_cdot_bounds[ref_id]), np.array(self.r_cdot_bounds[ref_id]), nodes=k)
+                    self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
+            else:
+                for i in range(0, 8):
+                    self.c_ref[i].assign(self.stance[ref_id], nodes=k)
+                    self.cdot[i].setBounds(-1. * np.array(self.cdot_bounds[ref_id]),
+                                           np.array(self.cdot_bounds[ref_id]), nodes=k)
+                    self.f[i].setBounds(-1. * np.array(self.f_bounds[ref_id]), np.array(self.f_bounds[ref_id]),
+                                        nodes=k)
+
+        self.step_counter += 1
 
 
 
@@ -277,8 +315,7 @@ for frame in foot_frames:
     c[i].setBounds(p, p, 0)  # starts in homing
 
     cdot[i].setInitialGuess([0., 0., 0.])
-    cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], 0)  # starts with 0 velocity
-    cdot[i].setBounds([0., 0., 0.], [0., 0., 0.], ns)  # ends with 0 velocity
+    cdot[i].setBounds([0., 0., 0.], [0., 0., 0.])  # with 0 velocity
 
     f[i].setBounds([-1000., -1000., -1000.], [1000., 1000., 1000.])
 
@@ -290,7 +327,6 @@ print(f"com: {com}")
 r.setInitialGuess(com)
 r.setBounds(com, com, 0)
 rdot.setInitialGuess([0., 0., 0.])
-#rdot.setBounds([0., 0., 0.], [0., 0., 0.], 0)
 
 print(f"base orientation: {joint_init[3:7]}")
 o.setInitialGuess(joint_init[3:7])
@@ -300,21 +336,36 @@ w.setBounds([0., 0., 0.], [0., 0., 0.], 0)
 
 # SET UP COST FUNCTION
 prb.createCost("rz_tracking", 2e3 * cs.sumsqr(r[2] - com[2]), nodes=range(1, ns+1))
+
 Wo = prb.createParameter('Wo', 1)
 Wo.assign(0.)
 prb.createCost("o_tracking", Wo * cs.sumsqr(o - joint_init[3:7]), nodes=range(1, ns+1))
-prb.createCost("rdot_tracking", 1e6 * cs.sumsqr(rdot - rdot_ref), nodes=range(1, ns+1))
+
+prb.createCost("rdot_tracking", 1e4 * cs.sumsqr(rdot - rdot_ref), nodes=range(1, ns+1))
+
 prb.createCost("w_tracking", 1e6*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
+
 prb.createCost("min_qddot", 1e1*cs.sumsqr(qddot), nodes=list(range(0, ns)))
 
+#these are the relative distance in y between the feet (needs to be rotated!)
+prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= -(initial_foot_position[1][1] - initial_foot_position[4][1]), lb=-1.))
+prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= -(initial_foot_position[3][1] - initial_foot_position[6][1]), lb=-1.))
+
+
+c_ref = dict()
 for i in range(0, 4):
     prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
-    prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
-    prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
+
+    c_ref[i] = prb.createParameter("c_ref" + str(i), 1)
+    c_ref[i].assign(initial_foot_position[i][2], nodes=range(0, ns+1))
+    prb.createConstraint("min_cz" + str(i), c[i][2] - c_ref[i])
+
 for i in range(4, 8):
     prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
-    prb.createCost("min_cdoty" + str(i), 1e6 * cs.sumsqr(cdot[i][1]))
-    prb.createCost("min_cdotz" + str(i), 1e6 * cs.sumsqr(cdot[i][2]))
+
+    c_ref[i] = prb.createParameter("c_ref" + str(i), 1)
+    c_ref[i].assign(initial_foot_position[i][2], nodes=range(0, ns+1))
+    prb.createConstraint("min_cz" + str(i), c[i][2] - c_ref[i])
 
 
 # CONSTRAINTS
@@ -327,16 +378,19 @@ prb.createConstraint("multiple_shooting", x_int["xf"] - x, nodes=list(range(1, n
 for i, fi in f.items():
     # FRICTION CONE
     mu = 0.8  # friction coefficient
-    R = np.identity(3, dtype=float)  # environment rotation wrt inertial frame
-    fc, fc_lb, fc_ub = kin_dyn.linearized_friction_cone(fi, mu, R)
+    StanceR = np.identity(3, dtype=float)  # environment rotation wrt inertial frame
+    fc, fc_lb, fc_ub = kin_dyn.linearized_friction_cone(fi, mu, StanceR)
     prb.createIntermediateConstraint(f"f{i}_friction_cone", fc, bounds=dict(lb=fc_lb, ub=fc_ub))
 
-prb.createConstraint("relative_vel_left_1", cdot[0] - cdot[1])
-prb.createConstraint("relative_vel_left_2", cdot[0] - cdot[2])
-prb.createConstraint("relative_vel_left_3", cdot[0] - cdot[3])
-prb.createConstraint("relative_vel_right_1", cdot[4] - cdot[5])
-prb.createConstraint("relative_vel_right_2", cdot[4] - cdot[6])
-prb.createConstraint("relative_vel_right_3", cdot[4] - cdot[7])
+#these are to keep the 4 points as a feet (needs to consider w x p)
+prb.createConstraint("relative_vel_left_1", cdot[0][0:2] - cdot[1][0:2])
+prb.createConstraint("relative_vel_left_2", cdot[0][0:2] - cdot[2][0:2])
+prb.createConstraint("relative_vel_left_3", cdot[0][0:2] - cdot[3][0:2])
+
+prb.createConstraint("relative_vel_right_1", cdot[4][0:2] - cdot[5][0:2])
+prb.createConstraint("relative_vel_right_2", cdot[4][0:2] - cdot[6][0:2])
+prb.createConstraint("relative_vel_right_3", cdot[4][0:2] - cdot[7][0:2])
+
 
 m = kindyn.mass()
 print(f"mass: {m}")
@@ -352,9 +406,11 @@ opts = {'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
         'ipopt.max_iter': 5000,
         'ipopt.linear_solver': 'ma57',
+        'ipopt.warm_start_init_point': 'yes',
+        'ipopt.fast_step_computation': 'yes',
         'ipopt.print_level': 0,
-        'ipopt.sb': 'yes',
-        'print_time': 0,
+        'ipopt.sb': 'no',
+        'print_time': False,
         'print_level': 0}
 
 solver = solver.Solver.make_solver('ipopt', prb, opts)
@@ -380,30 +436,8 @@ global joy_msg
 joy_msg = rospy.wait_for_message("joy", Joy)
 
 
-D = action_D(f, cdot)
-L = action_L(f, cdot)
-R = action_R(f, cdot)
-actions = {"D": D, "L": L, "R": R}
-
-REST = list()
-for i in range(0, ns):
-    REST.append("D")
-
-STEP = list()
-for i in range(0, 3):
-    STEP.append("D")
-for i in range(3, 10):
-    STEP.append("L")
-for i in range(10, 13):
-    STEP.append("D")
-for i in range(13, ns):
-    STEP.append("R")
-
-batch = {"REST": REST, "STEP": STEP}
-
-scheduler = action_scheduler(actions, batch)
-scheduler.setInitialBatch("REST")
-
+wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns)
+plot = 0
 while not rospy.is_shutdown():
     mat_storer.setInitialGuess(variables_dict, solution)
     #open loop
@@ -417,7 +451,13 @@ while not rospy.is_shutdown():
 
 
     #JOYSTICK
-    rdot_ref.assign([0.1 * joy_msg.axes[1], -0.1 * joy_msg.axes[0], 0.1 * joy_msg.axes[7]], nodes=range(1, ns+1)) #com velocities
+    alphaX = alphaY = 0.1
+    if joy_msg.buttons[4]:
+        alphaX = 0.4
+        alphaY = 0.3
+        print("STEP")
+
+    rdot_ref.assign([alphaX * joy_msg.axes[1], -alphaY * joy_msg.axes[0], 0.1 * joy_msg.axes[7]], nodes=range(1, ns+1)) #com velocities
     w_ref.assign([1. * joy_msg.axes[6], -1. * joy_msg.axes[4], 1. * joy_msg.axes[3]], nodes=range(1, ns + 1)) #base angular velocities
 
     if(joy_msg.buttons[3]):
@@ -425,16 +465,11 @@ while not rospy.is_shutdown():
     else:
         Wo.assign(0.)
 
+    if(joy_msg.buttons[4]):
+        wpg.set("step")
+    else:
+        wpg.set("cazzi")
 
-    scheduler.execute()
-
-    if joy_msg.buttons[4]:
-        scheduler.setNextBatch("STEP")
-        print("STEP")
-    #else:
-    #    setForceLimits(0,4, f, False)
-
-    ##
 
 
     tic()
