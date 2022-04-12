@@ -122,17 +122,20 @@ class steps_phase:
                 for i in range(0, 4):
                     self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
-                    self.f[i].setBounds(-1.*np.array(self.l_f_bounds[ref_id]), np.array(self.l_f_bounds[ref_id]), nodes=k)
+                    if k < self.nodes:
+                        self.f[i].setBounds(-1.*np.array(self.l_f_bounds[ref_id]), np.array(self.l_f_bounds[ref_id]), nodes=k)
                 for i in range(4, 8):
                     self.c_ref[i].assign(self.r_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.r_cdot_bounds[ref_id]), np.array(self.r_cdot_bounds[ref_id]), nodes=k)
-                    self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
+                    if k < self.nodes:
+                        self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
             else:
                 for i in range(0, 8):
                     self.c_ref[i].assign(self.stance[ref_id], nodes=k)
                     self.cdot[i].setBounds(-1. * np.array(self.cdot_bounds[ref_id]),
                                            np.array(self.cdot_bounds[ref_id]), nodes=k)
-                    self.f[i].setBounds(-1. * np.array(self.f_bounds[ref_id]), np.array(self.f_bounds[ref_id]),
+                    if k < self.nodes:
+                        self.f[i].setBounds(-1. * np.array(self.f_bounds[ref_id]), np.array(self.f_bounds[ref_id]),
                                         nodes=k)
 
         self.step_counter += 1
@@ -437,7 +440,6 @@ joy_msg = rospy.wait_for_message("joy", Joy)
 
 
 wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns)
-plot = 0
 while not rospy.is_shutdown():
     mat_storer.setInitialGuess(variables_dict, solution)
     #open loop
