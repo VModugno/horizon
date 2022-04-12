@@ -65,18 +65,22 @@ class NlpsolSolver(Solver):
         # build constraint functions list
         fun_list = list()
         for fun in self.fun_container.getCnstr().values():
-            fun_list.append(fun.getImpl())
+            fun_to_append = fun.getImpl()
+            if fun_to_append is not None:
+                fun_list.append(fun_to_append)
         g = cs.veccat(*fun_list)
 
         # treat differently cost and residual (residual must be quadratized)
         fun_list = list()
         for fun in self.fun_container.getCost().values():
-            if isinstance(fun, CostFunction):
-                fun_list.append(fun.getImpl()[:])
-            elif isinstance(fun, ResidualFunction):
-                fun_list.append(cs.sumsqr(fun.getImpl()[:]))
-            else:
-                raise Exception('wrong type of function found in fun_container')
+            fun_to_append = fun.getImpl()
+            if fun_to_append is not None:
+                if isinstance(fun, CostFunction):
+                    fun_list.append(fun_to_append[:])
+                elif isinstance(fun, ResidualFunction):
+                    fun_list.append(cs.sumsqr(fun_to_append[:]))
+                else:
+                    raise Exception('wrong type of function found in fun_container')
 
         # if it is empty, just set j to []
         j = cs.sum1(cs.veccat(*fun_list)) if fun_list else []
@@ -97,6 +101,11 @@ class NlpsolSolver(Solver):
         lbg = self._getFunList('lb')
         ubg = self._getFunList('ub')
 
+        # last guard
+        if lbg.shape != self.prob_dict['g'].shape:
+            raise ValueError(f'Constraint bounds have mismatching shape: {lbg.shape}. Allowed dimensions: {self.prob_dict["g"].shape}. '
+                             f'Be careful: if you added constraints or variables after loading the problem, you have to rebuild it before solving it!')
+
         # solve
         sol = self.solver(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg, p=p)
 
@@ -111,6 +120,8 @@ class NlpsolSolver(Solver):
 
         # get solution as state/input
         self._createVarSolAsInOut(sol)
+        self.var_solution['x_opt'] = self.x_opt
+        self.var_solution['u_opt'] = self.u_opt
 
         # build dt_solution as an array
         self._createDtSol()
