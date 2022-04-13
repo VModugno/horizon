@@ -66,7 +66,7 @@ class Problem:
     def createStateVariable(self, name: str, dim: int, casadi_type=None) -> sv.StateVariable:
         """
         Create a State Variable active on ALL the N+1 nodes of the optimization problem.
-
+        Remember: the State of the problem contains, in order of creation, all the State Variables created.
         Args:
             name: name of the variable
             dim: dimension of the variable
@@ -90,7 +90,7 @@ class Problem:
     def createInputVariable(self, name: str, dim: int, casadi_type=None) -> sv.InputVariable:
         """
         Create an Input Variable active on all the nodes of the optimization problem except the final one. (Input is not defined on the last node)
-
+        Remember: the Input of the problem contains, in order of creation, all the Input Variables created.
         Args:
             name: name of the variable
             dim: dimension of the variable
@@ -210,6 +210,7 @@ class Problem:
     def setDynamics(self, xdot):
         """
         Setter of the system Dynamics used in the optimization problem.
+        Remember that the variables in "xdot" are to be ordered as the variable in the state "x"
 
         Args:
             xdot: derivative of the State describing the dynamics of the system
