@@ -5,9 +5,9 @@ import logging
 import rospy
 import casadi as cs
 import numpy as np
-from horizon import problem
+from horizon import problem, variables
 from horizon.utils import utils, kin_dyn, resampler_trajectory, mat_storer
-from horizon.transcriptions import integrators
+from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers import solver
 from horizon.ros.replay_trajectory import *
 import matplotlib.pyplot as plt
@@ -266,67 +266,61 @@ if urdf == "":
 
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
 
+
 # Creates problem STATE variables
 r = prb.createStateVariable("r", 3) # CoM position
-r_prev = r.getVarOffset(-1)
-
-rdot = prb.createStateVariable("rdot", 3) # CoM vel
-rdot_prev = rdot.getVarOffset(-1)
-rdot_ref = prb.createParameter('rdot_ref', 3)
-rdot_ref.assign([0. ,0. , 0.], nodes=range(1, ns+1))
-
-rddot = prb.createInputVariable("rddot", 3) # CoM acc
-rddot_prev = rddot.getVarOffset(-1)
-
 o = prb.createStateVariable("o", 4) # base orientation
-o_prev = o.getVarOffset(-1)
-w = prb.createStateVariable("w", 3) # base vel
-w_prev = w.getVarOffset(-1)
-w_ref = prb.createParameter('w_ref', 3)
-w_ref.assign([0. ,0. , 0.], nodes=range(1, ns+1))
 
-wdot = prb.createInputVariable("wdot", 3) # base acc
-wdot_prev = wdot.getVarOffset(-1)
-
-q = cs.vertcat(r, o)
-qdot = cs.vertcat(rdot, w)
-qddot = cs.vertcat(rddot, wdot)
-
-q_prev = cs.vertcat(r_prev, o_prev)
-qdot_prev = cs.vertcat(rdot_prev, w_prev)
-qddot_prev = cs.vertcat(rddot_prev, wdot_prev)
+q = variables.Aggregate()
+q.addVariable(r)
+q.addVariable(o)
 
 nc = 2 * 4
 c = dict()
+for i in range(0, nc):
+    c[i] = prb.createStateVariable("c" + str(i), 3) # Contact i position
+    q.addVariable(c[i])
+
+rdot = prb.createStateVariable("rdot", 3) # CoM vel
+rdot_ref = prb.createParameter('rdot_ref', 3)
+rdot_ref.assign([0. ,0. , 0.], nodes=range(1, ns+1))
+
+w = prb.createStateVariable("w", 3) # base vel
+w_ref = prb.createParameter('w_ref', 3)
+w_ref.assign([0. ,0. , 0.], nodes=range(1, ns+1))
+
+qdot = variables.Aggregate()
+qdot.addVariable(rdot)
+qdot.addVariable(w)
+
 cdot = dict()
+for i in range(0, nc):
+    cdot[i] = prb.createStateVariable("cdot" + str(i), 3)  # Contact i vel
+    qdot.addVariable(cdot[i])
+
+rddot = prb.createInputVariable("rddot", 3) # CoM acc
+wdot = prb.createInputVariable("wdot", 3) # base acc
+
+qddot = variables.Aggregate()
+qddot.addVariable(rddot)
+qddot.addVariable(wdot)
+
 cddot = dict()
 f = dict()
 for i in range(0, nc):
-    c[i] = prb.createStateVariable("c" + str(i), 3) # Contact i position
-    q = cs.vertcat(q, c[i])
-    q_prev = cs.vertcat(q_prev, c[i].getVarOffset(-1))
-
-    cdot[i] = prb.createStateVariable("cdot" + str(i), 3)  # Contact i vel
-    qdot = cs.vertcat(qdot, cdot[i])
-    qdot_prev = cs.vertcat(qdot_prev, cdot[i].getVarOffset(-1))
-
     cddot[i] = prb.createInputVariable("cddot" + str(i), 3) # Contact i acc
-    qddot = cs.vertcat(qddot, cddot[i])
-    qddot_prev = cs.vertcat(qddot_prev, cddot[i].getVarOffset(-1))
+    qddot.addVariable(cddot[i])
 
     f[i] = prb.createInputVariable("f" + str(i), 3) # Contact i forces
 
 
-
-print(f"q : {q}")
-print(f"qdot : {qdot}")
-print(f"qddot : {qddot}")
-
 # Formulate discrete time dynamics
-x, xdot = utils.double_integrator_with_floating_base(q, qdot, qddot)
+x, xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars())
 prb.setDynamics(xdot)
-dae = {'x': x, 'p': qddot, 'ode': xdot, 'quad': 0}
-F_integrator = integrators.RK2(dae, opts=None)
+prb.setDt(T/ns)
+transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
+transcription_opts = dict(integrator='RK2') # integrator used by the multiple_shooting
+th = Transcriptor.make_method(transcription_method, prb, opts=transcription_opts)
 
 #Limits
 joint_init = [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,  # px, py, pz, qx, qy, qz, qw
@@ -383,7 +377,8 @@ prb.createCost("rdot_tracking", 1e4 * cs.sumsqr(rdot - rdot_ref), nodes=range(1,
 
 prb.createCost("w_tracking", 1e6*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
 
-prb.createCost("min_qddot", 1e0*cs.sumsqr(qddot), nodes=list(range(0, ns)))
+prb.createCost("min_qddot", 1e0*cs.sumsqr(qddot.getVars()), nodes=list(range(0, ns)))
+
 
 #these are the relative distance in y between the feet (needs to be rotated!)
 d_initial_1 = -(initial_foot_position[1][1] - initial_foot_position[4][1])
@@ -407,12 +402,6 @@ for i in range(4, 8):
     c_ref[i].assign(initial_foot_position[i][2], nodes=range(0, ns+1))
     prb.createConstraint("min_cz" + str(i), c[i][2] - c_ref[i])
 
-
-# CONSTRAINTS
-x_prev, _ = utils.double_integrator_with_floating_base(q_prev, qdot_prev, qddot_prev)
-x_int = F_integrator(x0=x_prev, p=qddot_prev, time=T/ns)
-prb.setDt(T/ns)
-prb.createConstraint("multiple_shooting", x_int["xf"] - x, nodes=list(range(1, ns+1)), bounds=dict(lb=np.zeros(x.size1()), ub=np.zeros(x.size1())))
 
 # FEET
 for i, fi in f.items():
@@ -442,7 +431,8 @@ SRBD = kin_dyn.SRBD(m, I, f, r, rddot, c, w, wdot)
 prb.createConstraint("SRBD", SRBD, bounds=dict(lb=np.zeros(6), ub=np.zeros(6)), nodes=list(range(0, ns)))
 
 # Create problem
-opts = {'ipopt.tol': 0.001,
+opts = {
+        'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
         'ipopt.max_iter': 5000,
         'ipopt.linear_solver': 'ma57',
@@ -451,7 +441,8 @@ opts = {'ipopt.tol': 0.001,
         'ipopt.print_level': 0,
         'ipopt.sb': 'no',
         'print_time': False,
-        'print_level': 0}
+        'print_level': 0
+}
 
 solver = solver.Solver.make_solver('ipopt', prb, opts)
 
