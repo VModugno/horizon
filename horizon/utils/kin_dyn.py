@@ -18,7 +18,7 @@ def SRBD(m, I, f_dict, r, rddot, p_dict, w, wdot):
     Returns:
         constraint as a vertcat
         m(rddot - g) - sum(f) = 0
-        Iwdot + w x Iw - sum(r - p) x f
+        Iwdot + w x Iw - sum(r - p) x f = 0
     """
     g = np.array([0., 0., -9.81])
     eq1 = m * (rddot - g)
@@ -29,6 +29,30 @@ def SRBD(m, I, f_dict, r, rddot, p_dict, w, wdot):
 
     return cs.vertcat(eq1, eq2)
 
+def fSRBD(m, I, f_dict, r, p_dict, w):
+    """
+    Returns com acceleration and base_link angular acceleration using Single Rigid Body Dynamics
+    Args:
+        m: robot mass
+        I: robot centroidal inertia
+        f_dict: dictionary of contact forces
+        r: com position
+        p_dict: dictionary of contact points
+        w: base angular velocity
+    Returns:
+        rddot = g + sum(f)/m
+        wdot = (w x Iw)/I + (sum(r - p) x f)/I
+    """
+    iI = cs.inv(I)
+
+    rddot = np.array([0., 0., -9.81])
+    wdot = -cs.mtimes(iI, cs.mtimes(utils.skew(w), cs.mtimes(I,  w)))
+
+    for i, f in f_dict.items():
+        rddot = rddot + cs.mtimes(1./m, f)
+        wdot = wdot + cs.mtimes(iI, cs.mtimes(utils.skew(p_dict[i] - r),  f))
+
+    return rddot, wdot
 
 def surface_point_contact(plane_dict, q, kindyn, frame):
     """
