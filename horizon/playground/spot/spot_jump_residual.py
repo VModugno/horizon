@@ -17,17 +17,25 @@ def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 
+
 action = 'jump_up'
 rviz_replay = True
 solver_type = 'ipopt'
+codegen = False
+warmstart_flag = False
+plot_sol = False
 
+
+resampling = False
+load_initial_guess = False
 
 if rviz_replay:
     from horizon.ros.replay_trajectory import replay_trajectory
     import rospy
     plot_sol = False
 
-path_to_examples = os.path.abspath(__file__ + "/../../../examples/")
+path_to_examples = os.path.abspath(__file__ + "/../../../examples")
+
 
 
 # options
@@ -38,6 +46,7 @@ tf = 2.5
 n_nodes = 50
 
 disp = [0., 0., 0., 0., 0., 0., 1.]
+
 
 node_action = (20, 30)
 
@@ -84,9 +93,11 @@ q_dot.setBounds(np.zeros(n_v), np.zeros(n_v), 0)
 
 q.setInitialGuess(q_init)
 
+
 [f.setInitialGuess([0, 0, 55]) for f in f_list]
 
 # transcription
+
 th = Transcriptor.make_method(transcription_method, prb, opts=transcription_opts)
 
 # dynamic feasibility
@@ -104,9 +115,7 @@ k_stance = list(filterfalse(lambda k: k in k_swing, k_all))
 
 # list of lifted legs
 lifted_legs = ['lf_foot', 'rf_foot']
-
-if action != 'wheelie' and action != 'jump_on_wall':
-    lifted_legs.extend(['lh_foot', 'rh_foot'])
+lifted_legs.extend(['lh_foot', 'rh_foot'])
 
 q_final = q_init
 q_final[:3] = q_final[:3] + disp[:3]
@@ -117,6 +126,7 @@ def barrier(x):
 
 for frame, f in contact_map.items():
     nodes_stance = k_stance if frame in lifted_legs else k_all
+
 
     FK = cs.Function.deserialize(kindyn.fk(frame))
     DFK = cs.Function.deserialize(kindyn.frameVelocity(frame, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED))
@@ -131,6 +141,7 @@ for frame, f in contact_map.items():
     prb.createIntermediateCost(f'{frame}_fn', barrier(f[2] - 25.0))
 
 
+
 # swing force is zero
 for leg in lifted_legs:
     nodes = k_swing
@@ -138,7 +149,9 @@ for leg in lifted_legs:
     contact_map[leg].setBounds(fzero, fzero, nodes=nodes)
 
 
+prb.createFinalConstraint(f"final_nominal_pos", q - q_final)
 prb.createResidual("min_q_dot", q_dot)
+# prb.createIntermediateResidual("min_q_ddot", 1e-3* (q_ddot))
 for f in f_list:
     prb.createIntermediateResidual(f"min_{f.getName()}", cs.sqrt(3e-3) * f)
 
@@ -154,8 +167,6 @@ if solver_type == 'ipopt':
     opts['ipopt.max_iter'] = 2000
 
 solv = solver.Solver.make_solver(solver_type, prb, opts)
-
-
 solv.solve()
 
 solution = solv.getSolutionDict()
@@ -212,7 +223,6 @@ if plot_sol:
 # ======================================================
 contact_map = {contacts_name[i]: solution[f_list[i].getName()] for i in range(n_c)}
 
-# resampling
 if rviz_replay:
 
     try:
@@ -224,8 +234,7 @@ if rviz_replay:
 
     except:
         print('Failed to automatically run RVIZ. Launch it manually.')
-
-    # remember to run a robot_state_publisher
+        # remember to run a robot_state_publisher
     repl = replay_trajectory(dt, joint_names, solution['q'], contact_map,
                              cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED, kindyn)
 
