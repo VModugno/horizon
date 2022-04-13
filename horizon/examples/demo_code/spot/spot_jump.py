@@ -29,7 +29,7 @@ resampling = True
 # flag to plot the solution
 plot_sol = True
 # flag to load initial guess (if a previous solution is present)
-load_initial_guess = True
+load_initial_guess = False
 
 # get path to the examples folder and temporary add it to the environment
 path_to_examples = os.path.abspath(__file__ + "/../../../")
@@ -44,8 +44,8 @@ if not os.path.isdir(save_dir):
 ms = mat_storer.matStorer(path_to_examples + f'/mat_files/{file_name}.mat')
 
 # options for horizon transcription
-transcription_method = 'multiple_shooting' # can choose between 'multiple_shooting' and 'direct_collocation'
-transcription_opts = dict(integrator='RK4') # integrator used by the multiple_shooting
+transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
+transcription_opts = dict(integrator='RK4')  # integrator used by the multiple_shooting
 
 
 # Create CasADi interface to Pinocchio with casadi_kin_dyn
