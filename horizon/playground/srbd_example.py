@@ -326,7 +326,7 @@ print(f"qddot : {qddot}")
 x, xdot = utils.double_integrator_with_floating_base(q, qdot, qddot)
 prb.setDynamics(xdot)
 dae = {'x': x, 'p': qddot, 'ode': xdot, 'quad': 0}
-F_integrator = integrators.EULER(dae, opts=None)
+F_integrator = integrators.RK2(dae, opts=None)
 
 #Limits
 joint_init = [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,  # px, py, pz, qx, qy, qz, qw
