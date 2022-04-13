@@ -1,6 +1,6 @@
 from horizon.solvers import Solver
 from horizon.problem import Problem
-from horizon.functions import Cost, Residual
+from horizon.functions import Cost, RecedingCost, Residual, RecedingResidual
 from typing import Dict, List
 import casadi as cs
 import numpy as np
@@ -75,13 +75,13 @@ class NlpsolSolver(Solver):
         for fun in self.fun_container.getCost().values():
             fun_to_append = fun.getImpl()
             if fun_to_append is not None:
-                if isinstance(fun, Cost):
+                if type(fun) in (Cost, RecedingCost):
                     fun_list.append(fun_to_append[:])
-                elif isinstance(fun, Residual):
+                elif type(fun) in (Residual, RecedingResidual):
                     fun_list.append(cs.sumsqr(fun_to_append[:]))
                 else:
                     raise Exception('wrong type of function found in fun_container')
-
+                
         # if it is empty, just set j to []
         j = cs.sum1(cs.veccat(*fun_list)) if fun_list else []
 
