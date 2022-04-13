@@ -7,7 +7,7 @@ except ImportError as e:
 from horizon.variables import Parameter
 from horizon.solvers import Solver
 from horizon.problem import Problem
-from horizon.functions import Function, Constraint, ResidualFunction
+from horizon.functions import Function, Constraint, Residual
 from typing import Dict, List
 from horizon.transcriptions import integrators
 import casadi as cs
@@ -223,7 +223,7 @@ class SolverILQR(Solver):
             param_list = f.getParameters()
 
             # save function value
-            if isinstance(f, ResidualFunction):
+            if isinstance(f, Residual):
                 value = cs.sumsqr(f.getFunction()(*input_list, *param_list))
             else:
                 value = f.getFunction()(*input_list, *param_list)
