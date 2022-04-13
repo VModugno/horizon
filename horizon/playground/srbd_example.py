@@ -375,27 +375,22 @@ prb.createCost("o_tracking", Wo * cs.sumsqr(o - joint_init[3:7]), nodes=range(1,
 
 prb.createCost("rdot_tracking", 1e4 * cs.sumsqr(rdot - rdot_ref), nodes=range(1, ns+1))
 
-prb.createCost("w_tracking", 1e6*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
+prb.createCost("w_tracking", 1e4*cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
 
 prb.createCost("min_qddot", 1e0*cs.sumsqr(qddot.getVars()), nodes=list(range(0, ns)))
 
 
 #these are the relative distance in y between the feet (needs to be rotated!)
-d_initial_1 = -(initial_foot_position[1][1] - initial_foot_position[4][1])
-relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= d_initial_1, lb=d_initial_1-0.5))
-d_initial_2 = -(initial_foot_position[3][1] - initial_foot_position[6][1])
-relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= d_initial_2, lb=d_initial_2-0.5))
+d_initial_1 = -(initial_foot_position[1][0:2] - initial_foot_position[4][0:2])
+relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1]-0.5))
+relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[1][0] + c[4][0], bounds=dict(ub= d_initial_1[0]+0.5, lb=d_initial_1[0]-0.5))
+d_initial_2 = -(initial_foot_position[3][0:2] - initial_foot_position[6][0:2])
+relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1]-0.5))
+relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[3][0] + c[6][0], bounds=dict(ub= d_initial_1[0]+0.5, lb=d_initial_1[0]-0.5))
 
 
 c_ref = dict()
-for i in range(0, 4):
-    prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
-
-    c_ref[i] = prb.createParameter("c_ref" + str(i), 1)
-    c_ref[i].assign(initial_foot_position[i][2], nodes=range(0, ns+1))
-    prb.createConstraint("min_cz" + str(i), c[i][2] - c_ref[i])
-
-for i in range(4, 8):
+for i in range(0, 8):
     prb.createCost("min_f" + str(i), 1e-3 * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
 
     c_ref[i] = prb.createParameter("c_ref" + str(i), 1)
@@ -412,13 +407,10 @@ for i, fi in f.items():
     prb.createIntermediateConstraint(f"f{i}_friction_cone", fc, bounds=dict(lb=fc_lb, ub=fc_ub))
 
 #these are to keep the 4 points as a feet (needs to consider w x p)
-prb.createConstraint("relative_vel_left_1", cdot[0][0:2] - cdot[1][0:2])
-prb.createConstraint("relative_vel_left_2", cdot[0][0:2] - cdot[2][0:2])
-prb.createConstraint("relative_vel_left_3", cdot[0][0:2] - cdot[3][0:2])
-
-prb.createConstraint("relative_vel_right_1", cdot[4][0:2] - cdot[5][0:2])
-prb.createConstraint("relative_vel_right_2", cdot[4][0:2] - cdot[6][0:2])
-prb.createConstraint("relative_vel_right_3", cdot[4][0:2] - cdot[7][0:2])
+for i in range(1,4):
+    prb.createConstraint("relative_vel_left_" + str(i), cdot[0][0:2] - cdot[i][0:2])
+for i in range(5,8):
+    prb.createConstraint("relative_vel_right_" + str(i), cdot[4][0:2] - cdot[i][0:2])
 
 
 m = kindyn.mass()
@@ -435,7 +427,7 @@ opts = {
         'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
         'ipopt.max_iter': 5000,
-        'ipopt.linear_solver': 'ma57',
+        'ipopt.linear_solver': 'ma27',
         'ipopt.warm_start_init_point': 'yes',
         'ipopt.fast_step_computation': 'yes',
         'ipopt.print_level': 0,
@@ -496,16 +488,24 @@ while not rospy.is_shutdown():
 
     if(joy_msg.buttons[4]):
         wpg.set("step")
-        relative_pos_y_1_4.setBounds(ub=d_initial_1, lb=d_initial_1 - 0.5)
-        relative_pos_y_3_6.setBounds(ub=d_initial_2, lb=d_initial_2 - 0.5)
+        relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - 0.5)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - 0.5)
+        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + 0.5, lb=d_initial_1[0]- 0.5)
+        relative_pos_x_3_6.setBounds(ub=d_initial_2[0]+ 0.5, lb=d_initial_2[0]- 0.5)
     elif (joy_msg.buttons[5]):
         wpg.set("jump")
-        relative_pos_y_1_4.setBounds(ub=d_initial_1, lb=d_initial_1)
-        relative_pos_y_3_6.setBounds(ub=d_initial_2, lb=d_initial_2)
+        d_actual_1 = -(solution['c' + str(1)][0:2, 1] - solution['c' + str(4)][0:2, 1])
+        d_actual_2 = -(solution['c' + str(3)][0:2, 1] - solution['c' + str(6)][0:2, 1])
+        relative_pos_y_1_4.setBounds(ub=d_actual_1[1], lb=d_actual_1[1] - 0.5)
+        relative_pos_y_3_6.setBounds(ub=d_actual_2[1], lb=d_actual_2[1])
+        relative_pos_x_1_4.setBounds(ub=d_actual_1[0], lb=d_actual_1[0])
+        relative_pos_x_3_6.setBounds(ub=d_actual_2[0] + 0.5, lb=d_actual_2[0]- 0.5)
     else:
         wpg.set("cazzi")
-        relative_pos_y_1_4.setBounds(ub=d_initial_1, lb=d_initial_1 - 0.5)
-        relative_pos_y_3_6.setBounds(ub=d_initial_2, lb=d_initial_2 - 0.5)
+        relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - 0.5)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - 0.5)
+        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + 0.5, lb=d_initial_1[0]- 0.5)
+        relative_pos_x_3_6.setBounds(ub=d_initial_2[0]+ 0.5, lb=d_initial_2[0]- 0.5)
 
 
 
