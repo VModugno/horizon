@@ -21,7 +21,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from abc import ABCMeta, abstractmethod
 
 class steps_phase:
-    def __init__(self, f, c, cdot, c_init_z, c_ref, nodes):
+    def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, max_force):
         self.f = f
         self.c = c
         self.cdot = cdot
@@ -43,8 +43,8 @@ class steps_phase:
             self.r_jump.append(c_init_z)
             self.l_jump_cdot_bounds.append([0., 0., 0.])
             self.r_jump_cdot_bounds.append([0., 0., 0.])
-            self.l_jump_f_bounds.append([1000., 1000., 1000.])
-            self.r_jump_f_bounds.append([1000., 1000., 1000.])
+            self.l_jump_f_bounds.append([max_force, max_force, max_force])
+            self.r_jump_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes jump
             self.l_jump.append(c_init_z + sin[k])
             self.r_jump.append(c_init_z + sin[k])
@@ -57,8 +57,8 @@ class steps_phase:
             self.r_jump.append(c_init_z)
             self.l_jump_cdot_bounds.append([0., 0., 0.])
             self.r_jump_cdot_bounds.append([0., 0., 0.])
-            self.l_jump_f_bounds.append([1000., 1000., 1000.])
-            self.r_jump_f_bounds.append([1000., 1000., 1000.])
+            self.l_jump_f_bounds.append([max_force, max_force, max_force])
+            self.r_jump_f_bounds.append([max_force, max_force, max_force])
 
 
 
@@ -69,7 +69,7 @@ class steps_phase:
         for k in range(0, nodes):
             self.stance.append([c_init_z])
             self.cdot_bounds.append([0., 0., 0.])
-            self.f_bounds.append([1000., 1000., 1000.])
+            self.f_bounds.append([max_force, max_force, max_force])
 
 
         #STEP
@@ -81,7 +81,7 @@ class steps_phase:
         for k in range(0,2): # 2 nodes down
             self.l_cycle.append(c_init_z)
             self.l_cdot_bounds.append([0., 0., 0.])
-            self.l_f_bounds.append([1000., 1000., 1000.])
+            self.l_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes step
             self.l_cycle.append(c_init_z + sin[k])
             self.l_cdot_bounds.append([10., 10., 10.])
@@ -89,14 +89,14 @@ class steps_phase:
         for k in range(0, 2):  # 2 nodes down
             self.l_cycle.append(c_init_z)
             self.l_cdot_bounds.append([0., 0., 0.])
-            self.l_f_bounds.append([1000., 1000., 1000.])
+            self.l_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes down (other step)
             self.l_cycle.append(c_init_z)
             self.l_cdot_bounds.append([0., 0., 0.])
-            self.l_f_bounds.append([1000., 1000., 1000.])
+            self.l_f_bounds.append([max_force, max_force, max_force])
         self.l_cycle.append(c_init_z) # last node down
         self.l_cdot_bounds.append([0., 0., 0.])
-        self.l_f_bounds.append([1000., 1000., 1000.])
+        self.l_f_bounds.append([max_force, max_force, max_force])
 
         # right step cycle
         self.r_cycle = []
@@ -105,22 +105,22 @@ class steps_phase:
         for k in range(0, 2):  # 2 nodes down
             self.r_cycle.append(c_init_z)
             self.r_cdot_bounds.append([0., 0., 0.])
-            self.r_f_bounds.append([1000., 1000., 1000.])
+            self.r_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes down (other step)
             self.r_cycle.append(c_init_z)
             self.r_cdot_bounds.append([0., 0., 0.])
-            self.r_f_bounds.append([1000., 1000., 1000.])
+            self.r_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 2):  # 2 nodes down
             self.r_cycle.append(c_init_z)
             self.r_cdot_bounds.append([0., 0., 0.])
-            self.r_f_bounds.append([1000., 1000., 1000.])
+            self.r_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes step
             self.r_cycle.append(c_init_z + sin[k])
             self.r_cdot_bounds.append([10., 10., 10.])
             self.r_f_bounds.append([0., 0., 0.])
         self.r_cycle.append(c_init_z)  # last node down
         self.r_cdot_bounds.append([0., 0., 0.])
-        self.r_f_bounds.append([1000., 1000., 1000.])
+        self.r_f_bounds.append([max_force, max_force, max_force])
 
         self.action = ""
 
@@ -606,7 +606,7 @@ joy_msg = rospy.wait_for_message("joy", Joy)
 """
 Walking patter generator and scheduler
 """
-wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns)
+wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns, max_force=max_contact_force)
 while not rospy.is_shutdown():
     """
     Automatically set initial guess from solution to variables in variables_dict
