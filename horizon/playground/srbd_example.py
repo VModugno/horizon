@@ -479,15 +479,21 @@ prb.createCost("min_qddot", min_qddot_gain * cs.sumsqr(qddot.getVars()), nodes=l
 Set up som CONSTRAINTS
 """
 """
-These are the relative distance in y between the feet 
+These are the relative distance in y between the feet. Initial configuration of contacts is taken as minimum distance in Y! 
 TODO: when feet will rotates, also these constraint has to rotate!
+TODO: what happen for only 4 contacts???
 """
+max_clearance_x = rospy.get_param("max_clearance_x", 0.5)
+print(f"max_clearance_x: {max_clearance_x}")
+max_clearance_y = rospy.get_param("max_clearance_y", 0.5)
+print(f"max_clearance_y: {max_clearance_y}")
+
 d_initial_1 = -(initial_foot_position[1][0:2] - initial_foot_position[4][0:2])
-relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1]-0.5))
-relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[1][0] + c[4][0], bounds=dict(ub= d_initial_1[0]+0.5, lb=d_initial_1[0]-0.5))
+relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
+relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[1][0] + c[4][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
 d_initial_2 = -(initial_foot_position[3][0:2] - initial_foot_position[6][0:2])
-relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1]-0.5))
-relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[3][0] + c[6][0], bounds=dict(ub= d_initial_1[0]+0.5, lb=d_initial_1[0]-0.5))
+relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1] - max_clearance_y))
+relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[3][0] + c[6][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
 
 min_f_gain = rospy.get_param("min_f_gain", 1e-3)
 print(f"min_f_gain: {min_f_gain}")
@@ -510,9 +516,10 @@ for i in range(0, nc):
 Friction cones and force unilaterality constraint
 TODO: for now flat terrain is assumed (StanceR needs tio be used more or less everywhere for contacts)
 """
+mu = rospy.get_param("friction_cone_coefficient", 0.8)
+print(f"mu: {mu}")
 for i, fi in f.items():
     # FRICTION CONE
-    mu = 0.8  # friction coefficient
     StanceR = np.identity(3, dtype=float)  # environment rotation wrt inertial frame
     fc, fc_lb, fc_ub = kin_dyn.linearized_friction_cone(fi, mu, StanceR)
     prb.createIntermediateConstraint(f"f{i}_friction_cone", fc, bounds=dict(lb=fc_lb, ub=fc_ub))
@@ -529,7 +536,7 @@ if contact_model > 1:
         prb.createConstraint("relative_vel_right_" + str(i), cdot[contact_model][0:2] - cdot[i][0:2])
 
 """
-Single Rigid Body Dynamics constraint:
+Single Rigid Body Dynamics constraint: data are taken from the loaded urdf model in nominal configuration
         m(rddot - g) - sum(f) = 0
         Iwdot + w x Iw - sum(r - p) x f = 0
 """
@@ -542,7 +549,9 @@ print(f"I centroidal: {I}")
 SRBD = kin_dyn.SRBD(m, I, f, r, rddot, c, w, wdot)
 prb.createConstraint("SRBD", SRBD, bounds=dict(lb=np.zeros(6), ub=np.zeros(6)), nodes=list(range(0, ns)))
 
-# Create problem
+"""
+Create solver
+"""
 opts = {
         'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
@@ -619,24 +628,24 @@ while not rospy.is_shutdown():
 
     if(joy_msg.buttons[4]):
         wpg.set("step")
-        relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - 0.5)
-        relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - 0.5)
-        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + 0.5, lb=d_initial_1[0]- 0.5)
-        relative_pos_x_3_6.setBounds(ub=d_initial_2[0]+ 0.5, lb=d_initial_2[0]- 0.5)
+        relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - max_clearance_y)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - max_clearance_y)
+        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
+        relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
     elif (joy_msg.buttons[5]):
         wpg.set("jump")
         d_actual_1 = -(solution['c' + str(1)][0:2, 1] - solution['c' + str(4)][0:2, 1])
         d_actual_2 = -(solution['c' + str(3)][0:2, 1] - solution['c' + str(6)][0:2, 1])
-        relative_pos_y_1_4.setBounds(ub=d_actual_1[1], lb=d_actual_1[1] - 0.5)
+        relative_pos_y_1_4.setBounds(ub=d_actual_1[1], lb=d_actual_1[1] - max_clearance_y)
         relative_pos_y_3_6.setBounds(ub=d_actual_2[1], lb=d_actual_2[1])
         relative_pos_x_1_4.setBounds(ub=d_actual_1[0], lb=d_actual_1[0])
-        relative_pos_x_3_6.setBounds(ub=d_actual_2[0] + 0.5, lb=d_actual_2[0]- 0.5)
+        relative_pos_x_3_6.setBounds(ub=d_actual_2[0] + max_clearance_x, lb=d_actual_2[0] - max_clearance_x)
     else:
         wpg.set("cazzi")
-        relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - 0.5)
-        relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - 0.5)
-        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + 0.5, lb=d_initial_1[0]- 0.5)
-        relative_pos_x_3_6.setBounds(ub=d_initial_2[0]+ 0.5, lb=d_initial_2[0]- 0.5)
+        relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - max_clearance_y)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - max_clearance_y)
+        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
+        relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
 
 
 
