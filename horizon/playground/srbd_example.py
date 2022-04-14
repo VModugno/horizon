@@ -19,6 +19,7 @@ from sensor_msgs.msg import Joy
 from numpy import linalg as LA
 from visualization_msgs.msg import Marker, MarkerArray
 from abc import ABCMeta, abstractmethod
+from std_msgs.msg import Float32
 
 class steps_phase:
     def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, max_force):
@@ -577,10 +578,7 @@ opts = {
 
 solver = solver.Solver.make_solver('ipopt', prb, opts)
 
-tic()
 solver.solve()
-print(f"time first solve: {toc()}")
-
 solution = solver.getSolutionDict()
 
 """
@@ -602,6 +600,9 @@ rate = rospy.Rate(hz)  # 10hz
 rospy.Subscriber('/joy', Joy, joy_cb)
 global joy_msg
 joy_msg = rospy.wait_for_message("joy", Joy)
+
+solution_time_pub = rospy.Publisher("solution_time", Float32, queue_size=10)
+
 
 """
 Walking patter generator and scheduler
@@ -663,8 +664,8 @@ while not rospy.is_shutdown():
     tic()
     if not solver.solve():
         print("UNABLE TO SOLVE")
+    solution_time_pub.publish(toc())
     solution = solver.getSolutionDict()
-    print(f"time solve: {toc()}")
 
     c0_hist = dict()
     for i in range(0, nc):
