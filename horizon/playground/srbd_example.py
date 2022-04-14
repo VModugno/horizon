@@ -553,10 +553,12 @@ prb.createConstraint("SRBD", SRBD, bounds=dict(lb=np.zeros(6), ub=np.zeros(6)), 
 """
 Create solver
 """
+max_iteration = rospy.get_param("max_iteration", 10)
+print(f"max_iteration: {max_iteration}")
 opts = {
         'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
-        'ipopt.max_iter': 5000,
+        'ipopt.max_iter': max_iteration,
         'ipopt.linear_solver': 'ma27',
         'ipopt.warm_start_init_point': 'yes',
         'ipopt.fast_step_computation': 'yes',
