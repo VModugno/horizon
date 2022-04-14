@@ -355,7 +355,7 @@ for i in range(0, nc):
 """
 Formulate discrete time dynamics using multiple_shooting and RK2 integrator
 """
-x, xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars())
+x, xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars(), base_velocity_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 prb.setDynamics(xdot)
 prb.setDt(T/ns)
 transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
