@@ -287,6 +287,78 @@ Visualization Manager:
         SRBD: true
       Queue Size: 100
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /SRB_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c0_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c1_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c2_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c3_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c4_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c5_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c6_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /c7_trj
+      Name: Marker
+      Namespaces:
+        SRBD: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
