@@ -13,6 +13,17 @@
         <param name="publish_frequency" type="double" value="250.0" />
     </node>
 
+    <rosparam param = "foot_frames">["left_foot_upper_left", "left_foot_upper_right", "left_foot_lower_left", "left_foot_lower_right",
+                                     "right_foot_upper_left", "right_foot_upper_right", "right_foot_lower_left", "right_foot_lower_right"]</rosparam>
+
+    <rosparam param = "joint_init">[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, <!-- px, py, pz, qx, qy, qz, qw -->
+                                    0.0, 0.04999999999997918, 0.0, <!-- 'leg_left_1_joint', 'leg_left_2_joint', 'leg_left_3_joint', -->
+                                    1.1693870096573384, 2.3401777720374923, 0.6999999999999997, <!-- 'leg_left_femur_joint', 'leg_left_knee_joint', 'leg_left_length_joint' -->
+                                    -0.049999999999970346, 0.0, <!-- 'leg_left_4_joint', 'leg_left_5_joint' -->
+                                    0.0, 0.04999999999997918, 0.0, <!-- 'leg_right_1_joint', 'leg_right_2_joint', 'leg_right_3_joint', -->
+                                    1.1693870096573384, 2.3401777720374923, 0.6999999999999997, <!-- 'leg_right_femur_joint', 'leg_right_knee_joint', 'leg_right_length_joint' -->
+                                    -0.049999999999970346, 0.0]</rosparam> <!-- 'leg_right_4_joint', 'leg_right_5_joint' -->
+    
     <node pkg="joy" type="joy_node" name="joy_node">
         <param name="dev" type="string" value="/dev/input/js0" />
         <!-- param name="autorepeat_rate" type="double" value="10." / -->
