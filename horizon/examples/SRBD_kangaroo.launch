@@ -23,11 +23,11 @@
                                     0.0, 0.04999999999997918, 0.0, <!-- 'leg_right_1_joint', 'leg_right_2_joint', 'leg_right_3_joint', -->
                                     1.1693870096573384, 2.3401777720374923, 0.6999999999999997, <!-- 'leg_right_femur_joint', 'leg_right_knee_joint', 'leg_right_length_joint' -->
                                     -0.049999999999970346, 0.0]</rosparam> <!-- 'leg_right_4_joint', 'leg_right_5_joint' -->
-    
+
     <node pkg="joy" type="joy_node" name="joy_node">
         <param name="dev" type="string" value="/dev/input/js0" />
         <!-- param name="autorepeat_rate" type="double" value="10." / -->
-        <param name="deadzone" type="double" value="0.1" />
+        <param name="deadzone" type="double" value="0.2" />
     </node>
 
 

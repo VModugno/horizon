@@ -493,7 +493,7 @@ relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][
 relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[1][0] + c[4][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
 d_initial_2 = -(initial_foot_position[3][0:2] - initial_foot_position[6][0:2])
 relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1] - max_clearance_y))
-relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[3][0] + c[6][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
+relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[3][0] + c[6][0], bounds=dict(ub= d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x))
 
 min_f_gain = rospy.get_param("min_f_gain", 1e-3)
 print(f"min_f_gain: {min_f_gain}")
