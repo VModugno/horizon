@@ -22,7 +22,7 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 
 class steps_phase:
-    def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, max_force):
+    def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, max_force, max_velocity):
         self.f = f
         self.c = c
         self.cdot = cdot
@@ -49,8 +49,8 @@ class steps_phase:
         for k in range(0, 8):  # 8 nodes jump
             self.l_jump.append(c_init_z + sin[k])
             self.r_jump.append(c_init_z + sin[k])
-            self.l_jump_cdot_bounds.append([10., 10., 10.])
-            self.r_jump_cdot_bounds.append([10., 10., 10.])
+            self.l_jump_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
+            self.r_jump_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
             self.l_jump_f_bounds.append([0., 0., 0.])
             self.r_jump_f_bounds.append([0., 0., 0.])
         for k in range(0, 7):  # 6 nodes down
@@ -85,7 +85,7 @@ class steps_phase:
             self.l_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes step
             self.l_cycle.append(c_init_z + sin[k])
-            self.l_cdot_bounds.append([10., 10., 10.])
+            self.l_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
             self.l_f_bounds.append([0., 0., 0.])
         for k in range(0, 2):  # 2 nodes down
             self.l_cycle.append(c_init_z)
@@ -117,7 +117,7 @@ class steps_phase:
             self.r_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes step
             self.r_cycle.append(c_init_z + sin[k])
-            self.r_cdot_bounds.append([10., 10., 10.])
+            self.r_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
             self.r_f_bounds.append([0., 0., 0.])
         self.r_cycle.append(c_init_z)  # last node down
         self.r_cdot_bounds.append([0., 0., 0.])
@@ -391,8 +391,10 @@ print(f"foot_frames: {foot_frames}")
 
 
 
-max_contact_force = rospy.get_param("max_contact_force", 1000)
+max_contact_force = rospy.get_param("max_contact_force", 1000.)
 print(f"max_contact_force: {max_contact_force}")
+max_contact_velocity = rospy.get_param("max_contact_velocity", 10.)
+print(f"max_contact_velocity: {max_contact_velocity}")
 i = 0
 initial_foot_position = dict()
 for frame in foot_frames:
@@ -607,7 +609,7 @@ solution_time_pub = rospy.Publisher("solution_time", Float32, queue_size=10)
 """
 Walking patter generator and scheduler
 """
-wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns, max_force=max_contact_force)
+wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns, max_force=max_contact_force, max_velocity=max_contact_velocity)
 while not rospy.is_shutdown():
     """
     Automatically set initial guess from solution to variables in variables_dict
