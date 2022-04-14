@@ -488,12 +488,22 @@ print(f"max_clearance_x: {max_clearance_x}")
 max_clearance_y = rospy.get_param("max_clearance_y", 0.5)
 print(f"max_clearance_y: {max_clearance_y}")
 
-d_initial_1 = -(initial_foot_position[1][0:2] - initial_foot_position[4][0:2])
-relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[1][1] + c[4][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
-relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[1][0] + c[4][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
-d_initial_2 = -(initial_foot_position[3][0:2] - initial_foot_position[6][0:2])
-relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[3][1] + c[6][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1] - max_clearance_y))
-relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[3][0] + c[6][0], bounds=dict(ub= d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x))
+fpi = []
+for l in range(0, number_of_legs):
+    if contact_model == 1:
+        fpi.append(l)
+    else:
+        fpi.append(l * contact_model)
+        fpi.append(l * contact_model + contact_model - 1)
+
+#fpi = [0, 3, 4, 7] #for knagaroo expected result
+
+d_initial_1 = -(initial_foot_position[fpi[0]][0:2] - initial_foot_position[fpi[2]][0:2])
+relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[fpi[0]][1] + c[fpi[2]][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
+relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[fpi[0]][0] + c[fpi[2]][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
+d_initial_2 = -(initial_foot_position[fpi[1]][0:2] - initial_foot_position[fpi[3]][0:2])
+relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[fpi[1]][1] + c[fpi[3]][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1] - max_clearance_y))
+relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[fpi[1]][0] + c[fpi[3]][0], bounds=dict(ub= d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x))
 
 min_f_gain = rospy.get_param("min_f_gain", 1e-3)
 print(f"min_f_gain: {min_f_gain}")
@@ -578,7 +588,7 @@ Dictionary to store variables used for warm-start
 """
 variables_dict = {"r": r, "rdot": rdot, "rddot": rddot,
                   "o": o, "w": w, "wdot": wdot}
-for i in range(0, 8):
+for i in range(0, nc):
     variables_dict["c" + str(i)] = c[i]
     variables_dict["cdot" + str(i)] = cdot[i]
     variables_dict["cddot" + str(i)] = cddot[i]
@@ -607,7 +617,7 @@ while not rospy.is_shutdown():
     rdot.setBounds(solution['rdot'][:, 1], solution['rdot'][:, 1], 0)
     o.setBounds(solution['o'][:, 1], solution['o'][:, 1], 0)
     w.setBounds(solution['w'][:, 1], solution['w'][:, 1], 0)
-    for i in range(0, 8):
+    for i in range(0, nc):
         c[i].setBounds(solution['c' + str(i)][: ,1], solution['c' + str(i)][: ,1], 0)
         cdot[i].setBounds(solution['cdot' + str(i)][:, 1], solution['cdot' + str(i)][:, 1], 0)
 
@@ -634,8 +644,8 @@ while not rospy.is_shutdown():
         relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
     elif (joy_msg.buttons[5]):
         wpg.set("jump")
-        d_actual_1 = -(solution['c' + str(1)][0:2, 1] - solution['c' + str(4)][0:2, 1])
-        d_actual_2 = -(solution['c' + str(3)][0:2, 1] - solution['c' + str(6)][0:2, 1])
+        d_actual_1 = -(solution['c' + str(fpi[0])][0:2, 1] - solution['c' + str(fpi[2])][0:2, 1])
+        d_actual_2 = -(solution['c' + str(fpi[1])][0:2, 1] - solution['c' + str(fpi[3])][0:2, 1])
         relative_pos_y_1_4.setBounds(ub=d_actual_1[1], lb=d_actual_1[1] - max_clearance_y)
         relative_pos_y_3_6.setBounds(ub=d_actual_2[1], lb=d_actual_2[1])
         relative_pos_x_1_4.setBounds(ub=d_actual_1[0], lb=d_actual_1[0])
@@ -657,15 +667,15 @@ while not rospy.is_shutdown():
     print(f"time solve: {toc()}")
 
     c0_hist = dict()
-    for i in range(0, 8):
+    for i in range(0, nc):
         c0_hist['c' + str(i)] = solution['c' + str(i)][:, 0]
 
     t = rospy.Time().now()
     SRBDTfBroadcaster(solution['r'][:, 0], solution['o'][:, 0], c0_hist, t)
-    for i in range(0, 8):
+    for i in range(0, nc):
         publishContactForce(t, solution['f' + str(i)][:, 0], 'c' + str(i))
         publishPointTrj(solution["c" + str(i)], t, 'c' + str(i), "world", color=[0., 0., 1.])
-    SRBDViewer(I, "SRB", t, 8)
+    SRBDViewer(I, "SRB", t, nc)
     publishPointTrj(solution["r"], t, "SRB", "world")
 
     rate.sleep()
