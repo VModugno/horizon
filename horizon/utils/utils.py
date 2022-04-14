@@ -1,4 +1,5 @@
 import casadi as cs
+from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
 
 def jac(dict, var_string_list, function_string_list):
     """
@@ -96,14 +97,17 @@ def toRot(q):
     return R
 
 
-def double_integrator_with_floating_base(q, ndot, nddot):
+def double_integrator_with_floating_base(q, ndot, nddot, base_velocity_reference_frame = cas_kin_dyn.CasadiKinDyn.LOCAL):
     """
     Construct the floating-base dynamic model:
                 x = [q, ndot]
                 xdot = [qdot, nddot]
     using quaternion dynamics: quatdot = quat x [omega, 0]
     NOTE: this implementation consider floating-base position and orientation expressed in GLOBAL (world) coordinates while
-    linear and angular velocities expressed in LOCAL (base_link) coordinates.
+    if base_velocity_reference_frame = cas_kin_dyn.CasadiKinDyn.LOCAL
+        linear and angular velocities expressed in LOCAL (base_link) coordinates.
+    else if base_velocity_reference_frame = cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+        linear and angular velocities expressed in WORLD coordinates.
     Args:
         q: joint space coordinates: q = [x y z px py pz pw qj], where p is a quaternion
         ndot: joint space velocities: ndot = [vx vy vz wx wy wz qdotj]
@@ -113,18 +117,26 @@ def double_integrator_with_floating_base(q, ndot, nddot):
         x: state x = [q, ndot]
         xdot: derivative of the state xdot = [qdot, nddot]
     """
+    if base_velocity_reference_frame != cas_kin_dyn.CasadiKinDyn.LOCAL and base_velocity_reference_frame != cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED:
+        raise Exception(f'base_velocity_reference_frame can be only LOCAL or LOCAL_WORLD_ALIGNED!')
 
     qw = cs.SX.zeros(4,1)
     qw[0:3] = 0.5*ndot[3:6]
 
-
-
-    if q.shape[1] == 1:
-        quaterniondot = quaterion_product(q[3:7], qw)
+    if base_velocity_reference_frame == cas_kin_dyn.CasadiKinDyn.LOCAL:
+        if q.shape[1] == 1:
+            quaterniondot = quaterion_product(q[3:7], qw)
+        else:
+            quaterniondot = quaterion_product(q[3:7, :], qw)
     else:
-        quaterniondot = quaterion_product(q[3:7, :], qw)
+        if q.shape[1] == 1:
+            quaterniondot = quaterion_product(qw, q[3:7])
+        else:
+            quaterniondot = quaterion_product(qw, q[3:7, :])
 
-    R = toRot(q[3:7])
+    R = toRot([0., 0., 0., 1.])
+    if base_velocity_reference_frame == cas_kin_dyn.CasadiKinDyn.LOCAL:
+        R = toRot(q[3:7])
     x = cs.vertcat(q, ndot)
 
     if ndot.shape[1] == 1:

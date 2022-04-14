@@ -13,7 +13,7 @@ def SRBD(m, I, f_dict, r, rddot, p_dict, w, wdot):
         r: com position
         rddot: com acceleration
         p_dict: dictionary of contact points
-        w: base angular velocity
+        w: base angular velocity (in WORLD frame)
         wdot: base angular acceleration
     Returns:
         constraint as a vertcat
@@ -38,7 +38,7 @@ def fSRBD(m, I, f_dict, r, p_dict, w):
         f_dict: dictionary of contact forces
         r: com position
         p_dict: dictionary of contact points
-        w: base angular velocity
+        w: base angular velocity (in WORLD frame)
     Returns:
         rddot = g + sum(f)/m
         wdot = (w x Iw)/I + (sum(r - p) x f)/I
