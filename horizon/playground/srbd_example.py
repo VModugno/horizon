@@ -32,34 +32,22 @@ class steps_phase:
         self.step_counter = 0
 
         #JUMP
-        self.l_jump = []
-        self.l_jump_cdot_bounds = []
-        self.l_jump_f_bounds = []
-        self.r_jump = []
-        self.r_jump_cdot_bounds = []
-        self.r_jump_f_bounds = []
+        self.jump_c = []
+        self.jump_cdot_bounds = []
+        self.jump_f_bounds = []
         sin = 0.1 * np.sin(np.linspace(0, np.pi, 8))
         for k in range(0, 7):  # 7 nodes down
-            self.l_jump.append(c_init_z)
-            self.r_jump.append(c_init_z)
-            self.l_jump_cdot_bounds.append([0., 0., 0.])
-            self.r_jump_cdot_bounds.append([0., 0., 0.])
-            self.l_jump_f_bounds.append([max_force, max_force, max_force])
-            self.r_jump_f_bounds.append([max_force, max_force, max_force])
+            self.jump_c.append(c_init_z)
+            self.jump_cdot_bounds.append([0., 0., 0.])
+            self.jump_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes jump
-            self.l_jump.append(c_init_z + sin[k])
-            self.r_jump.append(c_init_z + sin[k])
-            self.l_jump_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
-            self.r_jump_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
-            self.l_jump_f_bounds.append([0., 0., 0.])
-            self.r_jump_f_bounds.append([0., 0., 0.])
+            self.jump_c.append(c_init_z + sin[k])
+            self.jump_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
+            self.jump_f_bounds.append([0., 0., 0.])
         for k in range(0, 7):  # 6 nodes down
-            self.l_jump.append(c_init_z)
-            self.r_jump.append(c_init_z)
-            self.l_jump_cdot_bounds.append([0., 0., 0.])
-            self.r_jump_cdot_bounds.append([0., 0., 0.])
-            self.l_jump_f_bounds.append([max_force, max_force, max_force])
-            self.r_jump_f_bounds.append([max_force, max_force, max_force])
+            self.jump_c.append(c_init_z)
+            self.jump_cdot_bounds.append([0., 0., 0.])
+            self.jump_f_bounds.append([max_force, max_force, max_force])
 
 
 
@@ -147,19 +135,14 @@ class steps_phase:
                         self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
 
             elif action == "jump":
-                for i in range(0, 4):
-                    self.c_ref[i].assign(self.l_jump[ref_id], nodes = k)
-                    self.cdot[i].setBounds(-1.*np.array(self.l_jump_cdot_bounds[ref_id]), np.array(self.l_jump_cdot_bounds[ref_id]), nodes=k)
+                for i in range(0, len(c)):
+                    self.c_ref[i].assign(self.jump_c[ref_id], nodes = k)
+                    self.cdot[i].setBounds(-1. * np.array(self.jump_cdot_bounds[ref_id]), np.array(self.jump_cdot_bounds[ref_id]), nodes=k)
                     if k < self.nodes:
-                        self.f[i].setBounds(-1.*np.array(self.l_jump_f_bounds[ref_id]), np.array(self.l_jump_f_bounds[ref_id]), nodes=k)
-                for i in range(4, 8):
-                    self.c_ref[i].assign(self.r_jump[ref_id], nodes = k)
-                    self.cdot[i].setBounds(-1.*np.array(self.r_jump_cdot_bounds[ref_id]), np.array(self.r_jump_cdot_bounds[ref_id]), nodes=k)
-                    if k < self.nodes:
-                        self.f[i].setBounds(-1.*np.array(self.r_jump_f_bounds[ref_id]), np.array(self.r_jump_f_bounds[ref_id]), nodes=k)
+                        self.f[i].setBounds(-1. * np.array(self.jump_f_bounds[ref_id]), np.array(self.jump_f_bounds[ref_id]), nodes=k)
 
             else:
-                for i in range(0, 8):
+                for i in range(0, len(c)):
                     self.c_ref[i].assign(self.stance[ref_id], nodes=k)
                     self.cdot[i].setBounds(-1. * np.array(self.cdot_bounds[ref_id]),
                                            np.array(self.cdot_bounds[ref_id]), nodes=k)
@@ -260,6 +243,7 @@ def SRBDViewer(I, base_frame, t, number_of_contacts):
 
 
 horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
+#horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
 time.sleep(3.)
 
 """
@@ -500,6 +484,7 @@ for l in range(0, number_of_legs):
         fpi.append(l * contact_model + contact_model - 1)
 
 #fpi = [0, 3, 4, 7] #for knagaroo expected result
+#fpi = [0, 1, 2, 3] #for spot expected result
 
 d_initial_1 = -(initial_foot_position[fpi[0]][0:2] - initial_foot_position[fpi[2]][0:2])
 relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[fpi[0]][1] + c[fpi[2]][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
@@ -547,6 +532,9 @@ if contact_model > 1:
         prb.createConstraint("relative_vel_left_" + str(i), cdot[0][0:2] - cdot[i][0:2])
     for i in range(contact_model + 1, 2 * contact_model):
         prb.createConstraint("relative_vel_right_" + str(i), cdot[contact_model][0:2] - cdot[i][0:2])
+if contact_model == 1 and number_of_legs == 4: #quadrupedal case
+    prb.createConstraint("relative_vel_1" + str(i), cdot[fpi[0]][0:2] - cdot[fpi[3]][0:2])
+    prb.createConstraint("relative_vel_2" + str(i), cdot[fpi[1]][0:2] - cdot[fpi[2]][0:2])
 
 """
 Single Rigid Body Dynamics constraint: data are taken from the loaded urdf model in nominal configuration
