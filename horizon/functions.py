@@ -1,7 +1,7 @@
 import casadi as cs
 import numpy as np
 from horizon import misc_function as misc
-from horizon import variables as horizon_var
+from horizon import variables as sv
 from collections import OrderedDict
 import pickle
 import time
@@ -90,6 +90,7 @@ class AbstractFunction:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # print(f'setting nodes from {misc.getNodesFromBinary(self._active_nodes_array)} to {nodes}')
         if erasing:
             self._active_nodes_array[:] = 0
 
@@ -279,7 +280,7 @@ class Function(AbstractFunction):
         Returns:
             the implemented function
         """
-        num_nodes = int(np.sum(self._active_nodes_array))
+        num_nodes = np.sum(self._active_nodes_array).astype(int)
         super()._projectNodes(num_nodes, thread_map_num=self.thread_map_num)
 
     def getNodes(self) -> list:
@@ -319,12 +320,25 @@ class RecedingFunction(AbstractFunction):
         else:
             self.thread_map_num = thread_map_num
 
-        temp_var_nodes = np.array(range(self._active_nodes_array.size))
+        total_nodes = np.array(range(self._active_nodes_array.size))
+        self._feas_nodes_array = self._getFeasNodes(used_vars, used_pars, total_nodes)
+
+        # if the function is active (self._nodes_array) in some nodes where the variables it involves are not defined (self._var_nodes) throw an error.
+        # this is true for the offset variables also: an offset variable of a variable defined on [0, 1, 2] is only valid at [1, 2].
+        check_feas_nodes = self._feas_nodes_array - self._active_nodes_array
+        if (check_feas_nodes < 0).any():
+            raise ValueError(f'Function "{self.getName()}" cannot be active on nodes: {np.where(check_feas_nodes < 0)}')
+
+
+    def _getFeasNodes(self, vars, pars, total_nodes):
+
+
+        temp_nodes = total_nodes.copy()
 
         # IF RECEDING, it is important to define two concepts:
         # - function EXISTS: the function exists only on the nodes where ALL the variables of the function are defined.
         # - function is ACTIVE: the function can be activated/disabled on the nodes where it exists
-        for var in self.vars:
+        for var in vars:
             # getNodes() in a OffsetVariable returns the nodes of the base variable.
             # here I want the nodes where the variable is actually defined, so I need to consider also the offset
             # when getting the nodes:
@@ -333,21 +347,16 @@ class RecedingFunction(AbstractFunction):
             if -1 in var.getNodes():
                 continue
             var_nodes = np.array(var.getNodes()) - var.getOffset()
-            temp_var_nodes = np.intersect1d(temp_var_nodes, var_nodes)
-        for par in self.pars:
+            temp_nodes = np.intersect1d(temp_nodes, var_nodes)
+        for par in pars:
             if -1 in par.getNodes():
                 continue
             par_nodes = np.array(par.getNodes()) - par.getOffset()
-            temp_var_nodes = np.intersect1d(temp_var_nodes, par_nodes)
+            temp_nodes = np.intersect1d(temp_nodes, par_nodes)
 
-        self._feas_nodes = temp_var_nodes
-        self._feas_nodes_array = misc.getBinaryFromNodes(self._active_nodes_array.size, self._feas_nodes)
+        feas_nodes_array = misc.getBinaryFromNodes(total_nodes.size, temp_nodes)
 
-        # if the function is active (self._nodes_array) in some nodes where the variables it involves are not defined (self._var_nodes) throw an error.
-        # this is true for the offset variables also: an offset variable of a variable defined on [0, 1, 2] is only valid at [1, 2].
-        check_feas_nodes = self._feas_nodes_array - self._active_nodes_array
-        if (check_feas_nodes < 0).any():
-            raise ValueError(f'Function "{self.getName()}" cannot be active on nodes: {np.where(check_feas_nodes < 0)}')
+        return feas_nodes_array
 
     def getImpl(self, nodes=None):
         """
@@ -370,8 +379,8 @@ class RecedingFunction(AbstractFunction):
         Returns:
             the implemented function
         """
-        num_nodes = self._feas_nodes.size
-        super()._projectNodes(num_nodes)
+        num_nodes = np.sum(self._feas_nodes_array).astype(int)
+        super()._projectNodes(num_nodes, thread_map_num=self.thread_map_num)
 
     def setNodes(self, nodes, erasing=False):
         """
@@ -608,7 +617,6 @@ class Constraint(Function, AbstractBounds):
         Function.setNodes(self, pos_nodes, erasing)
         AbstractBounds.setNodes(self, pos_nodes)
 
-
 class RecedingConstraint(RecedingFunction, AbstractBounds):
     """
     Constraint Function of Horizon.
@@ -701,19 +709,34 @@ class RecedingCost(RecedingFunction):
             used_pars: parameters used in the function
             active_nodes_array: binary array specifying the nodes the function is active on
         """
-        self.weight_mask = None
+
+        # create weight mask to select which nodes (among the feasible) are active or not
+
         super().__init__(name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
+
+    def _setWeightMask(self, casadi_type):
+        self.weight_mask = sv.Parameter(f'{self.getName()}_weight_mask', self.getDim(), self._feas_nodes_array, casadi_type)
+        self.pars.append(self.weight_mask)
+
+        nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
+        nodes_mask[:, misc.getNodesFromBinary(self._active_nodes_array)] = 1.
+        self.weight_mask.assign(nodes_mask)
+
+        # override _f and _fun
+        self._f = self.weight_mask * self._f
+        all_input = self.vars + self.pars
+        all_names = [i.getName() for i in all_input]
+        self._fun = cs.Function(self.getName(), self.vars + self.pars, [self._f], all_names, ['f'])
+
+    def _getWeightMask(self):
+        return self.weight_mask
 
     def setNodes(self, nodes, erasing=False):
         super().setNodes(nodes, erasing)
-
         # eliminate/enable cost functions by setting their weight
-        nodes_mask = np.zeros([self.getDim(), np.zeros(int(np.sum(self._feas_nodes_array)))])
+        nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
         nodes_mask[:, nodes] = 1.
         self.weight_mask.assign(nodes_mask)
-
-    def _setWeightMask(self, weight_mask):
-        self.weight_mask = weight_mask
 
 class Residual(Cost):
     """

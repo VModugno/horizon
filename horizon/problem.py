@@ -429,7 +429,6 @@ class Problem:
         """
         # todo add guards
         if nodes is None:
-            # all the nodes besides the last
             nodes_array = np.ones(self.nodes)
         else:
             nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
@@ -441,25 +440,14 @@ class Problem:
         if self.debug_mode:
             self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
+
+        fun = self.function_container.createCost(name, j, used_var, used_par, nodes_array)
+
         # if receding, add a weight for activating/disabling the node
         if self.is_receding:
-            active_nodes = range(self.nodes)
-            weight_mask = self.createParameter(f'{name}_weight_mask', j.shape[0], active_nodes, casadi_type=self.default_casadi_type)
-            nodes_mask = np.zeros([j.shape[0], int(np.sum(np.ones(nodes_array.size)))])
-            nodes_mask[:, misc.getNodesFromBinary(nodes_array)] = 1.
-            weight_mask.assign(nodes_mask)
-
-            j_new = weight_mask * j
-            used_par.append(weight_mask)
-
-        else:
-            j_new = j
-
-        fun = self.function_container.createCost(name, j_new, used_var, used_par, nodes_array)
-
-        #hack
-        if self.is_receding:
-            setattr(fun, 'weight_mask', weight_mask)
+            fun._setWeightMask(self.default_casadi_type)
+            weight_mask = fun._getWeightMask()
+            self.var_container._pars[weight_mask.getName()] = weight_mask
 
 
         return fun
