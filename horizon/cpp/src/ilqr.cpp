@@ -613,10 +613,11 @@ MatConstRef IterativeLQR::gain(int i) const
 
 void IterativeLQR::add_param_to_map(const casadi::Function& f)
 {
+
     // add parameters from this function
     for(int i = 2; i < f.n_in(); i++)
     {
-        const int param_size = f.size1_in(2);
+        const int param_size = f.size1_in(i);
 
         // check if already exists
         if(_param_map->count(f.name()))
