@@ -241,13 +241,25 @@ class SolverILQR(Solver):
     
     def _set_param_values(self):
 
+
+        # apparently ilqr creates the parameters with dimensions: par_dim x n+1
+        # generally speaking, this is not necessarily true
         params = self.prb.var_container.getParList()
+
         for p in params:
-            self.ilqr.setParameterValue(p.getName(), p.getValues())
+            # todo small hack:
+            #  the parameters inside the ilqr are defined on ALL nodes
+            #  horizon allows to define parameters only on desired nodes
+            #  so i'm masking the parameter values with a matrix of nan of N+1 dimension
+            p_vals_temp = p.getValues()
+            p_vals = np.empty((p.getDim(), self.N+1))
+            p_vals[:] = np.nan
+            p_vals[:, p.getNodes()] = p_vals_temp
+            self.ilqr.setParameterValue(p.getName(), p_vals)
 
     
     def _iter_callback(self, fpres):
-        
+
         if not fpres.accepted:
             return
         else:
