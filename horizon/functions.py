@@ -11,6 +11,18 @@ from typing import Union, Iterable
 
 default_thread_map = 10
 
+# todo think about a good refactor for the RecedingCost:
+#  it requires a parameter, weight_mask, to activate/disable the cost on the desired nodes
+#     1. the parameter can be easily generated from the problem.py, but then it needs to be injected in the CostFunction
+#        this is good because the problem.py has also the knowledge of the casadi type
+#        RecedingCost(..., Param)
+#        ._setWeightMask() if constructed AFTER the function creation, should override _f and _fun
+#    2. the parameter can be generated from inside the function, and then added to the var_container used by the problem.py
+#       RecedingCost(...)
+#       par = fun._getWeightMask() and var_container.add(par)
+#  I would like to find a way to instantiate the receding cost with everything in place already:
+#
+
 class AbstractFunction:
     """
         Function of Horizon: generic function of SX values from CASADI.
@@ -122,7 +134,7 @@ class AbstractFunction:
         """
         return self.pars
 
-    def _projectNodes(self, num_nodes, thread_map_num):
+    def _projectNodes(self, thread_map_num):
         """
         Implements the function at the desired node using the desired variables.
 
@@ -132,6 +144,8 @@ class AbstractFunction:
         Returns:
             the implemented function
         """
+        num_nodes = np.sum(self._feas_nodes_array).astype(int)
+
         if num_nodes == 0:
             # if the function is not specified on any nodes, don't implement
             self._fun_impl = None
@@ -257,14 +271,12 @@ class Function(AbstractFunction):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._feas_nodes_array)
+            nodes = misc.checkNodes(nodes, self._active_nodes_array)
 
         # I have to convert the input nodes to the corresponding column position:
         # function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
-        # todo add guards
-        # nodes = misc.checkNodes(nodes, self._nodes)
         # getting the column corresponding to the nodes requested
         fun_impl = cs.vertcat(*[self._fun_impl[:, pos_nodes]])
 
@@ -280,8 +292,7 @@ class Function(AbstractFunction):
         Returns:
             the implemented function
         """
-        num_nodes = np.sum(self._active_nodes_array).astype(int)
-        super()._projectNodes(num_nodes, thread_map_num=self.thread_map_num)
+        super()._projectNodes(thread_map_num=self.thread_map_num)
 
     def getNodes(self) -> list:
         """
@@ -302,8 +313,13 @@ class Function(AbstractFunction):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
-        pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
-        super().setNodes(pos_nodes)
+        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
+        if len(pos_nodes) != len(nodes):
+            feas_nodes = misc.getNodesFromBinary(self._feas_nodes_array)
+
+            raise Exception(f'You are trying to set nodes of the function where it is NOT defined. Available nodes: {feas_nodes}. If you want to change the nodes freely in the horizon, use the receding mode.')
+
+        super().setNodes(pos_nodes, erasing)
         # usually the number of nodes stays the same, while the active nodes of a function may change.
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
         self._project()
@@ -331,7 +347,6 @@ class RecedingFunction(AbstractFunction):
 
 
     def _getFeasNodes(self, vars, pars, total_nodes):
-
 
         temp_nodes = total_nodes.copy()
 
@@ -367,6 +382,7 @@ class RecedingFunction(AbstractFunction):
         Returns:
             instance of the CASADI function at the desired node
         """
+        # todo return the implemented function on all nodes always??
         return cs.vertcat(*[self._fun_impl])
 
     def _project(self):
@@ -379,8 +395,7 @@ class RecedingFunction(AbstractFunction):
         Returns:
             the implemented function
         """
-        num_nodes = np.sum(self._feas_nodes_array).astype(int)
-        super()._projectNodes(num_nodes, thread_map_num=self.thread_map_num)
+        super()._projectNodes(thread_map_num=self.thread_map_num)
 
     def setNodes(self, nodes, erasing=False):
         """
@@ -390,7 +405,7 @@ class RecedingFunction(AbstractFunction):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
-        super().setNodes(nodes)
+        super().setNodes(nodes, erasing)
         # usually the number of nodes stays the same, while the active nodes of a function may change.
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
         self._project()
@@ -441,6 +456,7 @@ class AbstractBounds:
             val: desired values to set
             nodes: which nodes the values are applied on
         """
+
         val_checked = misc.checkValueEntry(val)
         if val_checked.shape[0] != self.fun_dim:
             raise Exception('Wrong dimension of upper bounds inserted.')
@@ -535,7 +551,7 @@ class AbstractBounds:
         """
         return self.getLowerBounds(nodes), self.getUpperBounds(nodes)
 
-    def setNodes(self, nodes):
+    def setNodes(self, nodes, erasing=False):
         """
         Setter for the active nodes of the constraint function.
 
@@ -543,9 +559,14 @@ class AbstractBounds:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo think about this, it depends on how the mechanics of the receding works
+        if erasing:
+            self.bounds['lb'][:] = -np.inf
+            self.bounds['ub'][:] = np.inf
+
         # for all the "new nodes" that weren't there, add default bounds
-        self.bounds['lb'][:, nodes] = np.zeros([self.fun_dim, 1])
-        self.bounds['ub'][:, nodes] = np.zeros([self.fun_dim, 1])
+        self.bounds['lb'][:, nodes] = 0.
+        self.bounds['ub'][:, nodes] = 0.
 
 
 class Constraint(Function, AbstractBounds):
@@ -579,6 +600,7 @@ class Constraint(Function, AbstractBounds):
 
     def _setVals(self, val_type, val, nodes=None):
 
+        # todo make a wrapper function for this Guard
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
@@ -613,9 +635,8 @@ class Constraint(Function, AbstractBounds):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
-        pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
-        Function.setNodes(self, pos_nodes, erasing)
-        AbstractBounds.setNodes(self, pos_nodes)
+        Function.setNodes(self, nodes, erasing)
+        AbstractBounds.setNodes(self, nodes, erasing)
 
 class RecedingConstraint(RecedingFunction, AbstractBounds):
     """
@@ -662,14 +683,17 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         else:
             nodes = misc.checkNodes(nodes, self._active_nodes_array)
 
-        super()._setVals(val_type, val, nodes)
+        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
+
+        super()._setVals(val_type, val, pos_nodes)
 
     def _getVals(self, val_type, nodes=None):
+        # todo return the bounds on all nodes always??
         return val_type
 
     def setNodes(self, nodes, erasing=False):
         RecedingFunction.setNodes(self, nodes, erasing)
-        AbstractBounds.setNodes(self, nodes)
+        AbstractBounds.setNodes(self, nodes, erasing)
 
 class Cost(Function):
     """

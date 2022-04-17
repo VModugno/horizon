@@ -47,7 +47,7 @@ def checkNodes(nodes, nodes_array=None):
 
         if checked_nodes.size != nodes_vec.size:
             wrong_nodes = np.ma.masked_array(nodes_vec, mask=nodes_array[nodes_vec]).compressed()
-            warnings.warn(f'Element requested is not defined on node: {wrong_nodes}.')
+            warnings.warn(f'Element requested is not defined/active on node: {wrong_nodes}.')
 
     return checked_nodes
 
