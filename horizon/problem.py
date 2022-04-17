@@ -956,7 +956,7 @@ if __name__ == '__main__':
 
 
     N = 3
-    nodes_vec = np.array(range(N+1))    # nodes = 10
+    # nodes_vec = np.array(range(N+1))    # nodes = 10
     # dt = 0.01
     # prb = Problem(nodes, crash_if_suboptimal=True, receding=True)
     # x = prb.createStateVariable('x', 6)
@@ -980,6 +980,7 @@ if __name__ == '__main__':
     #     all_sol[i] = sol
     #
     # exit()
+    N = 10
     dt = 0.01
     prb = Problem(N, receding=False, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
@@ -992,12 +993,25 @@ if __name__ == '__main__':
 
     # p1 = prb.createParameter('p1', 4)
     cnsrt = prb.createConstraint('cnsrt', x - y_prev, nodes=[1])
-    cost1 = prb.createCost('cost_x', 1e-3 * cs.sumsqr(x))
-    cost2 = prb.createIntermediateCost('cost_y', 1e-3 * cs.sumsqr(y))
+    # cnsrt = prb.createConstraint('cnsrt', x, nodes=[1])
+    # cost1 = prb.createCost('cost_x', 1e-3 * cs.sumsqr(x))
+    # cost2 = prb.createIntermediateCost('cost_y', 1e-3 * cs.sumsqr(y))
 
-    cnsrt.setLowerBounds([-cs.inf, -cs.inf])
-    cnsrt.setUpperBounds([cs.inf, cs.inf])
+    # cnsrt.setLowerBounds([-cs.inf, -cs.inf])
+    # cnsrt.setUpperBounds([cs.inf, cs.inf])
+    print(cnsrt.getLowerBounds())
+    print(cnsrt.getUpperBounds())
+    print(cnsrt.getNodes())
 
+    print(cnsrt.setBounds([-2, -2], [2, 2], nodes=2))
+    print(cnsrt.getLowerBounds())
+    print(cnsrt.getUpperBounds())
+    exit()
+    print(cnsrt.setNodes([5, 6], erasing=True))
+    print(cnsrt.getLowerBounds())
+    print(cnsrt.getUpperBounds())
+    print(cnsrt.getNodes())
+    exit()
     # print(cost.weight_mask.getValues())
     print(cnsrt.getImpl())
     print(cnsrt.getNodes())
