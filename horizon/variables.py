@@ -1255,6 +1255,38 @@ class VariableView(AbstractVariableView):
         """
         self._setVals('w0', val, nodes)
 
+class RecedingVariable(Variable):
+    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
+        super().__init__(tag, dim, nodes_array, casadi_type)
+
+    def shift(self):
+
+        # shift bounds
+        shift_num = 1
+        shifted_lb = self.getLowerBounds()[:, shift_num:]
+        shifted_ub = self.getUpperBounds()[:, shift_num:]
+
+        new_val_lb = -np.inf * np.ones([self.getDim(), shift_num])
+        new_val_ub = np.inf * np.ones([self.getDim(), shift_num])
+
+        self.setLowerBounds(np.hstack((shifted_lb, new_val_lb)))
+        self.setUpperBounds(np.hstack((shifted_ub, new_val_ub)))
+
+class RecedingParameter(Parameter):
+    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
+        super().__init__(tag, dim, nodes_array, casadi_type)
+
+    def shift(self):
+
+        # shift values
+        shift_num = 1
+        shifted_vals = self.getValues()[:, shift_num:]
+
+        new_vals = np.zeros([self.getDim(), shift_num])
+
+        self.assign(np.hstack((shifted_vals, new_vals)))
+
+
 class InputVariable(Variable):
     """
     Input (Control) Variable of Horizon Problem.
@@ -1275,11 +1307,6 @@ class InputVariable(Variable):
             nodes: should always be N-1, where N is the number of horizon nodes
         """
         super().__init__(tag, dim, nodes, casadi_type)
-
-    def __getitem__(self, item):
-        var_slice = super().__getitem__(item)
-        view = VariableView(self, var_slice, item)
-        return view
 
 class StateVariable(Variable):
     """
@@ -1303,10 +1330,32 @@ class StateVariable(Variable):
         """
         super(StateVariable, self).__init__(tag, dim, nodes, casadi_type)
 
-    def __getitem__(self, item):
-        var_slice = super().__getitem__(item)
-        view = VariableView(self, var_slice, item)
-        return view
+class RecedingInputVariable(RecedingVariable):
+    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+        """
+        Initialize the Receding Input Variable.
+
+        Args:
+            tag: name of the variable
+            dim: dimension of the variable
+            nodes: should always be N-1, where N is the number of horizon nodes
+        """
+        super().__init__(tag, dim, nodes, casadi_type)
+
+
+class RecedingStateVariable(RecedingVariable):
+    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+        """
+        Initialize the Receding State Variable.
+
+        Args:
+            tag: name of the variable
+            dim: dimension of the variable
+            nodes: should always be N-1, where N is the number of horizon nodes
+        """
+        super().__init__(tag, dim, nodes, casadi_type)
+
+
 
 class AbstractAggregate(ABC):
     """
@@ -1628,7 +1677,7 @@ class VariablesContainer:
     Container of all the variables of Horizon.
     It is used internally by the Problem to get the abstract and implemented variables.
     """
-    def __init__(self, logger=None):
+    def __init__(self, is_receding, logger=None):
         """
         Initialize the Variable Container.
 
@@ -1636,6 +1685,7 @@ class VariablesContainer:
            nodes: the number of nodes of the problem
            logger: a logger reference to log data
         """
+        self.is_receding = is_receding
         self._logger = logger
 
         self._vars = OrderedDict()
@@ -1674,7 +1724,10 @@ class VariablesContainer:
         if nodes_array is None:
             var_type = SingleVariable
         else:
-            var_type = Variable
+            if self.is_receding:
+                var_type = RecedingVariable
+            else:
+                var_type = Variable
 
         var = self.createVar(var_type, name, dim, nodes_array, casadi_type)
         return var
@@ -1689,7 +1742,12 @@ class VariablesContainer:
             nodes_array: binary array of nodes specifying which node is active
             casadi_type: type of casadi variable (SX or MX)
         """
-        var = self.createVar(StateVariable, name, dim, nodes_array, casadi_type)
+        if self.is_receding:
+            var_type = RecedingStateVariable
+        else:
+            var_type = StateVariable
+
+        var = self.createVar(var_type, name, dim, nodes_array, casadi_type)
         return var
 
     def setInputVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
@@ -1702,7 +1760,13 @@ class VariablesContainer:
             nodes_array: binary array of nodes specifying which node is active
             casadi_type: type of casadi variable (SX or MX)
         """
-        var = self.createVar(InputVariable, name, dim, nodes_array, casadi_type)
+        if self.is_receding:
+            var_type = RecedingInputVariable
+        else:
+            var_type = InputVariable
+
+
+        var = self.createVar(var_type, name, dim, nodes_array, casadi_type)
         return var
 
     def setSingleVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
@@ -1728,7 +1792,12 @@ class VariablesContainer:
             nodes_array: binary array of nodes specifying which node is active. If not specified, all the horizon nodes are considered
             casadi_type: type of casadi variable (SX or MX)
         """
-        par = Parameter(name, dim, nodes_array, casadi_type)
+        if self.is_receding:
+            par_type = RecedingParameter
+        else:
+            par_type = Parameter
+
+        par = par_type(name, dim, nodes_array, casadi_type)
         self._pars[name] = par
 
         if self._logger:

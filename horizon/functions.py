@@ -345,6 +345,8 @@ class RecedingFunction(AbstractFunction):
         if (check_feas_nodes < 0).any():
             raise ValueError(f'Function "{self.getName()}" cannot be active on nodes: {np.where(check_feas_nodes < 0)}')
 
+        self._fun_impl = None
+        self._project()
 
     def _getFeasNodes(self, vars, pars, total_nodes):
 
@@ -568,7 +570,6 @@ class AbstractBounds:
         self.bounds['lb'][:, nodes] = 0.
         self.bounds['ub'][:, nodes] = 0.
 
-
 class Constraint(Function, AbstractBounds):
     """
     Constraint Function of Horizon.
@@ -692,8 +693,28 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         return val_type
 
     def setNodes(self, nodes, erasing=False):
+
         RecedingFunction.setNodes(self, nodes, erasing)
         AbstractBounds.setNodes(self, nodes, erasing)
+
+    def shift(self):
+        shift_num = 1
+
+        active_lb = self.getLowerBounds()[:, misc.getNodesFromBinary(self._active_nodes_array)]
+        active_ub = self.getUpperBounds()[:, misc.getNodesFromBinary(self._active_nodes_array)]
+
+        old_nodes = np.array(self.getNodes())
+        shifted_nodes = old_nodes - shift_num
+        mask_nodes = shifted_nodes >= 0
+
+        masked_nodes = shifted_nodes[mask_nodes]
+        masked_lb = active_lb[:, mask_nodes]
+        masked_ub = active_ub[:, mask_nodes]
+
+        self.setNodes(masked_nodes, erasing=True)
+
+        self.setLowerBounds(masked_lb)
+        self.setUpperBounds(masked_ub)
 
 class Cost(Function):
     """
