@@ -29,7 +29,8 @@ class Problem:
     """
 
     # todo probably better to set logger, not logging_level
-    def __init__(self, N: int, casadi_type=cs.MX, crash_if_suboptimal: bool = False, receding=False, logging_level=logging.INFO):
+    def __init__(self, N: int, casadi_type=cs.MX, crash_if_suboptimal: bool = False, receding=False,
+                 logging_level=logging.INFO):
         """
         Initialize the optimization problem.
 
@@ -55,7 +56,7 @@ class Problem:
 
         self.nodes = N + 1
         # state variable to optimize
-        self.var_container = sv.VariablesContainer(self.logger)
+        self.var_container = sv.VariablesContainer(self.is_receding, self.logger)
         self.function_container = fc.FunctionsContainer(self.is_receding, self.thread_map_num, self.logger)
 
         self.state_aggr = sv.StateAggregate()
@@ -121,12 +122,13 @@ class Problem:
         """
         casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
 
-        nodes_array = np.ones(self.nodes) # dummy, cause it is the same on all the nodes
+        nodes_array = np.ones(self.nodes)  # dummy, cause it is the same on all the nodes
 
         var = self.var_container.setSingleVar(name, dim, nodes_array, casadi_type)
         return var
 
-    def createVariable(self, name: str, dim: int, nodes: Iterable = None, casadi_type=None) -> Union[sv.StateVariable, sv.SingleVariable]:
+    def createVariable(self, name: str, dim: int, nodes: Iterable = None, casadi_type=None) -> Union[
+        sv.StateVariable, sv.SingleVariable]:
         """
         Create a generic Variable of the optimization problem. Can be specified over a desired portion of the horizon nodes.
 
@@ -144,7 +146,9 @@ class Problem:
 
         casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
 
-        nodes_array = np.ones(self.nodes) if nodes is None else misc.getBinaryFromNodes(self.nodes, misc.checkNodes(nodes, np.ones(self.nodes)))
+        nodes_array = np.ones(self.nodes) if nodes is None else misc.getBinaryFromNodes(self.nodes,
+                                                                                        misc.checkNodes(nodes, np.ones(
+                                                                                            self.nodes)))
 
         var = self.var_container.setVar(name, dim, nodes_array, casadi_type)
         return var
@@ -333,7 +337,7 @@ class Problem:
     def createConstraint(self, name: str,
                          g,
                          nodes: Union[int, Iterable] = None,
-                         bounds=None) -> fc.Constraint:
+                         bounds=None) -> Union[fc.Constraint, fc.RecedingConstraint]:
         """
         Create a Constraint Function of the optimization problem.
 
@@ -363,7 +367,8 @@ class Problem:
         used_par = self._getUsedPar(g)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Constraint Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)} using vars {used_var}')
+            self.logger.debug(
+                f'Creating Constraint Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)} using vars {used_var}')
 
         # create internal representation of a constraint
         fun = self.function_container.createConstraint(name, g, used_var, used_par, active_nodes_array, bounds)
@@ -413,8 +418,8 @@ class Problem:
         return self.createConstraint(name, g, nodes=nodes, bounds=bounds)
 
     def createCost(self, name: str,
-                           j,
-                           nodes: Union[int, Iterable] = None):
+                   j,
+                   nodes: Union[int, Iterable] = None):
         """
         Create a Cost Function of the optimization problem.
 
@@ -438,8 +443,8 @@ class Problem:
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
-
+            self.logger.debug(
+                f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
         fun = self.function_container.createCost(name, j, used_var, used_par, nodes_array)
 
@@ -448,7 +453,6 @@ class Problem:
             fun._setWeightMask(self.default_casadi_type)
             weight_mask = fun._getWeightMask()
             self.var_container._pars[weight_mask.getName()] = weight_mask
-
 
         return fun
 
@@ -515,7 +519,8 @@ class Problem:
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
+            self.logger.debug(
+                f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
         fun = self.function_container.createResidual(name, j, used_var, used_par, nodes_array)
 
@@ -661,7 +666,6 @@ class Problem:
         """
         fun = self.function_container.getCnstr(name)
 
-
         return fun
 
     def getCosts(self, name=None):
@@ -675,7 +679,6 @@ class Problem:
             the desired constraint/s
         """
         fun = self.function_container.getCost(name)
-
 
         return fun
 
@@ -705,13 +708,14 @@ class Problem:
                 #   its solution will be [a, b, c, d, e, f, g]. I'm interested in the values at position [3, 4, 5, 6]
                 # suppose a variable is defined only on nodes [3, 4, 5, 6].
                 #   its solution will be [a, b, c, d]. I'm interested in the values at position [0, 1, 2, 3], which corresponds to nodes [3, 4, 5, 6]
-                node_index = [i for i in range(len(var.getNodes())) if var.getNodes()[i] in np.array(fun.getNodes()) + var.getOffset()]
+                node_index = [i for i in range(len(var.getNodes())) if
+                              var.getNodes()[i] in np.array(fun.getNodes()) + var.getOffset()]
                 all_vars.append(solution[var_name][:, node_index])
 
         all_pars = list()
         for par in fun.getParameters():
-                # careful about ordering
-                # todo this is very ugly, but what can I do (wanted to do it without the if)
+            # careful about ordering
+            # todo this is very ugly, but what can I do (wanted to do it without the if)
             if isinstance(par, sv.SingleParameter):
                 all_pars.append(par.getValues())
             else:
@@ -720,7 +724,6 @@ class Problem:
 
         fun_evaluated = fun_to_evaluate(*(all_vars + all_pars)).toarray()
         return fun_evaluated
-
 
     def toParameter(self, var_name):
 
@@ -791,7 +794,6 @@ class Problem:
 
                 fun._project()
 
-
         # for fun in self.getConstraints().values():
         #     for fun_var in fun.getVariables():
         #         if fun_var.getName() == var_name:
@@ -800,9 +802,6 @@ class Problem:
         #             f_nodes = fun.getNodes()
         #             self.removeConstraint(fun.getName())
         #             self.createConstraint(f_name, fun._f, f_nodes)
-
-
-
 
     def scopeNodeVars(self, node: int):
         """np.where(pos_nodes
@@ -875,7 +874,7 @@ class Problem:
 
     def save(self):
         data = dict()
-        
+
         data['n_nodes'] = self.getNNodes() - 1
 
         # save state variables
@@ -912,7 +911,7 @@ class Problem:
         # save cost and constraints
         data['cost'] = dict()
         for f in self.function_container.getCost().values():
-            f : fc.Function = f
+            f: fc.Function = f
             var_data = dict()
             var_data['name'] = f.getName()
             var_data['repr'] = str(f.getFunction())
@@ -924,7 +923,7 @@ class Problem:
 
         data['constraint'] = dict()
         for f in self.function_container.getCnstr().values():
-            f : fc.Function = f
+            f: fc.Function = f
             var_data = dict()
             var_data['name'] = f.getName()
             var_data['repr'] = str(f.getFunction())
@@ -946,16 +945,15 @@ def pickleable(obj):
         return False
     return True
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     import pickle
     from transcriptions import transcriptor
     from horizon.solvers import Solver
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
-
-    N = 3
+    # N = 3
     # nodes_vec = np.array(range(N+1))    # nodes = 10
     # dt = 0.01
     # prb = Problem(nodes, crash_if_suboptimal=True, receding=True)
@@ -981,55 +979,91 @@ if __name__ == '__main__':
     #
     # exit()
     N = 10
+    nodes_vec = np.array(range(N + 1))  # nodes = 10
     dt = 0.01
-    prb = Problem(N, receding=False, casadi_type=cs.SX)
+    prb = Problem(N, receding=True, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
     y = prb.createInputVariable('y', 2)
+    par = prb.createParameter('par', 2)
     y_prev = y.getVarOffset(-1)
-    # y = prb.createInputVariable('y', 3)
     prb.setDynamics(x)
     prb.setDt(dt)
 
+    print(par.getValues())
+    print('assigning new values ...')
+    par.assign([1, 2], nodes=[3, 4, 5, 6, 7, 8])
+    print(par.getValues())
+    print('shifting ...')
+    par.shift()
+    print(par.getValues())
+    print('assigning new values ...')
+    par.assign([3, 3], nodes=10)
+    print(par.getValues())
+    print('shifting ...')
+    par.shift()
+    print(par.getValues())
+    exit()
+
+    x.setUpperBounds([2, 3], nodes=[4, 5, 6])
+    print(x.getUpperBounds())
+    print('shifting ...')
+    x.shift()
+    print(x.getUpperBounds())
+    print('setting new bounds ...')
+    x.setUpperBounds([1, 2], nodes=10)
+    print(x.getUpperBounds())
+    print('shifting ...')
+    x.shift()
+    print('shifting ...')
+    x.shift()
+    print(x.getUpperBounds())
+    exit()
 
     # p1 = prb.createParameter('p1', 4)
-    cnsrt = prb.createConstraint('cnsrt', x - y_prev, nodes=[1])
+    # cnsrt = prb.createConstraint('cnsrt', x - y_prev, nodes=[1])
     # cnsrt = prb.createConstraint('cnsrt', x, nodes=[1])
     # cost1 = prb.createCost('cost_x', 1e-3 * cs.sumsqr(x))
     # cost2 = prb.createIntermediateCost('cost_y', 1e-3 * cs.sumsqr(y))
+    c = prb.createConstraint('c1', x[0], nodes=[3, 4, 5, 6])
 
-    # cnsrt.setLowerBounds([-cs.inf, -cs.inf])
-    # cnsrt.setUpperBounds([cs.inf, cs.inf])
-    print(cnsrt.getLowerBounds())
-    print(cnsrt.getUpperBounds())
-    print(cnsrt.getNodes())
-
-    print(cnsrt.setBounds([-2, -2], [2, 2], nodes=2))
-    print(cnsrt.getLowerBounds())
-    print(cnsrt.getUpperBounds())
+    print(c.getNodes())
+    c.setLowerBounds(2)
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    # c.setNodes([2, 3, 4, 5],  erasing=True)
+    print('shifting ...')
+    c.shift()
+    print('shifting ...')
+    c.shift()
+    print('shifting ...')
+    c.shift()
+    print('adding new nodes ...')
+    c.setNodes([9, 10])
+    c.setLowerBounds(-5, nodes=[9])
+    c.setLowerBounds(-10, nodes=[10])
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    print('shifting ...')
+    c.shift()
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    print('changing bounds ...')
+    c.setLowerBounds(-23, nodes=[8])
+    c.setLowerBounds(-25, nodes=[9])
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    print('shifting ...')
+    c.shift()
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
     exit()
-    print(cnsrt.setNodes([5, 6], erasing=True))
-    print(cnsrt.getLowerBounds())
-    print(cnsrt.getUpperBounds())
-    print(cnsrt.getNodes())
-    exit()
-    # print(cost.weight_mask.getValues())
-    print(cnsrt.getImpl())
-    print(cnsrt.getNodes())
-    # both getVal and getImpl return the constraint on ALL the nodes (methods used by the solver)
-    # print(cnsrt.setLowerBounds([-2, -2]))
-    print(cnsrt.getLowerBounds())
-    print(cnsrt.getUpperBounds())
-
-
-    # c1 = prb.createConstraint('c1', x1[0])
-
     x.setInitialGuess([5, 5])
     # print(x.getInitialGuess())
 
     x.setBounds([-10, -10], [10, 10])
     x.setBounds([7, 7], [7, 7], nodes=2)
-    # print(x.getLowerBounds())
-    # print(x.getUpperBounds())
+    print(x.getLowerBounds())
+    print(x.getUpperBounds())
     opts = dict()
     opts['ipopt.tol'] = 1e-12
     opts['ipopt.constr_viol_tol'] = 1e-12
@@ -1039,13 +1073,12 @@ if __name__ == '__main__':
 
     print('x:\n', sol['x'])
     # print('y:\n', sol['y'])
-    exit()
     old_sol = sol.copy()
     print('=========== receding the horizon: ==============')
 
     print('old initial guess: ')
     print(x.getInitialGuess())
-    new_ig_elem = [3,2]
+    new_ig_elem = [3, 2]
     x.setInitialGuess(sol['x'][:, 1:], nodes=nodes_vec[:-1])
     x.setInitialGuess(new_ig_elem, nodes=N)
     print('new initial guess: ')
@@ -1075,7 +1108,7 @@ if __name__ == '__main__':
     nodes_cnsrt = c.getNodes()
     print(nodes_cnsrt)
     print(c.getImpl())
-    c.setNodes(nodes_cnsrt-1, erasing=True)
+    c.setNodes(nodes_cnsrt - 1, erasing=True)
     print('new nodes:')
     print(c.getNodes())
 
@@ -1087,10 +1120,6 @@ if __name__ == '__main__':
     print('old x:\n', old_sol['x'])
     print('x:\n', sol['x'])
     # print('y:\n', sol['y'])
-
-
-
-
 
     # np.concatenate((shifted_lb, np.reshape(new_lb, (2, 1))))
     # x.getUpperBounds()[1:]
@@ -1146,4 +1175,3 @@ if __name__ == '__main__':
     # hplt.plotFunctions()
     #
     # plt.show()
-
