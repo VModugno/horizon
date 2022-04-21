@@ -1261,16 +1261,22 @@ class RecedingVariable(Variable):
 
     def shift(self):
 
+        print(f'============= VARIABLE ================')
+        print(f'NAME: {self.getName()}')
+        print(f'OLD LB: {self.getLowerBounds()}')
+        print(f'OLD UB: {self.getUpperBounds()}')
         # shift bounds
-        shift_num = 1
-        shifted_lb = self.getLowerBounds()[:, shift_num:]
-        shifted_ub = self.getUpperBounds()[:, shift_num:]
+        shift_num = -1
 
-        new_val_lb = -np.inf * np.ones([self.getDim(), shift_num])
-        new_val_ub = np.inf * np.ones([self.getDim(), shift_num])
+        shifted_lb = misc.shift_array(self.getLowerBounds(), shift_num, -np.inf)
+        shifted_ub = misc.shift_array(self.getUpperBounds(), shift_num, np.inf)
 
-        self.setLowerBounds(np.hstack((shifted_lb, new_val_lb)))
-        self.setUpperBounds(np.hstack((shifted_ub, new_val_ub)))
+        self.setLowerBounds(shifted_lb)
+        self.setUpperBounds(shifted_ub)
+
+        print(f'SHIFTED LB: {self.getLowerBounds()}')
+        print(f'SHIFTED UB: {self.getUpperBounds()}')
+
 
 class RecedingParameter(Parameter):
     def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
@@ -1278,13 +1284,15 @@ class RecedingParameter(Parameter):
 
     def shift(self):
 
+        print(f'============= PARAMETER ================')
+        print(f'NAME: {self.getName()}')
+        print(f'OLD VALUES: {self.getValues()}')
         # shift values
-        shift_num = 1
-        shifted_vals = self.getValues()[:, shift_num:]
+        shift_num = -1
+        shifted_vals = misc.shift_array(self.getValues(), shift_num, 0.)
+        self.assign(shifted_vals)
 
-        new_vals = np.zeros([self.getDim(), shift_num])
-
-        self.assign(np.hstack((shifted_vals, new_vals)))
+        print(f'SHIFTED VALUES: {self.getValues()}')
 
 
 class InputVariable(Variable):

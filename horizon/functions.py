@@ -698,13 +698,24 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         AbstractBounds.setNodes(self, nodes, erasing)
 
     def shift(self):
-        shift_num = 1
+        shift_num = -1
 
-        active_lb = self.getLowerBounds()[:, misc.getNodesFromBinary(self._active_nodes_array)]
-        active_ub = self.getUpperBounds()[:, misc.getNodesFromBinary(self._active_nodes_array)]
+        print(f'============= CONSTRAINT ================')
+        print(f'NAME: {self.getName()}')
+        print(f'OLD VALUES:\n {self.getLowerBounds()}')
+        print(f'OLD VALUES:\n {self.getUpperBounds()}')
+
+        active_nodes = misc.getNodesFromBinary(self._active_nodes_array)
+
+        # if the constraint is only defined on given nodes, I have to get the right nodes:
+        pos_nodes = misc.convertNodestoPos(active_nodes, self._feas_nodes_array)
+
+        active_lb = self.getLowerBounds()[:, pos_nodes]
+        active_ub = self.getUpperBounds()[:, pos_nodes]
+
 
         old_nodes = np.array(self.getNodes())
-        shifted_nodes = old_nodes - shift_num
+        shifted_nodes = old_nodes + shift_num
         mask_nodes = shifted_nodes >= 0
 
         masked_nodes = shifted_nodes[mask_nodes]
@@ -712,9 +723,11 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         masked_ub = active_ub[:, mask_nodes]
 
         self.setNodes(masked_nodes, erasing=True)
-
         self.setLowerBounds(masked_lb)
         self.setUpperBounds(masked_ub)
+
+        print(f'NEW VALUES:\n {self.getLowerBounds()}')
+        print(f'NEW VALUES:\n {self.getUpperBounds()}')
 
 class Cost(Function):
     """
@@ -760,7 +773,7 @@ class RecedingCost(RecedingFunction):
         super().__init__(name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
 
     def _setWeightMask(self, casadi_type):
-        self.weight_mask = sv.Parameter(f'{self.getName()}_weight_mask', self.getDim(), self._feas_nodes_array, casadi_type)
+        self.weight_mask = sv.RecedingParameter(f'{self.getName()}_weight_mask', self.getDim(), self._feas_nodes_array, casadi_type)
         self.pars.append(self.weight_mask)
 
         nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
@@ -782,6 +795,14 @@ class RecedingCost(RecedingFunction):
         nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
         nodes_mask[:, nodes] = 1.
         self.weight_mask.assign(nodes_mask)
+
+    # def shift(self):
+        # pass
+        # shift_num = -1
+
+        # print(f'============= COST ================')
+        # print(f'NAME: {self.getName()}')
+        # print(f'NEW VALUES:\n {self.weight_mask.getValues()}')
 
 class Residual(Cost):
     """
@@ -880,6 +901,7 @@ class FunctionsContainer:
 
         fun = fun_constructor(name, j, used_var, used_par, nodes_array, thread_map_num=self.thread_map_num)
         self.addFunction(fun)
+        
         return fun
 
     def addFunction(self, fun: Function):
