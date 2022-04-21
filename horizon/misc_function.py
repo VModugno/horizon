@@ -90,6 +90,18 @@ def getNodesFromBinary(nodes_array):
 
     return nodes
 
+def shift_array(arr, num, fill_value=np.nan):
+    result = np.empty_like(arr)
+    if num > 0:
+        result[:, :num] = fill_value
+        result[:, num:] = arr[:, :-num]
+    elif num < 0:
+        result[:, num:] = fill_value
+        result[:, :num] = arr[:, -num:]
+    else:
+        result[:] = arr
+    return result
+
 if __name__ == '__main__':
 
     print(checkNodes([3,3,4,5,6], np.array([0, 0, 1, 1, 1, 0, 0, 1, 0])))

@@ -985,6 +985,10 @@ if __name__ == '__main__':
     x = prb.createStateVariable('x', 2)
     y = prb.createInputVariable('y', 2)
     par = prb.createParameter('par', 2)
+
+    cost = prb.createCost('cost', x, nodes=[3, 4, 5])
+
+
     y_prev = y.getVarOffset(-1)
     prb.setDynamics(x)
     prb.setDt(dt)
