@@ -316,7 +316,6 @@ class Function(AbstractFunction):
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
         if len(pos_nodes) != len(nodes):
             feas_nodes = misc.getNodesFromBinary(self._feas_nodes_array)
-
             raise Exception(f'You are trying to set nodes of the function where it is NOT defined. Available nodes: {feas_nodes}. If you want to change the nodes freely in the horizon, use the receding mode.')
 
         super().setNodes(pos_nodes, erasing)
@@ -463,8 +462,6 @@ class AbstractBounds:
         if val_checked.shape[0] != self.fun_dim:
             raise Exception('Wrong dimension of upper bounds inserted.')
 
-        # for node in nodes:
-        #     if node in self._nodes:
         # todo guards (here it is assumed that bounds is a row)
         val_type[:, nodes] = val_checked
 
@@ -637,7 +634,9 @@ class Constraint(Function, AbstractBounds):
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
         Function.setNodes(self, nodes, erasing)
-        AbstractBounds.setNodes(self, nodes, erasing)
+        # todo am I wrong?
+        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
+        AbstractBounds.setNodes(self, pos_nodes, erasing)
 
 class RecedingConstraint(RecedingFunction, AbstractBounds):
     """
@@ -677,16 +676,29 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
 
         self._init_bounds(bounds)
 
+    def _checkActiveNodes(self):
+
+        # useful to deactivate nodes if lb and ub are -inf/inf
+        np.isinf(np.inf)
+        active_nodes = misc.getNodesFromBinary(self._active_nodes_array)
+
+        for node in active_nodes:
+            if np.isinf(self.bounds['lb'][:, node]).all() and np.isinf(self.bounds['ub'][:, node]).all():
+                print('entered')
+                self._active_nodes_array[node] = 0
+
     def _setVals(self, val_type, val, nodes=None):
 
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes = misc.checkNodes(nodes, self._feas_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
         super()._setVals(val_type, val, pos_nodes)
+        # todo put it also in normal constraint
+        self._checkActiveNodes()
 
     def _getVals(self, val_type, nodes=None):
         # todo return the bounds on all nodes always??
@@ -695,7 +707,18 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
     def setNodes(self, nodes, erasing=False):
 
         RecedingFunction.setNodes(self, nodes, erasing)
-        AbstractBounds.setNodes(self, nodes, erasing)
+
+        # todo am I wrong?
+
+        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
+        AbstractBounds.setNodes(self, pos_nodes, erasing)
+
+
+        print('=======================')
+        print('name:', self.getName())
+        print('nodes:', self._active_nodes_array)
+        print('lb:', self.bounds['lb'])
+        print('ub:', self.bounds['ub'])
 
     def shift(self):
         shift_num = -1
@@ -901,7 +924,7 @@ class FunctionsContainer:
 
         fun = fun_constructor(name, j, used_var, used_par, nodes_array, thread_map_num=self.thread_map_num)
         self.addFunction(fun)
-        
+
         return fun
 
     def addFunction(self, fun: Function):

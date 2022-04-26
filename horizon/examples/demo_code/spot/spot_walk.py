@@ -79,7 +79,7 @@ dt = tf / n_nodes
 contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
 
 # define dynamics
-prb = problem.Problem(n_nodes, receding=True)
+prb = problem.Problem(n_nodes, receding=False)
 q = prb.createStateVariable('q', n_q)
 q_dot = prb.createStateVariable('q_dot', n_v)
 q_ddot = prb.createInputVariable('q_ddot', n_v)

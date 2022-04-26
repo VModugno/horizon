@@ -3,6 +3,7 @@ import numpy
 from horizon.solvers import Solver
 from horizon.problem import Problem
 from horizon.variables import SingleVariable, SingleParameter
+from horizon import misc_function as misc
 import numpy as np
 import casadi as cs
 
@@ -48,10 +49,8 @@ class RecedingHandler:
     def _updateInitialGuess(self, solution):
 
         for name_var, var in self.prb.getVariables().items():
-            shifted_vals = solution[name_var][:, 1:]
-            new_vals = np.zeros([var.getDim(), 1])
-
-            var.setInitialGuess(np.hstack((shifted_vals, new_vals)))
+            shifted_vals = misc.shift_array(solution[name_var], -1, 0.)
+            var.setInitialGuess(shifted_vals)
 
 
 if __name__ == '__main__':
@@ -162,60 +161,106 @@ if __name__ == '__main__':
 
     # final constraint
     # p.setBounds(lb=[1, 1], ub=[1, 1], nodes=n_nodes)
-    prob.createFinalConstraint('goal', p - p_tgt)
+    goal_cnsrt = prob.createFinalConstraint('goal', p - p_tgt)
     v.setBounds(lb=[0, 0], ub=[0, 0], nodes=n_nodes)
 
-    obs_center = np.array([0.5, 0.5])
-    obs_r = 0.4
+    obs_center = np.array([0.7, 0.7])
+    obs_r = 0.1
     obs = cs.sumsqr(p - obs_center) - obs_r ** 2
 
+    # todo what to do with non-active constraints?
+    #  I can automatically switch off a node if it is inf/-inf
+    obs_cnsrt = prob.createIntermediateConstraint('obstacle', obs, nodes=[])
     # obs_cnsrt = prob.createIntermediateConstraint('obstacle', obs)
-    # obs_cnsrt.setUpperBounds(np.inf)
-
     # intermediate cost ( i want to minimize the force! )
-    prob.createIntermediateCost('cost', cs.sumsqr(F), )
+    prob.createIntermediateCost('cost', cs.sumsqr(F))
 
-    # solve
+    # todo method 1: manual shift
+
     traj = numpy.array([])
     solver = solver.Solver.make_solver('ipopt', prob)
-    rcd = RecedingHandler(solver)
     p_tgt.assign([1, 1])
-    for i in range(30):
-        rcd.recede()
+
+    plt.ion()
+    fig, ax = plt.subplots()
+    ax.set_title('xy plane')
+    ax.plot([0, 0], [0, 0], 'bo', markersize=12)
+    ax.plot([1, 1], [1, 1], 'g*', markersize=12)
+    line_traj, = ax.plot(0, 0)
+
+    rec_nodes = -1
+    for i in range(25):
+        print(f'========== iteration {i} ==============')
+        solver.solve()
         solution = solver.getSolutionDict()
-        p_tgt.assign([1, 1])
-        prob.getParameters('cost_weight_mask').assign([1])
+
+        # update initial guess
+        p_ig = misc.shift_array(solution['pos'], -1, 0.)
+        v_ig = misc.shift_array(solution['vel'], -1, 0.)
+        f_ig = misc.shift_array(solution['force'], -1, 0.)
+        p.setInitialGuess(p_ig)
+        v.setInitialGuess(v_ig)
+        F.setInitialGuess(f_ig)
+
         # required bounds for setting intial position
         p.setBounds(solution['pos'][:, 1], solution['pos'][:, 1], 0)
+        goal_cnsrt.setLowerBounds([-0.1, -0.1])
+        goal_cnsrt.setUpperBounds([0.1, 0.1])
+
+        # shift goal_cnsrt in horizon
+        # goal_cnsrt.shift()
+        # exit()
+        print(goal_cnsrt.getNodes())
+        print(goal_cnsrt.getBounds())
+        goal_cnsrt.setNodes(goal_cnsrt.getNodes()-1)
+        print(goal_cnsrt.getNodes())
+        print(goal_cnsrt.getBounds())
+        exit()
+        # shift v bounds in horizon
+        shifted_v_lb = misc.shift_array(v.getLowerBounds(), -1, 0.)
+        shifted_v_ub = misc.shift_array(v.getUpperBounds(), -1, 0.)
+        v.setBounds(shifted_v_lb, shifted_v_ub)
 
         traj = np.hstack((traj, np.atleast_2d(solution['pos'][:, 0]).T)) if traj.size else np.atleast_2d(solution['pos'][:, 0]).T
 
-    print(traj)
-    fig, ax = plt.subplots()
-    ax.set_title('xy plane')
-    ax.plot(traj[0], traj[1])
-    ax.plot([0, 0], [0, 0], 'bo', markersize=12)
-    ax.plot([1, 1], [1, 1], 'g*', markersize=12)
+        line_traj.set_xdata(traj[0])
+        line_traj.set_ydata(traj[1])
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+        if i > 10:
+            obs_cnsrt.setLowerBounds(0., nodes=[range(n_nodes)])
+            circle = plt.Circle(obs_center, radius=obs_r, fc='r')
+            ax.add_patch(circle)
 
-    plt.show()
-    exit()
-    # plot
-    plot_all = True
+        rec_nodes = rec_nodes -1
 
-    if plot_all:
-        hplt = plotter.PlotterHorizon(prob, solution)
-        hplt.plotVariables(['pos', 'vel', 'force'], grid=True)
-        # hplt.plotFunctions(grid=True)
-
-    fig, ax = plt.subplots()
-    ax.set_title('xy plane')
-    ax.plot(solution['pos'][0], solution['pos'][1])
-    ax.plot([0, 0], [0, 0], 'bo', markersize=12)
-    ax.plot([1, 1], [1, 1], 'g*', markersize=12)
-
-    # circle = plt.Circle(obs_center, radius=obs_r, fc='r')
-    # ax.add_patch(circle)
-    # ax.legend(['traj', 'start', 'goal', 'obstacle'])
-    # plt.gca().add_patch(circle)
-
-    plt.show()
+    # todo method 2: using recedingHandler
+    # traj = numpy.array([])
+    # solver = solver.Solver.make_solver('ipopt', prob)
+    # rcd = RecedingHandler(solver)
+    # p_tgt.assign([1, 1])
+    #
+    # plt.ion()
+    # fig, ax = plt.subplots()
+    # ax.set_title('xy plane')
+    # ax.plot([0, 0], [0, 0], 'bo', markersize=12)
+    # ax.plot([1, 1], [1, 1], 'g*', markersize=12)
+    # line_traj, = ax.plot(0, 0)
+    #
+    # for i in range(25):
+    #     rcd.recede()
+    #     solution = solver.getSolutionDict()
+    #     p_tgt.assign([1, 1])
+    #     prob.getParameters('cost_weight_mask').assign([1])
+    #     # required bounds for setting intial position
+    #     p.setBounds(solution['pos'][:, 1], solution['pos'][:, 1], 0)
+    #     traj = np.hstack((traj, np.atleast_2d(solution['pos'][:, 0]).T)) if traj.size else np.atleast_2d(solution['pos'][:, 0]).T
+    #     line_traj.set_xdata(traj[0])
+    #     line_traj.set_ydata(traj[1])
+    #     fig.canvas.draw()
+    #     fig.canvas.flush_events()
+    #
+    #     if i > 10:
+    #         obs_cnsrt.setLowerBounds(0., nodes=[range(n_nodes)])
+    #         circle = plt.Circle(obs_center, radius=obs_r, fc='r')
+    #         ax.add_patch(circle)
