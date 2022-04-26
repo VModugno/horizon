@@ -903,7 +903,7 @@ class Variable(AbstractVariable):
 
         val_checked = misc.checkValueEntry(val)
         if val_checked.shape[0] != indices_vec.size:
-            raise Exception('Wrong dimension of variable values inserted.')
+            raise Exception(f'Wrong dimension of variable values inserted: {val_checked.shape[0]} instead of {indices_vec.size}')
 
         self._impl[val_type][np.ix_(indices_vec, pos_nodes)] = val_checked
 
