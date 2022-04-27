@@ -144,11 +144,9 @@ class steps_phase:
             else:
                 for i in range(0, len(c)):
                     self.c_ref[i].assign(self.stance[ref_id], nodes=k)
-                    self.cdot[i].setBounds(-1. * np.array(self.cdot_bounds[ref_id]),
-                                           np.array(self.cdot_bounds[ref_id]), nodes=k)
+                    self.cdot[i].setBounds(-1. * np.array(self.cdot_bounds[ref_id]), np.array(self.cdot_bounds[ref_id]), nodes=k)
                     if k < self.nodes:
-                        self.f[i].setBounds(-1. * np.array(self.f_bounds[ref_id]), np.array(self.f_bounds[ref_id]),
-                                        nodes=k)
+                        self.f[i].setBounds(-1. * np.array(self.f_bounds[ref_id]), np.array(self.f_bounds[ref_id]), nodes=k)
 
         self.step_counter += 1
 
@@ -594,7 +592,8 @@ global joy_msg
 joy_msg = rospy.wait_for_message("joy", Joy)
 
 solution_time_pub = rospy.Publisher("solution_time", Float32, queue_size=10)
-
+srbd_pub = rospy.Publisher("srbd_constraint", WrenchStamped, queue_size=10)
+srbd_msg = WrenchStamped()
 
 """
 Walking patter generator and scheduler
@@ -670,6 +669,22 @@ while not rospy.is_shutdown():
         publishPointTrj(solution["c" + str(i)], t, 'c' + str(i), "world", color=[0., 0., 1.])
     SRBDViewer(I, "SRB", t, nc)
     publishPointTrj(solution["r"], t, "SRB", "world")
+
+    cc = dict()
+    ff = dict()
+    for i in range(0, 8):
+        cc[i] = solution["c" + str(i)][:, 0]
+        ff[i] = solution["f" + str(i)][:, 0]
+    srbd_0 = kin_dyn.SRBD(m, I, ff, solution["r"][:, 0], solution["rddot"][:, 0], cc, solution["w"][:, 0], solution["wdot"][:, 0])
+    srbd_msg.header.stamp = t
+    srbd_msg.wrench.force.x = srbd_0[0]
+    srbd_msg.wrench.force.y = srbd_0[1]
+    srbd_msg.wrench.force.z = srbd_0[2]
+    srbd_msg.wrench.torque.x = srbd_0[3]
+    srbd_msg.wrench.torque.y = srbd_0[4]
+    srbd_msg.wrench.torque.z = srbd_0[5]
+    srbd_pub.publish(srbd_msg)
+
 
     rate.sleep()
 
