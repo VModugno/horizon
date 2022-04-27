@@ -343,6 +343,8 @@ prb.setDynamics(xdot)
 prb.setDt(T/ns)
 transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
 transcription_opts = dict(integrator='RK2') # integrator used by the multiple_shooting
+if transcription_method == 'direct_collocation':
+    transcription_opts = dict()
 th = Transcriptor.make_method(transcription_method, prb, opts=transcription_opts)
 
 """
@@ -399,7 +401,7 @@ for frame in foot_frames:
     """
     Forces are between -max_max_contact_force and max_max_contact_force (unilaterality is added later)
     """
-    f[i].setBounds([-max_contact_force, -max_contact_force, -max_contact_force], [max_contact_force, max_contact_force, max_contact_force])
+    #f[i].setBounds([-max_contact_force, -max_contact_force, -max_contact_force], [max_contact_force, max_contact_force, max_contact_force])
 
     i = i + 1
 
