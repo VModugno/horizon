@@ -294,7 +294,7 @@ rdot = prb.createStateVariable("rdot", 3) # CoM vel
 rdot_ref = prb.createParameter('rdot_ref', 3)
 rdot_ref.assign([0. ,0. , 0.], nodes=range(1, ns+1))
 
-""" Base angular Velocity and paramter to handle references """
+""" Base angular Velocity and parameter to handle references """
 w = prb.createStateVariable("w", 3) # base vel
 w_ref = prb.createParameter('w_ref', 3)
 w_ref.assign([0. ,0. , 0.], nodes=range(1, ns+1))
@@ -401,7 +401,7 @@ for frame in foot_frames:
     """
     Forces are between -max_max_contact_force and max_max_contact_force (unilaterality is added later)
     """
-    #f[i].setBounds([-max_contact_force, -max_contact_force, -max_contact_force], [max_contact_force, max_contact_force, max_contact_force])
+    f[i].setBounds([-max_contact_force, -max_contact_force, -max_contact_force], [max_contact_force, max_contact_force, max_contact_force])
 
     i = i + 1
 
@@ -555,23 +555,25 @@ Create solver
 """
 max_iteration = rospy.get_param("max_iteration", 20)
 print(f"max_iteration: {max_iteration}")
-opts = {
+
+ipopt_opts = {
         'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
-        'ipopt.max_iter': max_iteration,
+        'ipopt.max_iter': 100,
         'ipopt.linear_solver': 'ma27',
-        'ipopt.warm_start_init_point': 'yes',
-        'ipopt.fast_step_computation': 'yes',
+        'ipopt.warm_start_init_point': 'no',
+        'ipopt.fast_step_computation': 'no',
         'ipopt.print_level': 0,
         'ipopt.sb': 'no',
         'print_time': False,
         'print_level': 0
 }
 
-solver = solver.Solver.make_solver('ipopt', prb, opts)
 
-solver.solve()
-solution = solver.getSolutionDict()
+solver_offline = solver.Solver.make_solver('ipopt', prb, ipopt_opts)
+
+solver_offline.solve()
+solution = solver_offline.getSolutionDict()
 
 """
 Dictionary to store variables used for warm-start
@@ -596,6 +598,24 @@ joy_msg = rospy.wait_for_message("joy", Joy)
 solution_time_pub = rospy.Publisher("solution_time", Float32, queue_size=10)
 srbd_pub = rospy.Publisher("srbd_constraint", WrenchStamped, queue_size=10)
 srbd_msg = WrenchStamped()
+
+"""
+online_solver
+"""
+opts = {
+        'ipopt.tol': 0.001,
+        'ipopt.constr_viol_tol': 0.001,
+        'ipopt.max_iter': max_iteration,
+        'ipopt.linear_solver': 'ma27',
+        'ipopt.warm_start_init_point': 'yes',
+        'ipopt.fast_step_computation': 'yes',
+        'ipopt.print_level': 0,
+        'ipopt.sb': 'no',
+        'print_time': False,
+        'print_level': 0
+}
+
+solver = solver.Solver.make_solver('ipopt', prb, opts)
 
 """
 Walking patter generator and scheduler
