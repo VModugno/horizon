@@ -563,10 +563,6 @@ ipopt_opts = {
         'ipopt.linear_solver': 'ma27',
         'ipopt.warm_start_init_point': 'no',
         'ipopt.fast_step_computation': 'no',
-        'ipopt.print_level': 0,
-        'ipopt.sb': 'no',
-        'print_time': False,
-        'print_level': 0
 }
 
 
@@ -603,16 +599,33 @@ srbd_msg = WrenchStamped()
 online_solver
 """
 opts = {
+        #'ipopt.adaptive_mu_globalization': 'never-monotone-mode',
+        #'ipopt.mu_allow_fast_monotone_decrease': 'no',
+        #'ipopt.mu_linear_decrease_factor': 0.1,
+        #'ipopt.max_cpu_time': 3e-2,
+        #'ipopt.hessian_approximation': 'limited-memory',
+        #'ipopt.hessian_approximation_space': 'all-variables',
+        #'ipopt.limited_memory_aug_solver': 'extended',
+        #'ipopt.linear_system_scaling': 'slack-based',
+        #'ipopt.ma27_ignore_singularity': 'yes',
+        #'ipopt.ma27_skip_inertia_check': 'yes',
+        #'ipopt.hessian_constant': 'yes',
+        #'ipopt.jac_c_constant' : 'yes',
+        #'ipopt.nlp_scaling_method': 'none',
+        #'ipopt.magic_steps': 'yes',
+        'ipopt.accept_every_trial_step': 'yes',
         'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
         'ipopt.max_iter': max_iteration,
         'ipopt.linear_solver': 'ma27',
+        #'ipopt.warm_start_entire_iterate': 'yes',
+        #'ipopt.warm_start_same_structure': 'yes',
         'ipopt.warm_start_init_point': 'yes',
         'ipopt.fast_step_computation': 'yes',
         'ipopt.print_level': 0,
-        'ipopt.sb': 'no',
-        'print_time': False,
-        'print_level': 0
+        'ipopt.suppress_all_output': 'yes',
+        'ipopt.sb': 'yes',
+        'print_time': 0
 }
 
 solver = solver.Solver.make_solver('ipopt', prb, opts)
