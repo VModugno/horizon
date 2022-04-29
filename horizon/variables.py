@@ -178,7 +178,7 @@ class SingleParameter(AbstractVariable):
         self._casadi_type = casadi_type
         self._nodes_array = nodes_array
         self._impl = dict()
-        self._impl['par'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
+        self._impl['var'] = self._casadi_type.sym(self._tag + '_impl', self._dim)
         self._impl['val'] = np.zeros([self._dim, 1])
 
     def assign(self, val, indices=None):
@@ -235,7 +235,7 @@ class SingleParameter(AbstractVariable):
         Returns:
             instance of the implemented parameter
         """
-        return self._getVals('par', nodes)
+        return self._getVals('var', nodes)
 
     def getNodes(self):
         """
@@ -350,7 +350,7 @@ class Parameter(AbstractVariable):
         par_impl = self._casadi_type.sym(self._tag, proj_dim[0], proj_dim[1])
         par_value = np.zeros([proj_dim[0], proj_dim[1]])
 
-        new_par_impl['par'] = par_impl
+        new_par_impl['var'] = par_impl
         new_par_impl['val'] = par_value
 
         self._impl.clear()
@@ -432,7 +432,7 @@ class Parameter(AbstractVariable):
         Returns:
             implemented instances of the abstract parameter
         """
-        return self._getVals('par', nodes)
+        return self._getVals('var', nodes)
 
     def getValues(self, nodes=None):
         """
@@ -506,7 +506,7 @@ class Parameter(AbstractVariable):
             createTag = lambda name, node: name + str(node) if node is not None else name
 
             new_tag = createTag(self._tag, node)
-            par = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._impl)
+            par = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl)
 
             self._par_offset[node] = par
         return par
