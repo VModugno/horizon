@@ -83,7 +83,7 @@ for i in range(1, num_samples + 1):
 
 current_path = os.path.abspath(__file__ + '/..')
 
-ms = mat_storer.matStorer(current_path + '/spot_jump_refined_local.mat')
+ms = mat_storer.matStorer(current_path + '/refiner_spot_jump.mat')
 solution_refined = ms.load()
 nodes_vec_refined = solution_refined['times'][0]
 
@@ -158,7 +158,6 @@ ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*aspect_ratio)
 # =============================================================
 # =============== after mesh refinement =======================
 # =============================================================
-
 ax = fig.add_subplot(gs[2])
 tau_ref = solution_refined['inverse_dynamics']['val'][0][0]
 for dim in range(6):
@@ -172,10 +171,19 @@ x_left, x_right = ax.get_xlim()
 y_low, y_high = ax.get_ylim()
 ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*0.08)
 ax.set_xlabel(r'time [s]')
+
+tau_sol_ref_res = solution_refined['tau_sol_res']
+
+dt_res = 0.001
+num_samples = tau_sol_ref_res.shape[1]
+nodes_vec_res = np.zeros([num_samples + 1])
+for i in range(1, num_samples + 1):
+    nodes_vec_res[i] = nodes_vec_res[i - 1] + dt_res
+
 ax = fig.add_subplot(gs[1])
 tau_ref = solution_refined['inverse_dynamics']['val'][0][0]
 for dim in range(6):
-    ax.plot(nodes_vec_refined[:-1], np.array(tau_ref[dim, :]), linewidth=3)
+    ax.plot(nodes_vec_res[:-1], np.array(tau_sol_ref_res[dim, :]), linewidth=3)
 for dim in range(6):
     ax.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]), s=30, facecolors='none', edgecolors='#d62728', zorder=3)
     plt.scatter(values_exceed, np.zeros([values_exceed.shape[0]]), marker='|', zorder=4, c='blue')
