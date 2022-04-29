@@ -27,7 +27,7 @@ urdffile = '../urdf/spot.urdf'
 urdf = open(urdffile, 'r').read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
 
-ms = mat_storer.matStorer('../spot/spot_jump_refined_local.mat')
+ms = mat_storer.matStorer('../spot/refiner_spot_jump.mat')
 prev_solution = ms.load()
 
 

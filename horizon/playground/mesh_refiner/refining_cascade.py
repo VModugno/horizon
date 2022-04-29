@@ -34,7 +34,7 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer('spot_jump.mat')
+ms = mat_storer.matStorer('spot_jump_refined_local_first.mat')
 prev_solution = ms.load()
 
 n_nodes = prev_solution['n_nodes'][0][0]
@@ -593,6 +593,7 @@ for node in range(n_nodes):
 # SOLVE PROBLEM
 # =============
 opts = {'ipopt.tol': 0.01,
+        'ipopt.warm_start_init_point': 'yes',
         'ipopt.constr_viol_tol': 0.01,
         'ipopt.max_iter': 4000,
         'ipopt.linear_solver': 'ma57'}
