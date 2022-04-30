@@ -28,6 +28,8 @@ if __name__ == '__main__':
   parser.add_argument('--replay', help='visualize the robot trajectory in rviz', action='store_true')
   parser.add_argument('--action', '-a', help='choose which action spot will perform', choices=roped_robot_actions, default=roped_robot_actions[1])
   parser.add_argument("--plot", '-p', type=str2bool, nargs='?', const=True, default=True, help="plot solutions")
+  parser.add_argument("--warmstart", '-w', type=str2bool, nargs='?', const=True, default=False,
+                      help="save solutions to mat file")
 
   args = parser.parse_args()
   main(args)
