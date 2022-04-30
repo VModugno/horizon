@@ -3,7 +3,7 @@
 import casadi as cs
 import numpy as np
 from horizon import problem
-from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter
+from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter, mat_storer
 from horizon.transcriptions.transcriptor import Transcriptor
 from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
 from horizon.solvers import solver
@@ -21,6 +21,9 @@ def main(args):
     rope_mode = args.action
     plot_sol = args.plot
     resample = True
+    warmstart_flag = args.warmstart
+
+    load_initial_guess = False
 
     if rviz_replay:
         from horizon.ros.replay_trajectory import replay_trajectory
@@ -30,6 +33,22 @@ def main(args):
 
 
     path_to_examples = os.path.dirname(os.path.realpath(__file__))
+
+    if warmstart_flag:
+        file_name = os.path.splitext(os.path.basename(__file__))[0]
+        save_dir = path_to_examples + '/mat_files'
+        save_file = path_to_examples + f'/mat_files/{file_name}.mat'
+
+        if not os.path.isdir(save_dir):
+            os.makedirs(save_dir)
+
+        ms = mat_storer.matStorer(path_to_examples + f'/mat_files/{file_name}.mat')
+
+        if os.path.isfile(save_file):
+            print(f'{file_name}.mat file found. Using previous solution as initial guess.')
+            load_initial_guess = True
+        else:
+            print(f'{file_name}.mat file NOT found. The solution will be saved for future warmstarting.')
 
     # Loading URDF model in pinocchio
     urdffile = os.path.join(path_to_examples, 'urdf', 'roped_template.urdf')
@@ -75,6 +94,12 @@ def main(args):
     prb.setDt(dt)
 
     # Set bounds and initial guess to variables
+
+    if load_initial_guess:
+        if os.path.exists(path_to_examples + f'/mat_files/{file_name}.mat'):
+            prev_solution = ms.load()
+            variables_dict = {"q": q, "qdot": qdot, "qddot": qddot, "f1": f1, "f2": f2, "frope": frope}
+            mat_storer.setInitialGuess(variables_dict, prev_solution)
 
     q_min = kindyn.q_min()
     q_max = kindyn.q_max()
@@ -191,6 +216,20 @@ def main(args):
 
     solution = solv.getSolutionDict()
 
+    solution_constraints_dict = dict()
+
+    if warmstart_flag:
+        if isinstance(dt, cs.SX):
+            ms.store({**solution, **solution_constraints_dict})
+        else:
+            dt_dict = dict(dt=dt)
+            ms.store({**solution, **solution_constraints_dict, **dt_dict})
+
+        variables_dict = {"q": q, "qdot": qdot, "qddot": qddot, "f1": f1, "f2": f2, "frope": frope}
+        mat_storer.setInitialGuess(variables_dict, solution)
+
+
+
     tau_hist = np.zeros(solution['qddot'].shape)
     ID = kin_dyn.InverseDynamics(kindyn, ['Contact1', 'Contact2', 'rope_anchor2'], cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 
@@ -248,10 +287,12 @@ if __name__ == '__main__':
     roped_robot_actions = ('rappel')
 
     parser = argparse.ArgumentParser(
-        description='cart-pole problem: moving the cart so that the pole reaches the upright position')
+        description='A template model of a robot connected to a wall thorugh a rope.')
     parser.add_argument('--replay', help='visualize the robot trajectory in rviz', action='store_true')
     parser.add_argument('--action', '-a', help='choose which action spot will perform', choices=roped_robot_actions,
                         default=roped_robot_actions[0])
+    parser.add_argument("--warmstart", '-w', type=str2bool, nargs='?', const=True, default=False,
+                        help="save solutions to mat file")
     parser.add_argument("--plot", '-p', type=str2bool, nargs='?', const=True, default=True, help="plot solutions")
 
     args = parser.parse_args()
