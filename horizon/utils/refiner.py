@@ -499,17 +499,15 @@ if __name__ == '__main__':
     n_f = 3
 
     # SET PROBLEM STATE AND INPUT VARIABLES
-    prb = problem.Problem(n_nodes)
+    prb = problem.Problem(n_nodes, receding=True)
     q = prb.createStateVariable('q', n_q)
     q_dot = prb.createStateVariable('q_dot', n_v)
     q_ddot = prb.createInputVariable('q_ddot', n_v)
 
-    f_list = list()
-    for i in range(n_c):
-        f_list.append(prb.createInputVariable(f'f{i}', n_f))
+    contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
+    f_list = [prb.createInputVariable(f'force_{i}', n_f) for i in contacts_name]
 
     # SET CONTACTS MAP
-    contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
     contact_map = dict(zip(contacts_name, f_list))
 
     load_initial_guess = True
@@ -520,9 +518,9 @@ if __name__ == '__main__':
         q_ig = prev_solution['q']
         q_dot_ig = prev_solution['q_dot']
         q_ddot_ig = prev_solution['q_ddot']
-        f_ig_list = list()
+        f_ig_list = [prev_solution[f.getName()] for f in f_list]
         for i in range(n_c):
-            f_ig_list.append(prev_solution[f'f{i}'])
+            [f.setInitialGuess(f_ig) for f, f_ig in zip(f_list, f_ig_list)]
 
         dt_ig = prev_solution['dt']
 
@@ -705,10 +703,7 @@ if __name__ == '__main__':
     prev_q = prev_solution['q']
     prev_q_dot = prev_solution['q_dot']
     prev_q_ddot = prev_solution['q_ddot']
-
-    prev_f_list = list()
-    for i in range(n_c):
-        prev_f_list.append(prev_solution[f'f{i}'])
+    prev_f_list = [prev_solution[f.getName()] for f in f_list]
 
 
     contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']

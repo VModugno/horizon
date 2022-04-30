@@ -63,8 +63,6 @@ if 'floating_base_joint' in joint_names:
 # Optimization parameters
 n_nodes = 50
 node_action = (20, 40)
-node_start_step = 20
-node_end_step = 40
 
 # number of contacts (4 feet of spot)
 n_c = 4
@@ -283,7 +281,7 @@ for name, item in prb.getConstraints().items():
     ub_mat = np.reshape(ub, (item.getDim(), len(item.getNodes())), order='F')
     solution_constraints_dict[name] = dict(val=solution_constraints[name], lb=lb_mat, ub=ub_mat, nodes=item.getNodes())
 
-info_dict = dict(n_nodes=n_nodes, node_start_step=node_start_step, node_end_step=node_end_step)
+info_dict = dict(n_nodes=n_nodes, node_action=node_action, stance_orientation=stance_orientation)
 
 if isinstance(dt, cs.SX):
     ms.store({**solution, **solution_constraints_dict, **info_dict})
@@ -322,7 +320,7 @@ if plot_sol:
             ax.plot(np.array([range(pos.shape[1])]), np.array(pos[dim, :]), marker="x", markersize=3,
                     linestyle='dotted')
 
-        plt.vlines([node_start_step, node_end_step], plt.gca().get_ylim()[0], plt.gca().get_ylim()[1], linestyles='dashed', colors='k', linewidth=0.4)
+        plt.vlines([node_action[0], node_action[1]], plt.gca().get_ylim()[0], plt.gca().get_ylim()[1], linestyles='dashed', colors='k', linewidth=0.4)
 
     plt.figure()
     for contact in contacts_name:
