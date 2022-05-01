@@ -29,7 +29,7 @@ resampling = True
 # flag to plot the solution
 plot_sol = True
 # flag to load initial guess (if a previous solution is present)
-load_initial_guess = False
+load_initial_guess = True
 
 # get path to the examples folder and temporary add it to the environment
 path_to_examples = os.path.abspath(__file__ + "/../../../")
@@ -204,7 +204,7 @@ prb.createFinalConstraint('final_velocity', q_dot)
 # set a final pose of the floating base and robot configuration:
 # rotate the robot orientation on the z-axis
 q_final = q_init.copy()
-q_final[3:7] = stance_orientation
+# q_final[3:7] = stance_orientation
 prb.createFinalConstraint(f"final_nominal_pos", q - q_final)
 
 
@@ -226,7 +226,7 @@ for frame, f in contact_map.items():
     a = DDFK(q=q, qdot=q_dot)['ee_acc_linear']
 
     # velocity of each end effector must be zero before and after the jump
-    prb.createConstraint(f"{frame}_vel_ground", v, nodes=nodes_stance)
+    prb.createConstraint(f"{frame}_vel_ground", v, nodes=nodes_stance + [nodes_swing[0]])
 
     # friction cones must be satisfied while the robot is touching the ground
     # parameters of the friction cones:
