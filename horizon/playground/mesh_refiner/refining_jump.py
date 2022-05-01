@@ -183,7 +183,7 @@ if plot_flag:
 
 tau_sol_base = tau_sol_res[:6, :]
 
-threshold = 6.
+threshold = 4.
 ## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
 indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
 # these indices corresponds to some nodes ..
@@ -198,13 +198,14 @@ value_duplicates = values_exceed[indices_duplicates]
 values_exceed = np.delete(values_exceed, np.where(np.in1d(values_exceed, value_duplicates)))
 indices_exceed = np.delete(indices_exceed, indices_duplicates)
 
-print('number of supplementary nodes:', len(indices_exceed))
+print(f'number of supplementary nodes: {len(indices_exceed)}: {values_exceed}')
 
 ## base vector nodes augmented with new nodes + sort
 nodes_vec_augmented = np.concatenate((nodes_vec, values_exceed))
 nodes_vec_augmented.sort(kind='mergesort')
 
-print(nodes_vec_augmented)
+print('nodes_vec:\n', nodes_vec)
+print('nodes_vec_augmented:\n', nodes_vec_augmented)
 # new number of nodes
 
 # ===========================================================
@@ -218,8 +219,9 @@ time_start_step = nodes_vec[old_node_start_step]
 time_end_step = nodes_vec[old_node_end_step]
 
 node_start_step = np.where(abs(time_start_step - nodes_vec_augmented) < dt_res)
+
 if node_start_step:
-    node_start_step = int(node_start_step[0][0])
+    node_start_step = int(node_start_step[0][1])
 else:
     raise Exception('something is wrong with time_start_step')
 
@@ -229,6 +231,7 @@ if node_end_step:
 else:
     raise Exception('something is wrong with time_start_step')
 
+node_action = [node_start_step, node_end_step]
 # ===================================================================================
 # ============================== REFINER ============================================
 # ===================================================================================
@@ -330,6 +333,7 @@ q_dot = prb.createStateVariable('q_dot', n_v)
 q_ddot = prb.createInputVariable('q_ddot', n_v)
 # set the dt as a variable: the optimizer can choose the dt in between each node
 dt = prb.createParameter("dt", 1, nodes=range(0, n_nodes))  # parameter dt as input
+# dt = prb.createInputVariable("dt", 1)
 
 f_list = [prb.createInputVariable(f'force_{i}', n_f) for i in contacts_name]
 
@@ -368,8 +372,11 @@ f_min = [-10000., -10000., -10.]
 f_max = [10000., 10000., 10000.]
 
 # time bounds
-dt_min = 0.02  # [s]
-dt_max = 0.1  # [s]
+# dt_min = 0.02  # [s]
+# dt_max = 0.1  # [s]
+
+# if isinstance(dt, cs.SX):
+#     dt.setBounds(dt_min, dt_max)
 
 # set bounds and of q
 q.setBounds(q_min, q_max)
@@ -393,33 +400,37 @@ for node in range(n_nodes+1):
     if node in base_indices:
         q.setInitialGuess(prev_q[:, k], node)
         k += 1
-    if node in zip_indices_new.keys():
-        q.setInitialGuess(q_res[:, zip_indices_new[node]], node)
+    # if node in zip_indices_new.keys():
+    #     q.setInitialGuess(q_res[:, zip_indices_new[node]], node)
 
 k = 0
 for node in range(n_nodes+1):
     if node in base_indices:
         q_dot.setInitialGuess(prev_q_dot[:, k], node)
         k += 1
-    if node in zip_indices_new.keys():
-        q_dot.setInitialGuess(qdot_res[:, zip_indices_new[node]], node)
+    # if node in zip_indices_new.keys():
+    #     q_dot.setInitialGuess(qdot_res[:, zip_indices_new[node]], node)
 
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
         q_ddot.setInitialGuess(prev_q_ddot[:, k], node)
         k += 1
-    if node in zip_indices_new.keys():
-        q_ddot.setInitialGuess(qddot_res[:, zip_indices_new[node]], node)
-
+    # if node in zip_indices_new.keys():
+        # q_ddot.setInitialGuess(qddot_res[:, zip_indices_new[node]], node)
+#
 for i_f in range(len(f_list)):
     k = 0
     for node in range(n_nodes):
         if node in base_indices:
             f_list[i_f].setInitialGuess(prev_f_list[i_f][:, k], node)
             k += 1
-        if node in zip_indices_new.keys():
-            f_list[i_f].setInitialGuess(f_res_list[i_f][:, zip_indices_new[node]], node)
+        # if node in zip_indices_new.keys():
+        #     f_list[i_f].setInitialGuess(f_res_list[i_f][:, zip_indices_new[node]], node)
+
+    # dt_ig = prev_solution['dt']
+    # if isinstance(dt, cs.SX):
+    #     dt.setInitialGuess(dt_ig)
 
 plot_ig = False
 if plot_ig:
@@ -512,7 +523,7 @@ prb.createFinalConstraint('final_velocity', q_dot)
 # set a final pose of the floating base and robot configuration:
 # rotate the robot orientation on the z-axis
 q_final = q_init.copy()
-q_final[3:7] = stance_orientation
+# q_final[3:7] = stance_orientation
 prb.createFinalConstraint(f"final_nominal_pos", q - q_final)
 
 
@@ -534,7 +545,7 @@ for frame, f in contact_map.items():
     a = DDFK(q=q, qdot=q_dot)['ee_acc_linear']
 
     # velocity of each end effector must be zero before and after the jump
-    prb.createConstraint(f"{frame}_vel_ground", v, nodes=nodes_stance)
+    prb.createConstraint(f"{frame}_vel_ground", v, nodes=nodes_stance + [nodes_swing[0]])
 
     # friction cones must be satisfied while the robot is touching the ground
     # parameters of the friction cones:
@@ -553,9 +564,9 @@ for frame, f in contact_map.items():
 # prb.createCost("min_q_dot", 3 * cs.sumsqr(q_dot))
 
 for f in f_list:
-    prb.createIntermediateCost(f"min_{f.getName()}", 0.001 * cs.sumsqr(f)) # 0.01
+    prb.createIntermediateCost(f"min_{f.getName()}", 0.02 * cs.sumsqr(f)) # 0.01
 
-prb.createIntermediateCost("min_qddot", 0.001 * cs.sumsqr(q_ddot)) #1
+prb.createIntermediateCost("min_qddot", 1 * cs.sumsqr(q_ddot)) #1
 
 ######################################## proximal auxiliary cost function #######################################
 weight = 1e9
@@ -564,16 +575,16 @@ for node in range(n_nodes):
     if node in base_indices:
         prb.createCost(f"q_close_to_old_node_{node}", weight * cs.sumsqr(q - prev_q[:, k]), nodes=node)
         k = k+1
-    if node in zip_indices_new.keys():
-        prb.createCost(f"q_close_to_res_node_{node}", weight * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
+    # if node in zip_indices_new.keys():
+    #     prb.createCost(f"q_close_to_res_node_{node}", weight * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
 
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
         prb.createCost(f"qdot_close_to_old_node_{node}", weight * cs.sumsqr(q_dot - prev_q_dot[:, k]), nodes=node)
         k = k+1
-    if node in zip_indices_new.keys():
-        prb.createCost(f"qdot_close_to_res_node_{node}", weight * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
+    # if node in zip_indices_new.keys():
+    #     prb.createCost(f"qdot_close_to_res_node_{node}", weight * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
 
 # =============
 # SOLVE PROBLEM
@@ -603,9 +614,7 @@ for name, item in prb.getConstraints().items():
     solution_constraints_dict[name] = dict(val=solution_constraints[name], lb=lb_mat, ub=ub_mat, nodes=item.getNodes())
 
 # ================================== resample refined trajectory ==================================
-f_list = list()
-for i in range(n_c):
-    f_list.append(solution[f'f{i}'])
+f_list = [solution[f'force_{i}'] for i in contacts_name]
 contact_map = dict(zip(contacts_name, f_list))
 
 q_sym = cs.SX.sym('q', n_q)
