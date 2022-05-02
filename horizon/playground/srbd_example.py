@@ -122,7 +122,19 @@ class steps_phase:
             if(ref_id == 0):
                 self.action = action
 
-            if action == "step":
+            if action == "trot":
+                for i in [0, 3]:
+                    self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
+                    self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
+                    if k < self.nodes:
+                        self.f[i].setBounds(-1.*np.array(self.l_f_bounds[ref_id]), np.array(self.l_f_bounds[ref_id]), nodes=k)
+                for i in [1, 2]:
+                    self.c_ref[i].assign(self.r_cycle[ref_id], nodes = k)
+                    self.cdot[i].setBounds(-1.*np.array(self.r_cdot_bounds[ref_id]), np.array(self.r_cdot_bounds[ref_id]), nodes=k)
+                    if k < self.nodes:
+                        self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
+
+            elif action == "step":
                 for i in range(0, 4):
                     self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
@@ -684,8 +696,8 @@ while not rospy.is_shutdown():
         relative_pos_x_3_6.setBounds(ub=d_actual_2[0] + max_clearance_x, lb=d_actual_2[0] - max_clearance_x)
     else:
         wpg.set("cazzi")
-        relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - max_clearance_y)
-        relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - max_clearance_y)
+        relative_pos_y_1_4.setBounds(ub=d_initial_1[1] + max_clearance_y, lb=d_initial_1[1] - max_clearance_y)
+        relative_pos_y_3_6.setBounds(ub=d_initial_2[1] + max_clearance_y, lb=d_initial_2[1] - max_clearance_y)
         relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
         relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
 
