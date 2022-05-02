@@ -707,7 +707,7 @@ while not rospy.is_shutdown():
 
     cc = dict()
     ff = dict()
-    for i in range(0, 8):
+    for i in range(0, nc):
         cc[i] = solution["c" + str(i)][:, 0]
         ff[i] = solution["f" + str(i)][:, 0]
     srbd_0 = kin_dyn.SRBD(m, I, ff, solution["r"][:, 0], solution["rddot"][:, 0], cc, solution["w"][:, 0], solution["wdot"][:, 0])
