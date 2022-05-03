@@ -9,6 +9,12 @@ import pickle
 import horizon.misc_function as misc
 import pprint
 from abc import ABC, abstractmethod
+import itertools
+
+def getRanges(i):
+    for a, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+        b = list(b)
+        yield b[0][1], b[-1][1]
 '''
 now the StateVariable is only abstract at the very beginning.
 Formerly

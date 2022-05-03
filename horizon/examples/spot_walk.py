@@ -198,9 +198,8 @@ def main(args):
             'ilqr.codegen_workdir': '/tmp/ilqr_walk',
             'ipopt.tol': 0.001,
             'ipopt.constr_viol_tol': n_nodes * 1e-3,
-            'ipopt.max_iter': 500
+            'ipopt.max_iter': 500,
             }
-
     solv = solver.Solver.make_solver(solver_type, prb, opts)
 
     try:
@@ -297,14 +296,12 @@ def main(args):
             clea_constr[i].setNodes(clea_nodes[i], erasing=True)
             contact_y[i].setNodes(contact_k[i], erasing=True)
 
-
     def set_initial_guess():
         xig = np.roll(solv.x_opt, -1, axis=1)
         xig[:, -1] = solv.x_opt[:, -1]
         prb.getState().setInitialGuess(xig)
 
         uig = np.roll(solv.u_opt, -1, axis=1)
-        uig[:, -1] = solv.u_opt[:, -1]
         uig[:, -1] = solv.u_opt[:, -1]
         prb.getInput().setInitialGuess(uig)
 
@@ -343,9 +340,25 @@ def main(args):
 
         solv.max_iter = 1
 
+        # todo this is very sad. Apparently the option of the ipopt solver cannot be changed after building the problem
+        #  therefore, I have to create another problem, but doing so I lose the initial guess
+        #  solution: embed the recreation of the problem inside 'solver'
+        prev_x_opt = solv.x_opt
+        prev_u_opt = solv.u_opt
         # rebuild problem with max_iter = 1 if ipopt (ilqr does not require to rebuild)
         opts['ipopt.max_iter'] = 2
+        # opts['ipopt.print_level'] = 0
+        # opts['print_time'] = 0
+        # opts['sb'] = 'yes'
+        opts['ipopt.warm_start_init_point'] = 'yes'
+        # opts['ipopt.warm_start_same_structure'] = 'yes'
+        # opts['ipopt.warm_start_entire_iterate'] = 'yes'
+        opts['ipopt.linear_solver'] = 'ma27'
+
         solv = solver.Solver.make_solver(solver_type, prb, opts)
+        solv.x_opt = prev_x_opt
+        solv.u_opt = prev_u_opt
+
         while True:
             vref.assign([0.05, 0, 0])
             k0 += 1
