@@ -6,6 +6,7 @@ from collections import OrderedDict
 import pickle
 import time
 from typing import Union, Iterable
+import itertools
 
 # from horizon.type_doc import BoundsDict
 
@@ -22,6 +23,11 @@ default_thread_map = 10
 #       par = fun._getWeightMask() and var_container.add(par)
 #  I would like to find a way to instantiate the receding cost with everything in place already:
 #
+
+def getRanges(i):
+    for a, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+        b = list(b)
+        yield b[0][1], b[-1][1]
 
 class AbstractFunction:
     """
@@ -684,7 +690,6 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
 
         for node in active_nodes:
             if np.isinf(self.bounds['lb'][:, node]).all() and np.isinf(self.bounds['ub'][:, node]).all():
-                print('entered')
                 self._active_nodes_array[node] = 0
 
     def _setVals(self, val_type, val, nodes=None):
@@ -713,12 +718,13 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
         AbstractBounds.setNodes(self, pos_nodes, erasing)
 
-
-        print('=======================')
-        print('name:', self.getName())
-        print('nodes:', self._active_nodes_array)
-        print('lb:', self.bounds['lb'])
-        print('ub:', self.bounds['ub'])
+        # print('=======================')
+        # print('name:', self.getName())
+        # print('nodes:', list(getRanges(misc.getNodesFromBinary(self._active_nodes_array))))
+        # for dim in range(self.bounds['lb'].shape[0]):
+        #     print(f'lb_{dim}:', list(getRanges(misc.getNodesFromBinary(np.isfinite(self.bounds['lb'][dim, :]).astype(int)))))
+        # for dim in range(self.bounds['ub'].shape[0]):
+        #     print(f'ub_{dim}:', list(getRanges(misc.getNodesFromBinary(np.isfinite(self.bounds['ub'][dim, :]).astype(int)))))
 
     def shift(self):
         shift_num = -1
