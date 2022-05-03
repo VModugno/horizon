@@ -35,7 +35,8 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer('spot_jump.mat')
+# ms = mat_storer.matStorer('spot_jump.mat')
+ms = mat_storer.matStorer('refining_jump.mat')
 prev_solution = ms.load()
 
 n_nodes = prev_solution['n_nodes'][0][0]
@@ -183,7 +184,7 @@ if plot_flag:
 
 tau_sol_base = tau_sol_res[:6, :]
 
-threshold = 4.
+threshold = 2.
 ## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
 indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
 # these indices corresponds to some nodes ..
@@ -575,16 +576,16 @@ for node in range(n_nodes):
     if node in base_indices:
         prb.createCost(f"q_close_to_old_node_{node}", weight * cs.sumsqr(q - prev_q[:, k]), nodes=node)
         k = k+1
-    # if node in zip_indices_new.keys():
-    #     prb.createCost(f"q_close_to_res_node_{node}", weight * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
+    if node in zip_indices_new.keys():
+        prb.createCost(f"q_close_to_res_node_{node}", weight * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
 
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
         prb.createCost(f"qdot_close_to_old_node_{node}", weight * cs.sumsqr(q_dot - prev_q_dot[:, k]), nodes=node)
         k = k+1
-    # if node in zip_indices_new.keys():
-    #     prb.createCost(f"qdot_close_to_res_node_{node}", weight * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
+    if node in zip_indices_new.keys():
+        prb.createCost(f"qdot_close_to_res_node_{node}", weight * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
 
 # =============
 # SOLVE PROBLEM
@@ -639,7 +640,7 @@ solution_resampled['f_res_list'] = f_res_list
 
 from horizon.variables import Variable, SingleVariable, Parameter, SingleParameter
 
-info_dict = dict(n_nodes=n_nodes, times=nodes_vec_augmented, node_start_step=node_start_step, node_end_step=node_end_step)
+info_dict = dict(n_nodes=n_nodes, times=nodes_vec_augmented, node_action=node_action, stance_orientation=stance_orientation)
 if isinstance(dt, Variable) or isinstance(dt, SingleVariable):
     ms.store({**solution, **solution_constraints_dict, **solution_resampled, **info_dict})
 elif isinstance(dt, Parameter) or isinstance(dt, SingleParameter):
