@@ -34,7 +34,8 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer('spot_jump.mat')
+ms = mat_storer.matStorer('refining_mat/spot_jump.mat')
+# ms = mat_storer.matStorer('spot_jump_refined_local.mat')
 prev_solution = ms.load()
 
 n_nodes = prev_solution['n_nodes'][0][0]
@@ -186,12 +187,11 @@ if plot_flag:
 
 tau_sol_base = tau_sol_res[:6, :]
 
-threshold = 4.
+threshold = 5.
 ## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
 indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
 # these indices corresponds to some nodes ..
 values_exceed = nodes_vec_res[indices_exceed]
-
 
 
 ## search for duplicates and remove them, both in indices_exceed and values_exceed
@@ -410,16 +410,16 @@ for node in range(n_nodes+1):
     if node in base_indices:
         q_dot.setInitialGuess(prev_q_dot[:, k], node)
         k += 1
-    if node in zip_indices_new.keys():
-        q_dot.setInitialGuess(qdot_res[:, zip_indices_new[node]], node)
+    # if node in zip_indices_new.keys():
+    #     q_dot.setInitialGuess(qdot_res[:, zip_indices_new[node]], node)
 
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
         q_ddot.setInitialGuess(prev_q_ddot[:, k], node)
         k += 1
-    if node in zip_indices_new.keys():
-        q_ddot.setInitialGuess(qddot_res[:, zip_indices_new[node]], node)
+    # if node in zip_indices_new.keys():
+    #     q_ddot.setInitialGuess(qddot_res[:, zip_indices_new[node]], node)
 
 for i_f in range(len(f_list)):
     k = 0
@@ -427,8 +427,8 @@ for i_f in range(len(f_list)):
         if node in base_indices:
             f_list[i_f].setInitialGuess(prev_f_list[i_f][:, k], node)
             k += 1
-        if node in zip_indices_new.keys():
-            f_list[i_f].setInitialGuess(f_res_list[i_f][:, zip_indices_new[node]], node)
+        # if node in zip_indices_new.keys():
+        #     f_list[i_f].setInitialGuess(f_res_list[i_f][:, zip_indices_new[node]], node)
 
 plot_ig = False
 if plot_ig:
@@ -564,12 +564,12 @@ for frame, f in contact_map.items():
 
 # SET COST FUNCTIONS
 # prb.createCost(f"jump_fb", 10000 * cs.sumsqr(q[2] - fb_during_jump[2]), nodes=node_start_step)
-# prb.createCost("min_q_dot", 1. * cs.sumsqr(q_dot))
+prb.createCost("min_q_dot", 1. * cs.sumsqr(q_dot))
 # prb.createFinalCost(f"final_nominal_pos", 1000 * cs.sumsqr(q - q_init))
 for f in f_list:
-    prb.createIntermediateCost(f"min_{f.getName()}", 0.01 * cs.sumsqr(f))
+    prb.createIntermediateCost(f"min_{f.getName()}", 0.01 * cs.sumsqr(f)) #0.01
 
-prb.createIntermediateCost("min_qddot", 1 * cs.sumsqr(q_ddot))
+prb.createIntermediateCost("min_qddot", 1 * cs.sumsqr(q_ddot)) #1
 
 ######################################## proximal auxiliary cost function #######################################
 weight = 1e9

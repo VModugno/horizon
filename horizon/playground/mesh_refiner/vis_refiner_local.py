@@ -9,7 +9,8 @@ current_path = os.path.abspath(__file__ + '/..')
 n_nodes = 50
 # ===============================================================================
 # ms = mat_storer.matStorer('../playground/spot/refiner_spot_jump.mat')
-ms = mat_storer.matStorer(current_path + '/refining_jump.mat')
+# ms = mat_storer.matStorer(current_path + '/spot_jump_refined_local.mat')
+ms = mat_storer.matStorer(current_path + '/refining_jump_third_cycle.mat')
 solution_refined = ms.load()
 nodes_vec_refined = solution_refined['times'][0]
 # ~~~~~~~~~~
@@ -53,6 +54,7 @@ plt.title('q_dot')
 
 # =============================================================
 dyn_feas = 'dynamic_feasibility' #'inverse_dynamics'
+# dyn_feas = 'inverse_dynamics'
 tau = solution[dyn_feas]['val'][0][0]
 tau_ref = solution_refined[dyn_feas]['val'][0][0]
 plt.figure()
@@ -71,10 +73,10 @@ plt.title('tau')
 
 
 contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
-f_list = [f'force_{i}' for i in contacts_name]
-contact_map = dict(zip(contacts_name, [solution[f'force_{i}'] for i in contacts_name]))
 # f_list = ['f0', 'f1', 'f2', 'f3']
 # contact_map = dict(zip(contacts_name, [solution['f0'], solution['f1'], solution['f2'], solution['f3']]))
+f_list = [f'force_{i}' for i in contacts_name]
+contact_map = dict(zip(contacts_name, [solution[f'force_{i}'] for i in contacts_name]))
 
 
 

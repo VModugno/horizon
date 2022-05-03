@@ -513,7 +513,7 @@ if __name__ == '__main__':
     load_initial_guess = True
     # import initial guess if present
     if load_initial_guess:
-        ms = mat_storer.matStorer('../playground/mesh_refiner/spot_jump.mat')
+        ms = mat_storer.matStorer('../playground/mesh_refiner/refining_mat/spot_jump.mat')
         prev_solution = ms.load()
         q_ig = prev_solution['q']
         q_dot_ig = prev_solution['q_dot']
