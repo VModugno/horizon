@@ -22,11 +22,14 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 
 class steps_phase:
-    def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, max_force, max_velocity):
+    def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, number_of_legs, contact_model, max_force, max_velocity):
         self.f = f
         self.c = c
         self.cdot = cdot
         self.c_ref = c_ref
+
+        self.number_of_legs = number_of_legs
+        self.contact_model = contact_model
 
         self.nodes = nodes
         self.step_counter = 0
@@ -135,12 +138,12 @@ class steps_phase:
                         self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
 
             elif action == "step":
-                for i in range(0, 4):
+                for i in range(0, contact_model):
                     self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
                     if k < self.nodes:
                         self.f[i].setBounds(-1.*np.array(self.l_f_bounds[ref_id]), np.array(self.l_f_bounds[ref_id]), nodes=k)
-                for i in range(4, 8):
+                for i in range(contact_model, contact_model * number_of_legs):
                     self.c_ref[i].assign(self.r_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.r_cdot_bounds[ref_id]), np.array(self.r_cdot_bounds[ref_id]), nodes=k)
                     if k < self.nodes:
@@ -253,6 +256,7 @@ def SRBDViewer(I, base_frame, t, number_of_contacts):
 
 
 horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
+#horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo_line_feet.launch")
 #horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
 time.sleep(3.)
 
@@ -498,6 +502,7 @@ for l in range(0, number_of_legs):
 #fpi = [0, 3, 4, 7] #for knagaroo expected result
 #fpi = [0, 1, 2, 3] #for spot expected result
 
+
 d_initial_1 = -(initial_foot_position[fpi[0]][0:2] - initial_foot_position[fpi[2]][0:2])
 relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[fpi[0]][1] + c[fpi[2]][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
 relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[fpi[0]][0] + c[fpi[2]][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
@@ -642,10 +647,11 @@ opts = {
 
 solver = solver.Solver.make_solver('ipopt', prb, opts)
 
+
 """
 Walking patter generator and scheduler
 """
-wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns, max_force=max_contact_force, max_velocity=max_contact_velocity)
+wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns, number_of_legs=number_of_legs, contact_model=contact_model, max_force=max_contact_force, max_velocity=max_contact_velocity)
 while not rospy.is_shutdown():
     """
     Automatically set initial guess from solution to variables in variables_dict
