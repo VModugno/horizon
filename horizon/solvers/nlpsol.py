@@ -8,11 +8,11 @@ import pprint
 
 
 class NlpsolSolver(Solver):
-    
+
     def __init__(self, prb: Problem, opts: Dict, solver_plugin: str) -> None:
-        
+
         super().__init__(prb, opts=opts)
-        
+
         # generate problem to be solved
         self.var_container = self.prb.var_container
         self.fun_container = self.prb.function_container
@@ -20,7 +20,12 @@ class NlpsolSolver(Solver):
         self.vars_impl = dict()
         self.pars_impl = dict()
 
+        self.cond_warm_start = self.opts.get('ipopt.warm_start_init_point', 'no') == 'yes'
+        self.lam_x0 = None
+        self.lam_g0 = None
+
         # dictionary of implemented variables
+        self.dict_sol = dict(x0=None, lbx=None, ubx=None, lbg=None, ubg=None, p=None)
 
         j, w, g, p = self.build()
         # implement the abstract state variable with the current node
@@ -81,12 +86,11 @@ class NlpsolSolver(Solver):
                     fun_list.append(cs.sumsqr(fun_to_append[:]))
                 else:
                     raise Exception('wrong type of function found in fun_container')
-                
+
         # if it is empty, just set j to []
         j = cs.sum1(cs.veccat(*fun_list)) if fun_list else []
 
         return j, w, g, p
-
 
     def solve(self) -> bool:
 
@@ -103,20 +107,31 @@ class NlpsolSolver(Solver):
 
         # last guard
         if lbg.shape != self.prob_dict['g'].shape:
-            raise ValueError(f'Constraint bounds have mismatching shape: {lbg.shape}. Allowed dimensions: {self.prob_dict["g"].shape}. '
-                             f'Be careful: if you added constraints or variables after loading the problem, you have to rebuild it before solving it!')
+            raise ValueError(
+                f'Constraint bounds have mismatching shape: {lbg.shape}. Allowed dimensions: {self.prob_dict["g"].shape}. '
+                f'Be careful: if you added constraints or variables after loading the problem, you have to rebuild it before solving it!')
+
+        # update solver arguments
+        self.dict_sol['x0'] = w0
+        self.dict_sol['lbx'] = lbw
+        self.dict_sol['ubx'] = ubw
+        self.dict_sol['lbg'] = lbg
+        self.dict_sol['ubg'] = ubg
+        self.dict_sol['p'] = p
 
         # solve
-        sol = self.solver(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg, p=p)
+        sol = self.solver(**self.dict_sol)
+
+        if self.cond_warm_start:
+            self.dict_sol['lam_x0'] = sol['lam_x']
+            self.dict_sol['lam_g0'] = sol['lam_g']
 
         self.cnstr_solution = self._createCnsrtSolDict(sol)
 
         # retrieve state and input trajector
 
-
         # get solution dict
         self.var_solution = self._createVarSolDict(sol)
-
 
         # get solution as state/input
         self._createVarSolAsInOut(sol)
@@ -136,6 +151,7 @@ class NlpsolSolver(Solver):
 
     def getDt(self):
         return self.dt_solution
+
 
 if __name__ == '__main__':
 
@@ -212,7 +228,7 @@ if __name__ == '__main__':
     cnsrt1 = prob.createIntermediateConstraint('cnsrt1', x + u)
     cnsrt1.setLowerBounds([-np.inf, -np.inf])
     ## this is new, bitches!
-    print(cnsrt1.getImpl(2)) # the constraints get implemented as soon as it get created muahahah
+    print(cnsrt1.getImpl(2))  # the constraints get implemented as soon as it get created muahahah
     ## =========
     # cnsrt2 = prob.createConstraint('cnsrt2', x * y[0:2], nodes=[3, 8])
     ## =========
@@ -230,12 +246,12 @@ if __name__ == '__main__':
     # cnsrt9 = prob.createConstraint('cnsrt9', y, nodes=N)
     #
 
-    cost1 = prob.createCost('cost1', x+p)
+    cost1 = prob.createCost('cost1', x + p)
     # =========
 
     # todo check if everything is allright!
     for i in range(N):
-        x.setLowerBounds(np.array(range(i, i+2)), nodes=i)
+        x.setLowerBounds(np.array(range(i, i + 2)), nodes=i)
 
     p.assign([20, 20], nodes=4)
     # f.assign([121, 122, 120, 119])
@@ -244,5 +260,3 @@ if __name__ == '__main__':
     prob.setDynamics(xdot)
     sol = NlpsolSolver(prb=prob, opts=dict(), solver_plugin='ipopt')
     sol.solve()
-
-
