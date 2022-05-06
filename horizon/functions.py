@@ -685,7 +685,6 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
     def _checkActiveNodes(self):
 
         # useful to deactivate nodes if lb and ub are -inf/inf
-        np.isinf(np.inf)
         active_nodes = misc.getNodesFromBinary(self._active_nodes_array)
 
         for node in active_nodes:
