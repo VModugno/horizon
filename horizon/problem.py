@@ -953,6 +953,37 @@ if __name__ == '__main__':
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
+    N = 10
+    nodes_vec = np.array(range(N + 1))  # nodes = 10
+    dt = 0.01
+    prb = Problem(N, receding=True, casadi_type=cs.SX)
+    x = prb.createStateVariable('x', 2)
+    y = prb.createInputVariable('y', 2)
+    x.setBounds([-2, -2], [2, 2])
+    y.setBounds([-5, -5], [5, 5])
+    prb.createCost('cost_x', x)
+    prb.createIntermediateCost('cost_y', y)
+
+    # for i in range(500):
+    #     cnsrt = prb.createConstraint(f'cnsrt_{i}', x - i * y, nodes=[])
+    #     print(cnsrt.getBounds())
+
+    prb.setDynamics(x)
+    prb.setDt(dt)
+
+    opts = dict()
+    opts['ipopt.linear_solver'] = 'ma27'
+    # opts['ipopt.check_derivatives_for_naninf'] = 'yes'
+    # opts['ipopt.jac_c_constant'] = 'yes'
+    # opts['ipopt.jac_d_constant'] = 'yes'
+    # opts['ipopt.hessian_constant'] = 'yes'
+    solv = Solver.make_solver('ipopt', prb, opts)
+    tic = time.time()
+    solv.solve()
+    toc = time.time() - tic
+    print(toc)
+    print(solv.getSolutionDict()['x'])
+    exit()
     # N = 3
     # nodes_vec = np.array(range(N+1))    # nodes = 10
     # dt = 0.01
