@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import casadi as cs
 from horizon.problem import Problem
@@ -12,41 +14,46 @@ def _trj(tau):
 
 # todo if action is "elapsed" remove it from .recede() otherwise it will stay forever
 class CartesianTask:
-    def __init__(self, name, kin_dyn, prb: Problem, action, dim=None):
+    def __init__(self, name, kin_dyn, prb: Problem, frame, dim=None):
 
         # todo name can be part of action
         self.prb = prb
-        self.action = action
         self.name = name
-        self.action_nodes = list(range(self.action.k_start, self.action.k_goal))
-        self.n_action = len(self.action_nodes)
-
+        self.frame = frame
 
         if dim is None:
             dim = np.array([0, 1, 2]).astype(int)
         else:
             dim = np.array(dim)
 
-        fk = cs.Function.deserialize(kin_dyn.fk(self.action.frame))
+        fk = cs.Function.deserialize(kin_dyn.fk(frame))
 
         # todo this is bad
         ee_p = fk(q=self.prb.getVariables('q'))['ee_pos']
 
         # todo or in problem or here check name of variables and constraints
-        self.task = prb.createParameter(f'{self.name}_{self.action.frame}_tgt', dim.size)
-        self.constr = prb.createConstraint(f"{self.name}_{self.action.frame}_task", ee_p[dim] - self.task, nodes=[])
+        self.task = prb.createParameter(f'{self.name}_{self.frame}_tgt', dim.size)
+        self.constr = prb.createConstraint(f"{self.name}_{self.frame}_task", ee_p[dim] - self.task, nodes=[])
 
+        self.action = None
+        self.action_nodes = None
+        self.n_action = None
+    def activate(self, action):
 
-    def activate(self):
+        self.action = copy.deepcopy(action)
+        self.action_nodes = list(range(self.action.k_start, self.action.k_goal))
+        self.n_action = len(self.action_nodes)
 
         self.constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
-        self.set_polynomial_trajectory(self.action_nodes)  # <==== SET TARGET
+        self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
 
         print(f'task {self.name} nodes: {self.constr.getNodes().tolist()}')
         print('===================================')
 
 
-    def set_polynomial_trajectory(self, nodes, clearance=None):
+    def set_polynomial_trajectory(self, k_start, nodes, start, goal, clearance=None):
+
+
 
         if clearance is None:
             clearance = 0.10
@@ -54,14 +61,26 @@ class CartesianTask:
         nodes_in_horizon = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
 
         for k in nodes_in_horizon:
-            tau = (k - self.action.k_start) / self.n_action
+            tau = (k - k_start) / self.n_action
             trj = _trj(tau) * clearance
-            trj += (1 - tau) * self.action.start + tau * self.action.goal
+            trj += (1 - tau) * start + tau * goal
             self.task.assign(trj, nodes=k)
 
 
-
     def recede(self, ks):
+
+
+
+        if self.action is None:
+            print(f'task {self.name} is not active')
+            return 0
+
+        if self.action.k_goal < 0:
+            self.action = None
+            self.action_nodes = None
+            self.n_action = None
+            return 0
+
 
         self.action.k_start = self.action.k_start + ks
         self.action.k_goal = self.action.k_goal + ks
@@ -69,8 +88,9 @@ class CartesianTask:
         shifted_nodes = [x + ks for x in self.action_nodes]
         self.action_nodes = [x for x in shifted_nodes if x >= 0]
 
+        # todo this is basically repeated code from activate
         self.constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
-        self.set_polynomial_trajectory(self.action_nodes)  # <==== SET TARGET
+        self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
 
         print(f'task {self.name} nodes: {self.constr.getNodes().tolist()}')
         print(f'param task {self.name} nodes: {self.task.getValues().tolist()}')
