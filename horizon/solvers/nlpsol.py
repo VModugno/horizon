@@ -152,6 +152,11 @@ class NlpsolSolver(Solver):
     def getDt(self):
         return self.dt_solution
 
+    def getSolutionState(self):
+        return self.var_solution['x_opt']
+
+    def getSolutionInput(self):
+        return self.var_solution['u_opt']
 
 if __name__ == '__main__':
 

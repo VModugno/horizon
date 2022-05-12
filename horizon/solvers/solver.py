@@ -293,6 +293,12 @@ class Solver(ABC):
         """
         pass
 
+    def getSolutionState(self):
+        pass
+
+    def getSolutionInput(self):
+        pass
+
     def configure_rti(self) -> bool:
         """
         Take appropriate actions to make the solver suitable for

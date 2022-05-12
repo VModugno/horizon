@@ -6,12 +6,13 @@ from horizon.problem import Problem
 from horizon.utils import utils, kin_dyn, plotter
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
+from horizon.rhc import receding_tasks
 from horizon.ros import replay_trajectory
 from horizon import misc_function as misc
 import rospy
 import os
 from horizon.functions import Constraint, Cost, RecedingCost, RecedingConstraint
-
+import subprocess
 
 # barrier function
 def _barrier(x):
@@ -108,182 +109,110 @@ class ActionManager:
     def _init_default_action(self):
 
         # todo for now the default is robot still, in contact
+        print('===================== initializing ========================')
+        print('===========================================================')
         # contact nodes
-        self.contact_nodes = {contact: list(range(1, self.N + 1)) for contact in contacts}  # all the nodes
-        self.unilat_nodes = {contact: list(range(self.N)) for contact in contacts}
-        self.clea_nodes = {contact: list() for contact in contacts}
+        # contact and unilat nodes are slightly different. How to define?
+        for frame, c_constr in self.contact_constr.items():
+            c_constr.active(list(range(self.N + 1)), 1)
+
+        # self.contact_nodes = {contact: list(range(1, self.N + 1)) for contact in contacts}  # all the nodes
+        # self.unilat_nodes = {contact: list(range(self.N)) for contact in contacts}
+        # self.clea_nodes = {contact: list() for contact in contacts}
         self.contact_k = {contact: list() for contact in contacts}
 
-        self.nodes.append(self.contact_nodes)
-        self.nodes.append(self.unilat_nodes)
-        self.nodes.append(self.clea_nodes)
-        self.nodes.append(self.contact_k)
+        print('===========================================================')
+        print('===========================================================')
 
 
         # default action
-        for frame, cnsrt_item in self._zero_vel_constr.items():
-            cnsrt_item.setNodes(self.contact_nodes[frame])
+        # for frame, cnsrt_item in self._zero_vel_constr.items():
+        #     cnsrt_item.setNodes(self.contact_nodes[frame])
+        #
+        # for frame, cnsrt_item in self._unil_constr.items():
+        #     cnsrt_item.setNodes(self.unilat_nodes[frame])
 
-        for frame, cnsrt_item in self._unil_constr.items():
-            cnsrt_item.setNodes(self.unilat_nodes[frame])
-
-        print('init:')
-        print('contact_nodes', self.contact_nodes)
-        print('unilat_nodes', self.unilat_nodes)
-        print('clea_nodes', self.clea_nodes)
-        print('contact_k', self.contact_k)
-        print('===================================')
 
     def init_constraints(self):
 
         # todo ISSUE: I need to initialize all the constraints that I will use in the problem
-        self._zero_vel_constr = dict()
-        self._unil_constr = dict()
-        self._friction_constr = dict()
-        self._cartesian_constr = dict()
-        self._target_constr = dict()
-        self._foot_z_constr = dict()
-        self._foot_tgt_params = dict()
-        self._foot_z_param = dict()
+        # self._zero_vel_constr = dict()
+        # self._unil_constr = dict()
+        # self._friction_constr = dict()
+        # self._cartesian_constr = dict()
+        # self._target_constr = dict()
+        # self._foot_z_constr = dict()
+        # self._foot_tgt_params = dict()
+        # self._foot_z_param = dict()
+
+        self.contact_constr = dict()
+        self.z_constr = dict()
 
         for frame in self.contacts:
-            self._zero_vel_constr[frame] = self._zero_velocity(frame)
-            self._unil_constr[frame] = self._unilaterality(frame)
-            self._friction_constr[frame] = self._friction(frame)
-            self._foot_tgt_params[frame], self._foot_tgt_params[frame] = self._cartesian_task('foot_tgt', frame)
-            self._foot_z_constr[frame], self._foot_z_param[frame] = self._cartesian_task('foot_z', frame, 2)
+            self.contact_constr[frame] = receding_tasks.Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
 
-        self.constraints.append(self._zero_vel_constr)
-        self.constraints.append(self._unil_constr)
-        self.constraints.append(self._friction_constr)
-        self.constraints.append(self._cartesian_constr)
-        self.constraints.append(self._target_constr)
-        self.constraints.append(self._foot_z_constr)
-        self.constraints.append(self._foot_tgt_params)
-        self.constraints.append(self._foot_z_param)
+            # self._zero_vel_constr[frame] = self._zero_velocity(frame)
+            # self._unil_constr[frame] = self._unilaterality(frame)
+            # self._friction_constr[frame] = self._friction(frame)
+
+            # self._foot_tgt_params[frame], self._foot_tgt_params[frame] = self._cartesian_task('foot_tgt', frame)
+            # todo if I decide to add tasks as classes, this is useless
+            # self._foot_z_constr[frame], self._foot_z_param[frame] = self._cartesian_task('foot_z', frame, 2)
 
 
     # todo:
     #  def getFramePos():
     #  def addFrame(self, frame):  ---> what is this?
 
-    def _reset_contact_constraints(self, frame, nodes):
-        contact_constraints = [self._zero_vel_constr, self._unil_constr, self._friction_constr, self._foot_z_constr,
-                               self.forces, self._target_constr]
-        for c in contact_constraints:
-            if frame in c:
-                fun = c[frame]
-                if isinstance(fun, Constraint):
-                    ## constraints and variables --> relax bounds
-                    c_inf = np.inf * np.ones(fun.getDim())
-                    fun.setBounds(-c_inf, c_inf, nodes)
-                elif isinstance(fun, Cost):
-                    current_nodes = fun.getNodes().astype(int)
-                    new_nodes = np.delete(current_nodes, nodes)
-                    fun.setNodes(new_nodes)
+    # def _reset_task_constraints(self, frame, nodes):
 
+        # todo reset task
+        # task.reset()
+        # contact_constraints = [self._zero_vel_constr, self._unil_constr, self._friction_constr, self._foot_z_constr,
+        #                        self.forces, self._target_constr]
+
+        # contact_constraints = [self._target_constr]
+
+        # for c in contact_constraints:
+        #     if frame in c:
+        #         fun = c[frame]
+        #         if isinstance(fun, Constraint):
+                    # constraints and variables --> relax bounds
+                    # c_inf = np.inf * np.ones(fun.getDim())
+                    # fun.setBounds(-c_inf, c_inf, nodes)
+                # elif isinstance(fun, Cost):
+                #     current_nodes = fun.getNodes().astype(int)
+                #     new_nodes = np.delete(current_nodes, nodes)
+                #     fun.setNodes(new_nodes)
+                #
                 ## todo should implement --> removeNodes()
                 ## todo should implement a function to reset to default values
 
-    def _zero_velocity(self, frame):
-        raise NotImplementedError()
+    # def _zero_velocity(self, frame):
+    #     raise NotImplementedError()
+    #
+    # def _unilaterality(self, frame):
+    #     raise NotImplementedError()
+    #
+    # def _friction(self, frame):
+    #     raise NotImplementedError()
+    #
+    # def _cartesian_task(self, name, frame, dim=3):
+    #     raise NotImplementedError()
 
-    def _unilaterality(self, frame):
-        raise NotImplementedError()
-
-    def _friction(self, frame):
-        raise NotImplementedError()
-
-    def _cartesian_task(self, name, frame, dim=3):
-        raise NotImplementedError()
-
-    def setContact(self, on, frame, nodes, target=None):
+    def setContact(self, on, frame, nodes):
         """
         establish/break contact
         """
-        nodes_now = np.array(nodes) - self.k0
-
-        # todo prepare nodes of contact on/off:
-        nodes_in_horizon_x = [k for k in nodes_now if k >= 0 and k <= self.N]
-        nodes_in_horizon_u = [k for k in nodes_now if k >= 0 and k < self.N]
-
         # todo reset all the other "contact" constraints on these nodes
-        self._reset_contact_constraints(frame, nodes_in_horizon_x)
-
-        # todo contact_nodes, unil_consr, friction_constr are slightly different
-
-        if on == 1:
-
-            # if it's on:
-            # update nodes contact constraint
-            # todo if nodes was a Set it would have been easier
-            # todo why < self.N?
-            nodes_to_add = [k for k in nodes_now if k not in self.contact_nodes[frame] and k <= self.N]
-            if nodes_to_add:
-                self.contact_nodes[frame].extend(nodes_to_add)
-
-            # update nodes for unilateral constraint
-            nodes_to_add = [k for k in nodes_now if k not in self.contact_nodes[frame] and k <= self.N]
-            if nodes_to_add:
-                self.unilat_nodes[frame].extend(nodes_to_add)
-
-            # update clearance nodes
-            self.clea_nodes[frame] = [k for k in self.clea_nodes[frame] if k not in nodes]
-
-            erasing = True
-            self._zero_vel_constr[frame].setNodes(self.contact_nodes[frame], erasing=erasing)  # state + starting from node 1
-            self._unil_constr[frame].setNodes(self.unilat_nodes[frame], erasing=erasing)  # input -> without last node
-            # self._friction_constr[frame].setNodes(self.unilat_nodes[frame], erasing=erasing)  # input
-
-            if target is not None:
-                self._target_constr[frame].setNodes(nodes, erasing=erasing)
-
-        elif on == 0:
-
-            erasing = True
-            # if it's off:
-            # update contact nodes
-            # todo i don't understand --> k < self.N
-            self.contact_nodes[frame] = [k for k in self.contact_nodes[frame] if k not in nodes and k <= self.N]
-            # update nodes for unilateral constraint
-            self.unilat_nodes[frame] = [k for k in self.unilat_nodes[frame] if k not in nodes]
-
-            self._zero_vel_constr[frame].setNodes(self.contact_nodes[frame], erasing=erasing)  # state + starting from node 1
-            self._unil_constr[frame].setNodes(self.unilat_nodes[frame], erasing=erasing)
-
-            # set forces to zero
-            f = self.forces[frame]
-            fzero = np.zeros(f.getDim())
-            f.setBounds(fzero, fzero, nodes_in_horizon_u)
+        # self._reset_task_constraints(frame, nodes_in_horizon_x)
 
 
-    def setCartesianTask(self, frame, nodes, task, task_nodes, param, start, goal, opts=None):
-        """
-        set cartesian task
-        """
+        # todo what to do with z_constr?
+        # self.z_constr.reset()
 
-        # todo this is temporary
-        if 'clearance' in opts:
-            clearance = opts['clearance']
-        else:
-            clearance = 0.10
+        self.contact_constr[frame].active(nodes, on)
 
-        # todo prepare nodes of action:
-        # nodes_in_horizon_x = [k for k in nodes if k >= 0 and k <= self.N]
-        # nodes_in_horizon_u = [k for k in nodes if k >= 0 and k < self.N]
-
-        # todo to reset?
-        # self._reset_contact_constraints(frame, nodes_in_horizon_x)
-
-        nodes_to_add = [k for k in nodes if k not in task_nodes and k <= self.N]
-
-        if nodes_to_add:
-            task_nodes.extend(nodes_to_add)
-
-        print(nodes_to_add)
-        # todo should be somewhere else
-        task.setNodes(task_nodes, erasing=True)  # <==== SET NODES
-        self.set_polynomial_trajectory(start, goal, task_nodes, param, clearance)  # <==== SET TARGET
 
     def setStep(self, step: Step):
         """
@@ -304,122 +233,59 @@ class ActionManager:
         # break contact at swing nodes + z_trajectory + (optional) xy goal
         # contact
         self.setContact(0, frame, swing_nodes)
-        # cartesian task:
-        # z goal
-        # update clearance nodes
-        z_start = self.default_foot_z[frame] if step.start.size == 0 else step.start[2]
-        z_goal = self.default_foot_z[frame] if step.goal.size == 0 else step.goal[2]
+
+        if step.start.size == 0:
+            step.start = self.default_foot_z[frame]
+
+        if step.goal.size == 0:
+            step.goal = self.default_foot_z[frame]
+
         opts = dict()
         opts['clearance'] = 0.1
 
-        self.setCartesianTask(frame, swing_nodes, self._foot_z_constr[frame], self.clea_nodes[frame],
-                              self._foot_z_param[frame], z_start, z_goal, opts)
+        self.z_constr[frame] = receding_tasks.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, step, 2)
+        self.z_constr[frame].activate()
 
         # xy goal
-        if k_goal <= self.N and k_goal > 0 and step.goal.size > 0:
-            # todo cartesian task: what if it is a trajectory or a single point?
-            self.setCartesianTask(frame, k_goal, self.contact_k[frame], k_goal, self._foot_tgt_params[frame], step.goal)
-            self.contact_k[frame].append(k_goal)  # <==== SET NODES
-            self._foot_tgt_params[frame].assign(step.goal, nodes=k_goal)  # <==== SET TARGET
+        # todo
+        # if k_goal <= self.N and k_goal > 0 and step.goal.size > 0:
+        #     todo cartesian task: what if it is a trajectory or a single point?
+            # self.setCartesianTask(frame, k_goal, self.contact_k[frame], k_goal, self._foot_tgt_params[frame], step.goal)
+            # self.contact_k[frame].append(k_goal)  # <==== SET NODES
+            # self._foot_tgt_params[frame].assign(step.goal, nodes=k_goal)  # <==== SET TARGET
 
 
 class ActionManagerImpl(ActionManager):
     def __init__(self, prb: Problem, urdf, kindyn, contacts_map, default_foot_z, opts=None):
         super().__init__(prb, urdf, kindyn, contacts_map, default_foot_z, opts)
 
-    def _zero_force(self, frame):
-        """
-        equality constraint
-        """
-        f = self.forces[frame]
-        constr = self.prb.createConstraint(f'{frame}_force', f, nodes=[])
-        return constr
-
-    def _zero_velocity(self, frame):
-        """
-        equality constraint
-        """
-        dfk = cs.Function.deserialize(self.kd.frameVelocity(frame, self.kd_frame))
-        ee_v = dfk(q=self.joint_pos, qdot=self.joint_vel)['ee_vel_linear']
-
-        constr = self.prb.createConstraint(f"{frame}_vel", ee_v, nodes=[])
-        return constr
-
-    def _unilaterality(self, frame):
-        """
-        barrier cost
-        """
-        f = self.forces[frame]
-        fcost = _barrier(f[2] - self.fmin)
-
-        # todo or createIntermediateCost?
-        barrier = self.prb.createCost(f'{frame}_unil_barrier', 1e-3 * fcost, nodes=[])
-        return barrier
-
-    def _friction(self, frame):
-        """
-        barrier cost
-        """
-        f = self.forces[frame]
-        mu = 0.5
-        fcost = _barrier(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
-        barrier = self.prb.createIntermediateCost(f'{frame}_fc', 1e-3 * fcost, nodes=[])
-        return barrier
-
-    # todo if I want to get rid of the name, I need automatic name creation: if no name is given, create a dummy one
-    def _cartesian_task(self, name, frame, dim=None):
-        """
-        equality constraint
-        """
-        if dim is None:
-            dim = np.array([0, 1, 2]).astype(int)
-        else:
-            dim = np.array(dim)
-
-        fk = cs.Function.deserialize(self.kd.fk(frame))
-        ee_p = fk(q=self.joint_pos)['ee_pos']
-
-        # todo or in problem or here check name of variables and constraints
-        task = self.prb.createParameter(f'{name}_{frame}_tgt', dim.size)
-        constr = self.prb.createConstraint(f"{name}_{frame}_task", ee_p[dim] - task, nodes=[])
-        return constr, task
-
-    def execute(self):
+    def execute(self, solver):
         """
         given the default, spin once shifting the horizon
         """
         shift_num = -1
+        self._update_initial_state(solver, shift_num)
 
         # todo check if constraint has inputs and remove last node
         # todo the default is all the contacts are active
         # default: "renewing" nodes
         # state
-        for n_name, n_list in self.contact_nodes.items():
-            # shift all the contact node and add the new entry at the last node
-            # not considering the first node
-            shifted_nodes = [x + shift_num for x in n_list] + [self.N]
-            self.contact_nodes[n_name] = [x for x in shifted_nodes if x > 0]
 
-        for frame, cnsrt_item in self._zero_vel_constr.items():
-            cnsrt_item.setNodes(self.contact_nodes[frame])
+        # set constraints
+        for c_name, c_constr in self.contact_constr.items():
+            c_constr.recede(shift_num)
 
-        # input
-        for n_name, n_list in self.unilat_nodes.items():
-            # shift all the contact node and add the new entry at the last node - 1 because this constraint involves inputs
-            shifted_nodes = [x + shift_num for x in n_list] + [self.N - 1]
-            self.unilat_nodes[n_name] = [x for x in shifted_nodes if x >= 0]
+        for c_name, c_constr in self.z_constr.items():
+            c_constr.recede(shift_num)
 
-        for frame, cnsrt_item in self._unil_constr.items():
-            cnsrt_item.setNodes(self.unilat_nodes[frame])
+        # set nodes
+        # for n_name, n_list in self.contact_k.items():
+        #     shifted_nodes = [x + shift_num for x in n_list]
+        #     self.contact_k[n_name] = [x for x in shifted_nodes if x >= 0]
 
-        # swing nodes, "decaying" nodes
-        for n_name, n_list in self.clea_nodes.items():
-            shifted_nodes = [x + shift_num for x in n_list]
-            self.clea_nodes[n_name] = [x for x in shifted_nodes if x >= 0]
-
-        for n_name, n_list in self.contact_k.items():
-            shifted_nodes = [x + shift_num for x in n_list]
-            self.contact_k[n_name] = [x for x in shifted_nodes if x >= 0]
+        # set constraints
+        # for frame, cnsrt_item in self._foot_tgt_constr.items():
+        #     cnsrt_item.setNodes(self.contact_k[frame], erasing=erasing)
 
         # todo
         #  the difference here is which list of nodes get new entry nodes and which do not
@@ -427,35 +293,24 @@ class ActionManagerImpl(ActionManager):
 
         # difference between "action", which is decaying and "default", which is renewing
 
-        # todo transform everthing in an array?
-        # np.array(n) + shift_num
-        # n = shifted_nodes[mask_nodes]
-        # default
-        # n = misc.shift_array(n, shift_num, -np.inf)
+    def _update_initial_state(self, solver: Solver, shift_num):
 
-        # for constr_dict in self.constraints:
-        #     for c_name, c in constr_dict.items():
-        #         if isinstance(c, RecedingConstraint):
-        #             c.shift()
+        x_opt = solver.getSolutionState()
+        u_opt = solver.getSolutionInput()
 
-    # def _friction(self, frame):
-    #     """
-    #     inequality constraint
-    #     """
-    #     mu = 0.5
-    #     frame_rot = np.identity(3, dtype=float)  # environment rotation wrt inertial frame
-    #     fc, fc_lb, fc_ub = self.kd.linearized_friction_cone(f, mu, frame_rot)
-    #     self.prb.createIntermediateConstraint(f"f{frame}_friction_cone", fc, bounds=dict(lb=fc_lb, ub=fc_ub))
+        xig = np.roll(x_opt, shift_num, axis=1)
 
-    # def _unilaterality(self, f):
-    #     """
-    #     inequality constraint
-    #     """
-    #     # todo or createIntermediateConstraint?
-    #     f = self.forces[frame]
-    #     constr = self.prb.createConstraint(f'{f.getName()}_unil', f_z[2] - self.fmin, nodes=[])
-    #     constr.setUpperBounds(np.inf)
-    #     return constr
+        for i in range(abs(shift_num)):
+            xig[:, -1 - i] = x_opt[:, -1]
+        self.prb.getState().setInitialGuess(xig)
+
+        uig = np.roll(u_opt, shift_num, axis=1)
+
+        for i in range(abs(shift_num)):
+            uig[:, -1 - i] = u_opt[:, -1]
+        self.prb.getInput().setInitialGuess(uig)
+
+        self.prb.setInitialState(x0=xig[:, 0])
 
 
 if __name__ == '__main__':
@@ -536,7 +391,7 @@ if __name__ == '__main__':
     prb.createFinalResidual("min_qf", 1e0 * (q[7:] - q0[7:]))
 
     # regularize input
-    prb.createIntermediateResidual("min_q_ddot", 1e-3 * a)
+    prb.createIntermediateResidual("min_q_ddot", 1e-1 * a)
 
     for f in forces:
         prb.createIntermediateResidual(f"min_{f.getName()}", 1e-2 * (f - f0))
@@ -607,58 +462,11 @@ if __name__ == '__main__':
     #
     # create solver and solve initial seed
 
-    # am.setContact(0, 'lf_foot', range(25, 35))
-    # am.setContact(0, 'rf_foot', range(25, 35))
-    # am.setContact(0, 'lh_foot', range(25, 35))
-    # am.setContact(0, 'rh_foot', range(25, 35))
-    # am.setContact(0, 'lf_foot', range(10, 30))
-    # am.setContact(0, 'lf_foot', range(10, 30))
-    # am.setContact(0, 'rf_foot', [0, 1, 2])
     am.setStep(s_1)
-    # am.setStep(s_2)
-    # am.setStep(s_3)
-    # am.setStep(s_4)
-    # am.setStep(s_2)
-    print('contact_nodes', am.contact_nodes)
-    print('unilat_nodes', am.unilat_nodes)
-    print('clea_nodes', am.clea_nodes)
-    print('contact_k', am.contact_k)
-
-    # print('contact_nodes', am.contact_nodes)
-    # print('unilat_nodes', am.unilat_nodes)
-    # print('clea_nodes', am.clea_nodes)
-    # print('contact_k', am.contact_k)
-    # print('===================================')
-    # am.setContact(0, 'lf_foot', range(10, 30))
-    # am.setContact(0, 'rf_foot', [0, 1, 2])
-    print('===========executing ...========================')
-    # am.execute()
-    # print('===========executing ...========================')
-    # am.execute()
-    # am.setStep(s_2)
-    # print('contact_nodes', am.contact_nodes)
-    # print('unilat_nodes', am.unilat_nodes)
-    # print('clea_nodes', am.clea_nodes)
-    # print('contact_k', am.contact_k)
-    # print('===========executing ...========================')
-    # am.execute()
-    # print('===========executing ...========================')
-    # am.execute()
-    # print('===========executing ...========================')
-    # am.execute()
-    # print('===========executing ...========================')
-    # am.execute()
-    # print('===========executing ...========================')
-    # am.execute()
-    # print('===========executing ...========================')
-    # am.execute()
-    # print('contact_nodes', am.contact_nodes)
-    # print('unilat_nodes', am.unilat_nodes)
-    # print('clea_nodes', am.clea_nodes)
-    # print('contact_k', am.contact_k)
+    am.setStep(s_2)
 
 
-
+    # print('===========executing ...========================')
 
     opts = {'ipopt.tol': 0.001,
             'ipopt.constr_viol_tol': 1e-3,
@@ -666,15 +474,40 @@ if __name__ == '__main__':
             }
 
     solver_bs = Solver.make_solver('ipopt', prb, opts)
-
+    # solver_rti = Solver.make_solver('ipopt', prb, opts)
     # ptgt.assign(ptgt_final, nodes=ns)
 
     solver_bs.solve()
-
-
     solution = solver_bs.getSolutionDict()
+
+    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
+    subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
+    rospy.loginfo("'spot' visualization started.")
+
+
+    # q_sol = solution['q']
+    # frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
+    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
+    # repl.sleep(1.)
+    # repl.replay(is_floating_base=True)
+    # exit()
+    # =========================================================================
+    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+    while True:
+
+        am.execute(solver_bs)
+
+        solver_bs.solve()
+        solution = solver_bs.getSolutionDict()
+
+
+        repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
+        repl.publish_joints(solution['q'][:, 0])
+        repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+
+
     # set ROS stuff and launchfile
-    plot = False
+    plot = True
 
     if plot:
         import matplotlib.pyplot as plt
@@ -700,18 +533,6 @@ if __name__ == '__main__':
         hplt.plotVariables(['q'], show_bounds=True, gather=2, legend=False)
         matplotlib.pyplot.show()
 
-    import subprocess
-
-    q_sol = solution['q']
-    frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
-
-    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
-    subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
-    rospy.loginfo("'spot' visualization started.")
-    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
-
-    repl.sleep(1.)
-    repl.replay(is_floating_base=True)
 
 
 
