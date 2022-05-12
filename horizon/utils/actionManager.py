@@ -150,7 +150,7 @@ class ActionManager:
 
         for frame in self.contacts:
             self.contact_constr[frame] = receding_tasks.Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
-
+            self.z_constr[frame] = receding_tasks.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
             # self._zero_vel_constr[frame] = self._zero_velocity(frame)
             # self._unil_constr[frame] = self._unilaterality(frame)
             # self._friction_constr[frame] = self._friction(frame)
@@ -243,8 +243,9 @@ class ActionManager:
         opts = dict()
         opts['clearance'] = 0.1
 
-        self.z_constr[frame] = receding_tasks.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, step, 2)
-        self.z_constr[frame].activate()
+
+
+        self.z_constr[frame].activate(step)
 
         # xy goal
         # todo
@@ -493,8 +494,12 @@ if __name__ == '__main__':
     # exit()
     # =========================================================================
     repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+    iteration = 0
     while True:
 
+        if iteration == 60:
+            am.setStep(s_1)
+            
         am.execute(solver_bs)
 
         solver_bs.solve()
@@ -504,7 +509,8 @@ if __name__ == '__main__':
         repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
         repl.publish_joints(solution['q'][:, 0])
         repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
-
+        iteration = iteration+1
+        print(iteration)
 
     # set ROS stuff and launchfile
     plot = True
