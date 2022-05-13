@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import casadi as cs
 from horizon.problem import Problem
+import casadi_kin_dyn.py3casadi_kin_dyn as pycasadi_kin_dyn
 from horizon.functions import RecedingConstraint, RecedingCost
 from horizon import misc_function as misc
 
@@ -28,32 +29,66 @@ class CartesianTask:
 
         fk = cs.Function.deserialize(kin_dyn.fk(frame))
 
+        # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+        # dfk = cs.Function.deserialize(kin_dyn.frameVelocity(frame, kd_frame))
+        # ddfk = cs.Function.deserialize(kin_dyn.frameAcceleration(frame, kd_frame))
+
         # todo this is bad
-        ee_p = fk(q=self.prb.getVariables('q'))['ee_pos']
+        q = self.prb.getVariables('q')
+        # v = self.prb.getVariables('v')
+
+        ee_p = fk(q=q)['ee_pos']
+        # ee_v = dfk(q=q, qdot=v)['ee_vel_linear']
+        # ee_a = ddfk(q=q, qdot=v)['ee_acc_linear']
 
         # todo or in problem or here check name of variables and constraints
-        self.task = prb.createParameter(f'{self.name}_{self.frame}_tgt', dim.size)
-        self.constr = prb.createConstraint(f"{self.name}_{self.frame}_task", ee_p[dim] - self.task, nodes=[])
+        pos_frame_name = f'{self.name}_{self.frame}_pos'
+        # vel_frame_name = f'{self.name}_{self.frame}_vel'
+        # acc_frame_name = f'{self.name}_{self.frame}_acc'
 
+        self.pos_tgt = prb.createParameter(f'{pos_frame_name}_tgt', dim.size)
+        # self.vel_tgt = prb.createParameter(f'{vel_frame_name}_tgt', dim.size)
+        # self.acc_tgt = prb.createParameter(f'{acc_frame_name}_tgt', dim.size)
+
+        self.pos_constr = prb.createConstraint(f'{pos_frame_name}_task', ee_p[dim] - self.pos_tgt, nodes=[])
+        # self.vel_constr = prb.createConstraint(f'{vel_frame_name}_task', ee_v[dim] - self.vel_tgt, nodes=[])
+        # self.acc_constr = prb.createConstraint(f'{acc_frame_name}_task', ee_a[dim] - self.acc_tgt, nodes=[])
+
+        self.task_target = None
         self.action = None
         self.action_nodes = None
         self.n_action = None
+
     def activate(self, action):
+
+        self.trajectory_mode = False
 
         self.action = copy.deepcopy(action)
         self.action_nodes = list(range(self.action.k_start, self.action.k_goal))
         self.n_action = len(self.action_nodes)
 
-        self.constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
-        self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
+        goal = np.atleast_2d(self.action.goal)
+        # todo when to activate manual mode?
+        if goal.shape[1] != self.n_action and goal.shape[1] != 1:
+            raise ValueError(f'Wrong goal dimension ({self.action.goal.size}) inserted.')
+        else:
+            self.trajectory_mode = True
 
-        print(f'task {self.name} nodes: {self.constr.getNodes().tolist()}')
+        if goal.shape[1] == self.n_action:
+            self.trajectory_mode = False
+
+        self.pos_constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
+
+        if self.trajectory_mode:
+            self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
+        else:
+            self.pos_tgt.assign(goal, nodes=self.action_nodes)
+
+        print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
+        print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
         print('===================================')
 
-
     def set_polynomial_trajectory(self, k_start, nodes, start, goal, clearance=None):
-
-
 
         if clearance is None:
             clearance = 0.10
@@ -64,12 +99,9 @@ class CartesianTask:
             tau = (k - k_start) / self.n_action
             trj = _trj(tau) * clearance
             trj += (1 - tau) * start + tau * goal
-            self.task.assign(trj, nodes=k)
-
+            self.pos_tgt.assign(trj, nodes=k)
 
     def recede(self, ks):
-
-
 
         if self.action is None:
             print(f'task {self.name} is not active')
@@ -89,14 +121,25 @@ class CartesianTask:
         self.action_nodes = [x for x in shifted_nodes if x >= 0]
 
         # todo this is basically repeated code from activate
-        self.constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
-        self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
+        self.pos_constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
 
-        print(f'task {self.name} nodes: {self.constr.getNodes().tolist()}')
-        print(f'param task {self.name} nodes: {self.task.getValues().tolist()}')
+        if self.trajectory_mode:
+            self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
+        else:
+            if self.action_nodes:
+                param_target = np.atleast_2d(self.action.goal[-len(self.action_nodes):])  # todo get only the right portion of param
+                self.pos_tgt.assign(param_target, nodes=self.action_nodes)
+
+        print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
+        print(f'param task {self.name} nodes: {self.pos_tgt.getValues().tolist()}')
         print(f'action_nodes_start:', self.action.k_start)
         print(f'action_nodes_goal:', self.action.k_goal)
 
+    def setTarget(self, target):
+        """
+        manually overrides the goal
+        """
+        self.action.goal = target
 
     def reset(self):
 
@@ -176,7 +219,7 @@ class Contact():
             erasing = True
             # if it's off:
             # update contact nodes
-            #
+            # todo F=0 and v=0 must be activated on the same node otherwise there is one interval where F!=0 and v!=0
             self.contact_nodes = [k for k in self.contact_nodes if k not in nodes and k <= self.prb.getNNodes() - 1]
             # update nodes for unilateral constraint
             self.unilat_nodes = [k for k in self.unilat_nodes if k not in nodes]

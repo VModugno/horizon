@@ -1,3 +1,5 @@
+import copy
+
 import matplotlib.pyplot
 import numpy as np
 from casadi_kin_dyn import pycasadi_kin_dyn
@@ -95,16 +97,28 @@ class ActionManager:
         self.init_constraints()
         self._init_default_action()
 
-    def set_polynomial_trajectory(self, start, goal, nodes, param, clearance):
+    def compute_polynomial_trajectory(self, k_start, nodes, p_start, p_goal, clearance, dim=None):
+
+        if dim is None:
+            dim = [0, 1, 2]
 
         # todo check dimension of parameter before assigning it
         nodes_in_horizon = [k for k in nodes if k >= 0 and k <= self.N]
 
+        traj_array = np.zeros(len(nodes_in_horizon))
+
+        start = p_start[dim]
+        goal = p_goal[dim]
+
+        index = 0
         for k in nodes_in_horizon:
             tau = (k - k_start) / len(nodes)
             trj = _trj(tau) * clearance
             trj += (1 - tau) * start + tau * goal
-            param.assign(trj, nodes=k)
+            traj_array[index] = trj
+            index = index+1
+
+        return np.array(traj_array)
 
     def _init_default_action(self):
 
@@ -147,17 +161,15 @@ class ActionManager:
 
         self.contact_constr = dict()
         self.z_constr = dict()
+        self.foot_tgt_constr = dict()
 
         for frame in self.contacts:
             self.contact_constr[frame] = receding_tasks.Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
             self.z_constr[frame] = receding_tasks.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
-            # self._zero_vel_constr[frame] = self._zero_velocity(frame)
-            # self._unil_constr[frame] = self._unilaterality(frame)
-            # self._friction_constr[frame] = self._friction(frame)
+            self.foot_tgt_constr[frame] = receding_tasks.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0, 1])
 
             # self._foot_tgt_params[frame], self._foot_tgt_params[frame] = self._cartesian_task('foot_tgt', frame)
             # todo if I decide to add tasks as classes, this is useless
-            # self._foot_z_constr[frame], self._foot_z_param[frame] = self._cartesian_task('foot_z', frame, 2)
 
 
     # todo:
@@ -218,11 +230,11 @@ class ActionManager:
         """
         add step to horizon stack
         """
-
+        s = copy.deepcopy(step)
         # todo how to define current cycle
-        frame = step.frame
-        k_start = step.k_start
-        k_goal = step.k_goal
+        frame = s.frame
+        k_start = s.k_start
+        k_goal = s.k_goal
         swing_nodes = list(range(k_start, k_goal))
         n_swing = len(swing_nodes)
 
@@ -234,27 +246,26 @@ class ActionManager:
         # contact
         self.setContact(0, frame, swing_nodes)
 
-        if step.start.size == 0:
-            step.start = self.default_foot_z[frame]
-
-        if step.goal.size == 0:
-            step.goal = self.default_foot_z[frame]
-
-        opts = dict()
-        opts['clearance'] = 0.1
-
-
-
-        self.z_constr[frame].activate(step)
-
         # xy goal
-        # todo
-        # if k_goal <= self.N and k_goal > 0 and step.goal.size > 0:
+        if k_goal <= self.N and k_goal > 0 and step.goal.size > 0:
+            a = Action(frame, k_goal, k_goal+1, s.start, s.goal[:2])
+            self.foot_tgt_constr[frame].activate(a)
         #     todo cartesian task: what if it is a trajectory or a single point?
-            # self.setCartesianTask(frame, k_goal, self.contact_k[frame], k_goal, self._foot_tgt_params[frame], step.goal)
-            # self.contact_k[frame].append(k_goal)  # <==== SET NODES
-            # self._foot_tgt_params[frame].assign(step.goal, nodes=k_goal)  # <==== SET TARGET
+        #     self.setCartesianTask(frame, k_goal, self.contact_k[frame], k_goal, self._foot_tgt_params[frame], step.goal)
+        #     self.contact_k[frame].append(k_goal)  # <==== SET NODES
+        #     self._foot_tgt_params[frame].assign(step.goal, nodes=k_goal)  # <==== SET TARGET
 
+        start = np.array([0, 0, self.default_foot_z[frame]]) if s.start.size == 0 else s.start
+        goal = np.array([0, 0, self.default_foot_z[frame]]) if s.goal.size == 0 else s.goal
+
+        # todo this way I can define my own trajectory goal (assign the parameter)
+        z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes, start, goal, 0.10, dim=2)
+        s.goal = z_traj
+
+        # opts = dict()
+        # opts['clearance'] = 0.1
+
+        self.z_constr[frame].activate(s)
 
 class ActionManagerImpl(ActionManager):
     def __init__(self, prb: Problem, urdf, kindyn, contacts_map, default_foot_z, opts=None):
@@ -271,6 +282,7 @@ class ActionManagerImpl(ActionManager):
         # todo the default is all the contacts are active
         # default: "renewing" nodes
         # state
+
 
         # set constraints
         for c_name, c_constr in self.contact_constr.items():
@@ -344,7 +356,6 @@ if __name__ == '__main__':
     nf = 3
 
     v0 = np.zeros(nv)
-
     prb.setDt(dt)
 
     # state and control vars
@@ -437,9 +448,15 @@ if __name__ == '__main__':
     k_end = 40
     s_2 = Step('rf_foot', k_start, k_end)
 
-    k_start = 10
-    k_end = 20
-    s_3 = Step('lh_foot', k_start, k_end)
+    k_start = 20
+    k_end = 30
+    f_k = cs.Function.deserialize(kd.fk('lh_foot'))
+    initial_lh_foot = f_k(q=q_init)['ee_pos']
+    step_len = np.array([0.2, 0.1, 0])
+    print(f'step target: {initial_lh_foot + step_len}')
+    s_3 = Step('lh_foot', k_start, k_end, goal=initial_lh_foot + step_len)
+
+
 
     k_start = 10
     k_end = 20
@@ -463,8 +480,9 @@ if __name__ == '__main__':
     #
     # create solver and solve initial seed
 
-    am.setStep(s_1)
-    am.setStep(s_2)
+    # am.setStep(s_1)
+    # am.setStep(s_2)
+    am.setStep(s_3)
 
 
     # print('===========executing ...========================')
@@ -486,31 +504,32 @@ if __name__ == '__main__':
     rospy.loginfo("'spot' visualization started.")
 
 
-    # q_sol = solution['q']
-    # frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
-    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
-    # repl.sleep(1.)
-    # repl.replay(is_floating_base=True)
-    # exit()
+    ## single replay
+    q_sol = solution['q']
+    frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
+    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
+    repl.sleep(1.)
+    repl.replay(is_floating_base=True)
+    exit()
     # =========================================================================
-    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
-    iteration = 0
-    while True:
-
-        if iteration == 60:
-            am.setStep(s_1)
-            
-        am.execute(solver_bs)
-
-        solver_bs.solve()
-        solution = solver_bs.getSolutionDict()
-
-
-        repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
-        repl.publish_joints(solution['q'][:, 0])
-        repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
-        iteration = iteration+1
-        print(iteration)
+    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+    # iteration = 0
+    # while True:
+    #
+    #     # if iteration == 20:
+    #         # am.setStep(s_1)
+    #
+    #     am.execute(solver_bs)
+    #
+    #     solver_bs.solve()
+    #     solution = solver_bs.getSolutionDict()
+    #
+    #
+    #     repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
+    #     repl.publish_joints(solution['q'][:, 0])
+    #     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+    #     iteration = iteration+1
+    #     print(iteration)
 
     # set ROS stuff and launchfile
     plot = True
@@ -525,6 +544,8 @@ if __name__ == '__main__':
 
             plt.title(f'feet position - plane_xy')
             plt.plot(np.array(pos[0, :]).flatten(), np.array(pos[1, :]).flatten(), linewidth=2.5)
+            plt.scatter(np.array(pos[0, 0]), np.array(pos[1, 0]))
+            plt.scatter(np.array(pos[0, -1]), np.array(pos[1, -1]), marker='x')
 
         plt.figure()
         for contact in contacts:
@@ -533,6 +554,8 @@ if __name__ == '__main__':
 
             plt.title(f'feet position - plane_xz')
             plt.plot(np.array(pos[0, :]).flatten(), np.array(pos[2, :]).flatten(), linewidth=2.5)
+            plt.scatter(np.array(pos[0, 0]), np.array(pos[2, 0]))
+            plt.scatter(np.array(pos[0, -1]), np.array(pos[2, -1]), marker='x')
 
         hplt = plotter.PlotterHorizon(prb, solution)
         hplt.plotVariables([elem.getName() for elem in forces], show_bounds=True, gather=2, legend=False)
