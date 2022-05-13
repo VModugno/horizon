@@ -417,8 +417,9 @@ class Parameter(AbstractVariable):
             indices_vec = np.array(indices).astype(int)
 
         val_checked = misc.checkValueEntry(val)
+
         if val_checked.shape[0] != indices_vec.size:
-            raise Exception('Wrong dimension of parameter values inserted.')
+            raise Exception(f'Wrong dimension of parameter values inserted: ({val_checked.shape[0]}) != {indices_vec.size}')
 
         # if a matrix of values is being provided, check cols match len(nodes)
         multiple_vals = val_checked.ndim == 2 and val_checked.shape[1] != 1
