@@ -247,25 +247,19 @@ class ActionManager:
         self.setContact(0, frame, swing_nodes)
 
         # xy goal
-        if k_goal <= self.N and k_goal > 0 and step.goal.size > 0:
-            a = Action(frame, k_goal, k_goal+1, s.start, s.goal[:2])
-            self.foot_tgt_constr[frame].activate(a)
-        #     todo cartesian task: what if it is a trajectory or a single point?
-        #     self.setCartesianTask(frame, k_goal, self.contact_k[frame], k_goal, self._foot_tgt_params[frame], step.goal)
-        #     self.contact_k[frame].append(k_goal)  # <==== SET NODES
-        #     self._foot_tgt_params[frame].assign(step.goal, nodes=k_goal)  # <==== SET TARGET
+        if self.N >= k_goal > 0 and step.goal.size > 0:
+            self.foot_tgt_constr[frame].activate([k_goal], s.goal[:2])
 
+        # z goal
         start = np.array([0, 0, self.default_foot_z[frame]]) if s.start.size == 0 else s.start
         goal = np.array([0, 0, self.default_foot_z[frame]]) if s.goal.size == 0 else s.goal
 
         # todo this way I can define my own trajectory goal (assign the parameter)
         z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes, start, goal, 0.10, dim=2)
-        s.goal = z_traj
 
         # opts = dict()
         # opts['clearance'] = 0.1
-
-        self.z_constr[frame].activate(s)
+        self.z_constr[frame].activate(swing_nodes, z_traj)
 
 class ActionManagerImpl(ActionManager):
     def __init__(self, prb: Problem, urdf, kindyn, contacts_map, default_foot_z, opts=None):
@@ -289,6 +283,9 @@ class ActionManagerImpl(ActionManager):
             c_constr.recede(shift_num)
 
         for c_name, c_constr in self.z_constr.items():
+            c_constr.recede(shift_num)
+
+        for c_name, c_constr in self.foot_tgt_constr.items():
             c_constr.recede(shift_num)
 
         # set nodes
@@ -504,33 +501,34 @@ if __name__ == '__main__':
     rospy.loginfo("'spot' visualization started.")
 
 
-    ## single replay
-    q_sol = solution['q']
-    frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
-    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
-    repl.sleep(1.)
-    repl.replay(is_floating_base=True)
-    exit()
+    # single replay
+    # q_sol = solution['q']
+    # frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
+    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
+    # repl.sleep(1.)
+    # repl.replay(is_floating_base=True)
+    # exit()
     # =========================================================================
-    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
-    # iteration = 0
-    # while True:
-    #
-    #     # if iteration == 20:
-    #         # am.setStep(s_1)
-    #
-    #     am.execute(solver_bs)
-    #
-    #     solver_bs.solve()
-    #     solution = solver_bs.getSolutionDict()
-    #
-    #
-    #     repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
-    #     repl.publish_joints(solution['q'][:, 0])
-    #     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
-    #     iteration = iteration+1
-    #     print(iteration)
+    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+    iteration = 0
+    while True:
 
+        if iteration == 20:
+            am.setStep(s_1)
+
+
+        am.execute(solver_bs)
+
+        solver_bs.solve()
+        solution = solver_bs.getSolutionDict()
+
+
+        repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
+        repl.publish_joints(solution['q'][:, 0])
+        repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+        iteration = iteration+1
+        print(iteration)
+    #
     # set ROS stuff and launchfile
     plot = True
 

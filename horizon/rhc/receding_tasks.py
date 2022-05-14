@@ -14,6 +14,7 @@ def _trj(tau):
     return 64. * tau ** 3 * (1 - tau) ** 3
 
 # todo if action is "elapsed" remove it from .recede() otherwise it will stay forever
+# todo name is useless
 class CartesianTask:
     def __init__(self, name, kin_dyn, prb: Problem, frame, dim=None):
 
@@ -54,68 +55,49 @@ class CartesianTask:
         # self.vel_constr = prb.createConstraint(f'{vel_frame_name}_task', ee_v[dim] - self.vel_tgt, nodes=[])
         # self.acc_constr = prb.createConstraint(f'{acc_frame_name}_task', ee_a[dim] - self.acc_tgt, nodes=[])
 
-        self.task_target = None
-        self.action = None
+        self.ref = None
         self.action_nodes = None
         self.n_action = None
 
-    def activate(self, action):
+    def activate(self, nodes, ref_traj):
 
-        self.trajectory_mode = False
-
-        self.action = copy.deepcopy(action)
-        self.action_nodes = list(range(self.action.k_start, self.action.k_goal))
+        self.action_nodes = nodes
         self.n_action = len(self.action_nodes)
 
-        goal = np.atleast_2d(self.action.goal)
+        self.ref = np.atleast_2d(ref_traj)
         # todo when to activate manual mode?
-        if goal.shape[1] != self.n_action and goal.shape[1] != 1:
-            raise ValueError(f'Wrong goal dimension ({self.action.goal.size}) inserted.')
-        else:
-            self.trajectory_mode = True
-
-        if goal.shape[1] == self.n_action:
-            self.trajectory_mode = False
+        if self.ref.shape[1] != self.n_action:
+            raise ValueError(f'Wrong goal dimension inserted: ({self.ref.shape[0]} != {self.n_action})')
 
         self.pos_constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
 
-        if self.trajectory_mode:
-            self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
-        else:
-            self.pos_tgt.assign(goal, nodes=self.action_nodes)
+        # self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
+        self.pos_tgt.assign(self.ref, nodes=self.action_nodes)
 
         print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
         print('===================================')
 
-    def set_polynomial_trajectory(self, k_start, nodes, start, goal, clearance=None):
-
-        if clearance is None:
-            clearance = 0.10
-        # todo check dimension of parameter before assigning it
-        nodes_in_horizon = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
-
-        for k in nodes_in_horizon:
-            tau = (k - k_start) / self.n_action
-            trj = _trj(tau) * clearance
-            trj += (1 - tau) * start + tau * goal
-            self.pos_tgt.assign(trj, nodes=k)
+    # def set_polynomial_trajectory(self, k_start, nodes, start, goal, clearance=None):
+    #
+    #     if clearance is None:
+    #         clearance = 0.10
+    #     # todo check dimension of parameter before assigning it
+    #     nodes_in_horizon = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
+    #
+    #     for k in nodes_in_horizon:
+    #         tau = (k - k_start) / self.n_action
+    #         trj = _trj(tau) * clearance
+    #         trj += (1 - tau) * start + tau * goal
+    #         self.pos_tgt.assign(trj, nodes=k)
 
     def recede(self, ks):
 
-        if self.action is None:
-            print(f'task {self.name} is not active')
-            return 0
-
-        if self.action.k_goal < 0:
-            self.action = None
-            self.action_nodes = None
+        # if nodes is None, task is not active
+        if self.action_nodes is None:
             self.n_action = None
+            self.ref = None
             return 0
-
-
-        self.action.k_start = self.action.k_start + ks
-        self.action.k_goal = self.action.k_goal + ks
 
         shifted_nodes = [x + ks for x in self.action_nodes]
         self.action_nodes = [x for x in shifted_nodes if x >= 0]
@@ -123,28 +105,34 @@ class CartesianTask:
         # todo this is basically repeated code from activate
         self.pos_constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
 
-        if self.trajectory_mode:
-            self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
-        else:
-            if self.action_nodes:
-                param_target = np.atleast_2d(self.action.goal[-len(self.action_nodes):])  # todo get only the right portion of param
-                self.pos_tgt.assign(param_target, nodes=self.action_nodes)
+        # if nodes is empty, reset and return
+        if not np.array(self.action_nodes).size:
+            self.n_action = None
+            self.ref = None
+            # todo right now the non-active nodes of the parameter gets dirty,
+            #  because .assing() only assign a value to the current nodes, the other are left with the old value
+            #  better to reset?
+            # self.pos_tgt.reset()
+            return 0
 
+        # get only the right portion of param
+        param_target = self.ref[:, -len(self.action_nodes):]
+        self.pos_tgt.assign(param_target, nodes=self.action_nodes)
+
+        print('current_target:', param_target)
         print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         print(f'param task {self.name} nodes: {self.pos_tgt.getValues().tolist()}')
-        print(f'action_nodes_start:', self.action.k_start)
-        print(f'action_nodes_goal:', self.action.k_goal)
 
-    def setTarget(self, target):
+    def setTarget(self, ref_traj):
         """
         manually overrides the goal
         """
-        self.action.goal = target
+        self.ref = ref_traj
 
     def reset(self):
 
         self.action_nodes = []
-        self.constr.setNodes(self.action_nodes, erasing=True)
+        self.pos_constr.setNodes(self.action_nodes, erasing=True)
 
 
 
