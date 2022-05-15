@@ -64,7 +64,7 @@ class ActionManager:
         # todo list of contact is fixed?
 
         self.constraints = list()
-        self.nodes = list()
+        self.nodes = None
         self.current_cycle = 0  # what to do here?
 
         self.contacts = contacts_map.keys()
@@ -87,10 +87,6 @@ class ActionManager:
 
 
         self.default_foot_z = default_foot_z
-        # set default z-pos of contact
-        # self.default_foot_z = dict()
-        # for frame in contacts:
-        #     self.default_foot_z[frame] = 0.
 
         self.k0 = 0
 
@@ -103,7 +99,7 @@ class ActionManager:
             dim = [0, 1, 2]
 
         # todo check dimension of parameter before assigning it
-        nodes_in_horizon = [k for k in nodes if k >= 0 and k <= self.N]
+        nodes_in_horizon = [k for k in nodes if k >= 0]
 
         traj_array = np.zeros(len(nodes_in_horizon))
 
@@ -133,11 +129,10 @@ class ActionManager:
         # self.contact_nodes = {contact: list(range(1, self.N + 1)) for contact in contacts}  # all the nodes
         # self.unilat_nodes = {contact: list(range(self.N)) for contact in contacts}
         # self.clea_nodes = {contact: list() for contact in contacts}
-        self.contact_k = {contact: list() for contact in contacts}
+        # self.contact_k = {contact: list() for contact in contacts}
 
         print('===========================================================')
         print('===========================================================')
-
 
         # default action
         # for frame, cnsrt_item in self._zero_vel_constr.items():
@@ -168,49 +163,7 @@ class ActionManager:
             self.z_constr[frame] = receding_tasks.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
             self.foot_tgt_constr[frame] = receding_tasks.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0, 1])
 
-            # self._foot_tgt_params[frame], self._foot_tgt_params[frame] = self._cartesian_task('foot_tgt', frame)
-            # todo if I decide to add tasks as classes, this is useless
 
-
-    # todo:
-    #  def getFramePos():
-    #  def addFrame(self, frame):  ---> what is this?
-
-    # def _reset_task_constraints(self, frame, nodes):
-
-        # todo reset task
-        # task.reset()
-        # contact_constraints = [self._zero_vel_constr, self._unil_constr, self._friction_constr, self._foot_z_constr,
-        #                        self.forces, self._target_constr]
-
-        # contact_constraints = [self._target_constr]
-
-        # for c in contact_constraints:
-        #     if frame in c:
-        #         fun = c[frame]
-        #         if isinstance(fun, Constraint):
-                    # constraints and variables --> relax bounds
-                    # c_inf = np.inf * np.ones(fun.getDim())
-                    # fun.setBounds(-c_inf, c_inf, nodes)
-                # elif isinstance(fun, Cost):
-                #     current_nodes = fun.getNodes().astype(int)
-                #     new_nodes = np.delete(current_nodes, nodes)
-                #     fun.setNodes(new_nodes)
-                #
-                ## todo should implement --> removeNodes()
-                ## todo should implement a function to reset to default values
-
-    # def _zero_velocity(self, frame):
-    #     raise NotImplementedError()
-    #
-    # def _unilaterality(self, frame):
-    #     raise NotImplementedError()
-    #
-    # def _friction(self, frame):
-    #     raise NotImplementedError()
-    #
-    # def _cartesian_task(self, name, frame, dim=3):
-    #     raise NotImplementedError()
 
     def setContact(self, on, frame, nodes):
         """
@@ -218,7 +171,6 @@ class ActionManager:
         """
         # todo reset all the other "contact" constraints on these nodes
         # self._reset_task_constraints(frame, nodes_in_horizon_x)
-
 
         # todo what to do with z_constr?
         # self.z_constr.reset()
@@ -255,10 +207,7 @@ class ActionManager:
         goal = np.array([0, 0, self.default_foot_z[frame]]) if s.goal.size == 0 else s.goal
 
         # todo this way I can define my own trajectory goal (assign the parameter)
-        z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes, start, goal, 0.10, dim=2)
-
-        # opts = dict()
-        # opts['clearance'] = 0.1
+        z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes, start, goal, s.clearance, dim=2)
         self.z_constr[frame].activate(swing_nodes, z_traj)
 
 class ActionManagerImpl(ActionManager):
@@ -288,19 +237,9 @@ class ActionManagerImpl(ActionManager):
         for c_name, c_constr in self.foot_tgt_constr.items():
             c_constr.recede(shift_num)
 
-        # set nodes
-        # for n_name, n_list in self.contact_k.items():
-        #     shifted_nodes = [x + shift_num for x in n_list]
-        #     self.contact_k[n_name] = [x for x in shifted_nodes if x >= 0]
-
-        # set constraints
-        # for frame, cnsrt_item in self._foot_tgt_constr.items():
-        #     cnsrt_item.setNodes(self.contact_k[frame], erasing=erasing)
-
         # todo
         #  the difference here is which list of nodes get new entry nodes and which do not
         #  can also shift only decaying nodes and fill everything else with default nodes
-
         # difference between "action", which is decaying and "default", which is renewing
 
     def _update_initial_state(self, solver: Solver, shift_num):
@@ -373,14 +312,14 @@ if __name__ == '__main__':
     prb.createIntermediateConstraint('dynamics', tau[:6])
 
     # final goal (a.k.a. integral velocity control)
-    ptgt_final = [0, 0, 0]
+    ptgt_final = [0.2, 0, 0]
     vmax = [0.05, 0.05, 0.05]
     ptgt = prb.createParameter('ptgt', 3)
 
     # goalx = prb.createFinalResidual("final_x",  1e3*(q[0] - ptgt[0]))
-    # goalx = prb.createFinalConstraint("final_x", q[0] - ptgt[0])
-    # goaly = prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
-    # goalrz = prb.createFinalResidual("final_rz", 1e3 * (q[5] - ptgt[2]))
+    goalx = prb.createFinalConstraint("final_x", q[0] - ptgt[0])
+    goaly = prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
+    goalrz = prb.createFinalResidual("final_rz", 1e3 * (q[5] - ptgt[2]))
     # base_goal_tasks = [goalx, goaly, goalrz]
 
     # final velocity
@@ -438,12 +377,12 @@ if __name__ == '__main__':
     am = ActionManagerImpl(prb, urdf, kd, dict(zip(contacts, forces)), default_foot_z)
 
     k_start = 10
-    k_end = 20
+    k_end = 15
     s_1 = Step('lf_foot', k_start, k_end)
 
-    k_start = 10
-    k_end = 40
-    s_2 = Step('rf_foot', k_start, k_end)
+    k_start = 40
+    k_end = 45
+    s_2 = Step('lf_foot', k_start, k_end)
 
     k_start = 20
     k_end = 30
@@ -475,13 +414,36 @@ if __name__ == '__main__':
     for f in forces:
         f.setInitialGuess(f0)
     #
+
+    # ============== add steps!!!!!!!!! =======================
+    am.setStep(s_1)
+    am.setStep(s_2)
+    # am.setStep(s_3)
+
+    step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
+    k_step_n = 5
+    k_start = 10
+
+    step_list = list()
+    n_step = 15
+
+    for n in range(n_step):
+        l = step_pattern[n % len(step_pattern)]
+        k_end = k_start + k_step_n
+        s = Step(l, k_start, k_end)
+        print(l, k_start, k_end)
+        k_start = k_end
+        step_list.append(s)
+
+    # for s_i in step_list:
+    #     am.setStep(s_i)
+
+    # am.setStep(step_list[0])
+    # am.setStep(step_list[1])
+    # am.setStep(step_list[2])
+    # am.setStep(step_list[3])
+
     # create solver and solve initial seed
-
-    # am.setStep(s_1)
-    # am.setStep(s_2)
-    am.setStep(s_3)
-
-
     # print('===========executing ...========================')
 
     opts = {'ipopt.tol': 0.001,
@@ -491,7 +453,8 @@ if __name__ == '__main__':
 
     solver_bs = Solver.make_solver('ipopt', prb, opts)
     # solver_rti = Solver.make_solver('ipopt', prb, opts)
-    # ptgt.assign(ptgt_final, nodes=ns)
+
+    ptgt.assign(ptgt_final, nodes=ns)
 
     solver_bs.solve()
     solution = solver_bs.getSolutionDict()
@@ -513,8 +476,10 @@ if __name__ == '__main__':
     iteration = 0
     while True:
 
-        if iteration == 20:
-            am.setStep(s_1)
+
+        # if iteration % 20 == 0:
+        #     am.setStep(s_1)
+            # am.setContact(0, 'rh_foot', range(5, 15))
 
 
         am.execute(solver_bs)
