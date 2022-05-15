@@ -171,7 +171,7 @@ class Contact():
         # initialize contact nodes
         # todo default action?
         # should I keep track of these?
-        self.action_nodes = []
+        self.lift_nodes = []
         self.contact_nodes = []
         self.unilat_nodes = []
         # self.contact_nodes = list(range(1, self.prb.getNNodes()))# all the nodes
@@ -204,7 +204,7 @@ class Contact():
 
         elif on == 0:
 
-            print(nodes)
+            self.lift_nodes.extend(nodes)
             erasing = True
             # if it's off:
             # update contact nodes
@@ -281,13 +281,15 @@ class Contact():
     def recede(self, ks):
 
         # update nodes for contact constraints
-        self.
+        new_node_x = [] if self.prb.getNNodes() - 1 in self.lift_nodes else [self.prb.getNNodes() - 1]
+        new_node_u = [] if self.prb.getNNodes() - 2 in self.lift_nodes else [self.prb.getNNodes() - 2]
+
         # todo check if it is to add the new node or not
-        shifted_contact_nodes = [x + ks for x in self.contact_nodes] + [self.prb.getNNodes() - 1]
+        shifted_contact_nodes = [x + ks for x in self.contact_nodes] + new_node_x
         self.contact_nodes = [x for x in shifted_contact_nodes if x > 0]
 
         # update nodes for unilateral constraint
-        shifted_unilat_nodes = [x + ks for x in self.unilat_nodes] + [self.prb.getNNodes() - 2]
+        shifted_unilat_nodes = [x + ks for x in self.unilat_nodes] + new_node_u
         self.unilat_nodes = [x for x in shifted_unilat_nodes if x > 0]
 
         erasing = True

@@ -417,7 +417,7 @@ if __name__ == '__main__':
 
     # ============== add steps!!!!!!!!! =======================
     am.setStep(s_1)
-    am.setStep(s_2)
+    # am.setStep(s_2)
     # am.setStep(s_3)
 
     step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
