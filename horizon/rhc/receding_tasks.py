@@ -10,9 +10,6 @@ from horizon import misc_function as misc
 def _barrier(x):
     return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
 
-def _trj(tau):
-    return 64. * tau ** 3 * (1 - tau) ** 3
-
 # todo if action is "elapsed" remove it from .recede() otherwise it will stay forever
 # todo name is useless
 class CartesianTask:
@@ -56,59 +53,62 @@ class CartesianTask:
         # self.acc_constr = prb.createConstraint(f'{acc_frame_name}_task', ee_a[dim] - self.acc_tgt, nodes=[])
 
         self.ref = None
-        self.action_nodes = None
+        self.active_ref = None
+        self.action_nodes = list()
+        self.active_nodes = None
         self.n_action = None
 
     def activate(self, nodes, ref_traj):
 
-        self.action_nodes = nodes
-        self.n_action = len(self.action_nodes)
+        # todo centralize checking of nodes if in horizon, now is scattered everywhere
+        # adding all the nodes to action nodes, even if they are not in horizon
+        for k in nodes:
+            if k not in self.action_nodes:
+                self.action_nodes.append(k)
 
-        self.ref = np.atleast_2d(ref_traj)
+        # adding to active_nodes only nodes in horizon
+        # self.active_nodes = [k for k in nodes if k >= 0 and k < self.prb.getNNodes()]
+        self.active_nodes = [k for k in self.action_nodes if k >= 0 and k < self.prb.getNNodes() - 1]
+
+        self.n_action = len(self.active_nodes)
+
+        # todo probably not very efficient
+        if self.ref is None:
+            self.ref = np.atleast_2d(ref_traj)
+        else:
+            self.ref = np.append(self.ref, np.atleast_2d(ref_traj), 1)
+
+        self.active_ref = self.ref[:, -self.n_action:]
+
         # todo when to activate manual mode?
-        if self.ref.shape[1] != self.n_action:
-            raise ValueError(f'Wrong goal dimension inserted: ({self.ref.shape[0]} != {self.n_action})')
+        if self.active_ref.shape[1] != self.n_action:
+            raise ValueError(f'Wrong goal dimension inserted: ({self.active_ref.shape[1]} != {self.n_action})')
 
-        self.pos_constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
-
-        # self.set_polynomial_trajectory(self.action.k_start, self.action_nodes, self.action.start, self.action.goal)  # <==== SET TARGET
-        self.pos_tgt.assign(self.ref, nodes=self.action_nodes)
+        self.pos_constr.setNodes(self.active_nodes, erasing=True)  # <==== SET NODES
+        self.pos_tgt.assign(self.active_ref, nodes=self.active_nodes) # <==== SET TARGET
 
         print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
         print('===================================')
 
-    # def set_polynomial_trajectory(self, k_start, nodes, start, goal, clearance=None):
-    #
-    #     if clearance is None:
-    #         clearance = 0.10
-    #     # todo check dimension of parameter before assigning it
-    #     nodes_in_horizon = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
-    #
-    #     for k in nodes_in_horizon:
-    #         tau = (k - k_start) / self.n_action
-    #         trj = _trj(tau) * clearance
-    #         trj += (1 - tau) * start + tau * goal
-    #         self.pos_tgt.assign(trj, nodes=k)
-
     def recede(self, ks):
 
         # if nodes is None, task is not active
         if self.action_nodes is None:
+            self.active_nodes = None
             self.n_action = None
             self.ref = None
             return 0
 
-        shifted_nodes = [x + ks for x in self.action_nodes]
-        self.action_nodes = [x for x in shifted_nodes if x >= 0]
-
+        # todo recede action nodes and set new active nodes
+        self.action_nodes = [x + ks for x in self.action_nodes]
+        self.active_nodes = [k for k in self.action_nodes if k >= 0 and k < self.prb.getNNodes()]
         # todo this is basically repeated code from activate
-        self.pos_constr.setNodes(self.action_nodes, erasing=True)  # <==== SET NODES
+        self.pos_constr.setNodes(self.active_nodes, erasing=True)  # <==== SET NODES
 
         # if nodes is empty, reset and return
-        if not np.array(self.action_nodes).size:
+        if not np.array(self.active_nodes).size:
             self.n_action = None
-            self.ref = None
             # todo right now the non-active nodes of the parameter gets dirty,
             #  because .assing() only assign a value to the current nodes, the other are left with the old value
             #  better to reset?
@@ -116,12 +116,12 @@ class CartesianTask:
             return 0
 
         # get only the right portion of param
-        param_target = self.ref[:, -len(self.action_nodes):]
-        self.pos_tgt.assign(param_target, nodes=self.action_nodes)
+        self.active_ref = self.ref[:, -len(self.active_nodes):]
+        self.pos_tgt.assign(self.active_ref, nodes=self.active_nodes)
 
-        print('current_target:', param_target)
         print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
-        print(f'param task {self.name} nodes: {self.pos_tgt.getValues().tolist()}')
+        # print(f'param task {self.name} nodes: {self.pos_tgt.getValues().tolist()}')
+        print(f'param task {self.name} nodes:', self.active_ref.tolist())
 
     def setTarget(self, ref_traj):
         """
@@ -131,8 +131,8 @@ class CartesianTask:
 
     def reset(self):
 
-        self.action_nodes = []
-        self.pos_constr.setNodes(self.action_nodes, erasing=True)
+        self.active_nodes = []
+        self.pos_constr.setNodes(self.active_nodes, erasing=True)
 
 
 
@@ -171,6 +171,7 @@ class Contact():
         # initialize contact nodes
         # todo default action?
         # should I keep track of these?
+        self.action_nodes = []
         self.contact_nodes = []
         self.unilat_nodes = []
         # self.contact_nodes = list(range(1, self.prb.getNNodes()))# all the nodes
@@ -180,13 +181,12 @@ class Contact():
 
     def active(self, nodes, on):
 
-        # nodes = list(range(action.k_start, action.k_goal))
+        # todo prepare nodes of contact on/off:
+        nodes_in_horizon_x = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
+        nodes_in_horizon_u = [k for k in nodes if k >= 0 and k < self.prb.getNNodes() - 1]
 
         # reset contact / unilaterality / friction
-        self._reset_constraints_and_force(nodes)
-
-        # todo prepare nodes of contact on/off:
-        nodes_in_horizon_u = [k for k in nodes if k >= 0 and k < self.prb.getNNodes() -1]
+        self._reset_constraints_and_force(nodes_in_horizon_x)
 
         if on == 1:
             # if it's on:
@@ -204,6 +204,7 @@ class Contact():
 
         elif on == 0:
 
+            print(nodes)
             erasing = True
             # if it's off:
             # update contact nodes
@@ -280,6 +281,8 @@ class Contact():
     def recede(self, ks):
 
         # update nodes for contact constraints
+        self.
+        # todo check if it is to add the new node or not
         shifted_contact_nodes = [x + ks for x in self.contact_nodes] + [self.prb.getNNodes() - 1]
         self.contact_nodes = [x for x in shifted_contact_nodes if x > 0]
 
