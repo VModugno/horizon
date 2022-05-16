@@ -183,6 +183,8 @@ class ActionManager:
         add step to horizon stack
         """
         s = copy.deepcopy(step)
+
+        print(f'========= activating step {s.frame}: {s.k_start} - {s.k_goal} ==========')
         # todo how to define current cycle
         frame = s.frame
         k_start = s.k_start
@@ -455,7 +457,6 @@ if __name__ == '__main__':
     # solver_rti = Solver.make_solver('ipopt', prb, opts)
 
     ptgt.assign(ptgt_final, nodes=ns)
-
     solver_bs.solve()
     solution = solver_bs.getSolutionDict()
 
