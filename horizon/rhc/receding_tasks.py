@@ -68,7 +68,7 @@ class CartesianTask:
 
         # adding to active_nodes only nodes in horizon
         # self.active_nodes = [k for k in nodes if k >= 0 and k < self.prb.getNNodes()]
-        self.active_nodes = [k for k in self.action_nodes if k >= 0 and k < self.prb.getNNodes() - 1]
+        self.active_nodes = [k for k in self.action_nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
 
         self.n_action = len(self.active_nodes)
 
@@ -226,7 +226,10 @@ class Contact():
         print(f'contact {self.name} nodes:')
         print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
         print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
-        print(f'force: imma here but im difficult to show')
+        # print(f'force: imma here but im difficult to show')
+        print(f'force: ')
+        print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
+        print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
         print('===================================')
 
     def _zero_velocity(self):
@@ -280,9 +283,13 @@ class Contact():
 
     def recede(self, ks):
 
+        print("=============================================== ======== ===============================================")
+        print("=============================================== RECEDING ===============================================")
+        print("=============================================== ======== ===============================================")
         # update nodes for contact constraints
         new_node_x = [] if self.prb.getNNodes() - 1 in self.lift_nodes else [self.prb.getNNodes() - 1]
         new_node_u = [] if self.prb.getNNodes() - 2 in self.lift_nodes else [self.prb.getNNodes() - 2]
+        self.lift_nodes = [x + ks for x in self.lift_nodes]
 
         # todo check if it is to add the new node or not
         shifted_contact_nodes = [x + ks for x in self.contact_nodes] + new_node_x
