@@ -275,7 +275,9 @@ class Contact():
                 fun.setBounds(-c_inf, c_inf, nodes)
             elif isinstance(fun, RecedingCost):
                 current_nodes = fun.getNodes().astype(int)
-                new_nodes = np.delete(current_nodes, nodes)
+                new_nodes = current_nodes.copy()
+                for val in nodes:
+                    new_nodes = new_nodes[new_nodes != val]
                 fun.setNodes(new_nodes, erasing=True)
 
         self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
