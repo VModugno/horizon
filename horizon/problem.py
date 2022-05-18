@@ -959,11 +959,21 @@ if __name__ == '__main__':
     prb = Problem(N, receding=True, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
     y = prb.createInputVariable('y', 2)
+    dan = prb.createParameter('dan', 2)
     x.setBounds([-2, -2], [2, 2])
     y.setBounds([-5, -5], [5, 5])
     prb.createCost('cost_x', x)
-    prb.createIntermediateCost('cost_y', y)
+    mimmo = prb.createIntermediateConstraint('cost_y', y - dan)
 
+    print(mimmo.getUpperBounds())
+    print(mimmo.getLowerBounds())
+    exit()
+
+    print(dan.getValues())
+    print(dan.getNodes())
+    dan.assign([[2, 3, 4]], [])
+    print(dan.getValues())
+    exit()
     # for i in range(500):
     #     cnsrt = prb.createConstraint(f'cnsrt_{i}', x - i * y, nodes=[])
     #     print(cnsrt.getBounds())

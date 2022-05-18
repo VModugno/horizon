@@ -382,8 +382,8 @@ if __name__ == '__main__':
     k_end = 15
     s_1 = Step('lf_foot', k_start, k_end)
 
-    k_start = 40
-    k_end = 45
+    k_start = 10
+    k_end = 15
     s_2 = Step('lf_foot', k_start, k_end)
 
     k_start = 20
@@ -418,8 +418,8 @@ if __name__ == '__main__':
     #
 
     # ============== add steps!!!!!!!!! =======================
-    am.setStep(s_1)
-    # am.setStep(s_2)
+    # am.setStep(s_1)
+    am.setStep(s_2)
     # am.setStep(s_3)
 
     step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
@@ -477,7 +477,8 @@ if __name__ == '__main__':
     iteration = 0
     while True:
 
-
+        if iteration == 20:
+            am.setStep(s_1)
         # if iteration % 20 == 0:
         #     am.setStep(s_1)
             # am.setContact(0, 'rh_foot', range(5, 15))

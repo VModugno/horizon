@@ -80,6 +80,9 @@ class CartesianTask:
 
         self.active_ref = self.ref[:, -self.n_action:]
 
+        if self.n_action == 0:
+            return 0
+
         # todo when to activate manual mode?
         if self.active_ref.shape[1] != self.n_action:
             raise ValueError(f'Wrong goal dimension inserted: ({self.active_ref.shape[1]} != {self.n_action})')
@@ -174,6 +177,7 @@ class Contact():
         self.lift_nodes = []
         self.contact_nodes = []
         self.unilat_nodes = []
+        self.zero_force_nodes = []
         # self.contact_nodes = list(range(1, self.prb.getNNodes()))# all the nodes
         # self.unilat_nodes = list(range(self.prb.getNNodes() - 1))
         # todo reset all the other "contact" constraints on these nodes
@@ -183,8 +187,7 @@ class Contact():
 
         # todo prepare nodes of contact on/off:
         nodes_in_horizon_x = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
-        nodes_in_horizon_u = [k for k in nodes if k >= 0 and k < self.prb.getNNodes() - 1]
-
+        node_in_horizon_u = [k for k in nodes if k >= 0 and k < self.prb.getNNodes() - 1]
         # reset contact / unilaterality / friction
         self._reset_constraints_and_force(nodes_in_horizon_x)
 
@@ -213,10 +216,13 @@ class Contact():
             # update nodes for unilateral constraint
             self.unilat_nodes = [k for k in self.unilat_nodes if k not in nodes]
 
+            # update nodes for zero-force constraint
+            nodes_to_add = [k for k in nodes if k not in self.zero_force_nodes and k < self.prb.getNNodes() - 1]
+            self.zero_force_nodes.extend(nodes_to_add)
             # set forces to zero
             f = self.force
             fzero = np.zeros(f.getDim())
-            f.setBounds(fzero, fzero, nodes_in_horizon_u)
+            f.setBounds(fzero, fzero, self.zero_force_nodes)
 
         erasing = True
         self._zero_vel_constr.setNodes(self.contact_nodes, erasing=erasing)  # state + starting from node 1
@@ -288,10 +294,13 @@ class Contact():
         print("=============================================== ======== ===============================================")
         print("=============================================== RECEDING ===============================================")
         print("=============================================== ======== ===============================================")
+        self.lift_nodes = [x + ks for x in self.lift_nodes]
+
         # update nodes for contact constraints
         new_node_x = [] if self.prb.getNNodes() - 1 in self.lift_nodes else [self.prb.getNNodes() - 1]
         new_node_u = [] if self.prb.getNNodes() - 2 in self.lift_nodes else [self.prb.getNNodes() - 2]
-        self.lift_nodes = [x + ks for x in self.lift_nodes]
+        new_node_zero_f = [] if self.prb.getNNodes() - 2 not in self.lift_nodes else [self.prb.getNNodes() - 2]
+
 
         # todo check if it is to add the new node or not
         shifted_contact_nodes = [x + ks for x in self.contact_nodes] + new_node_x
@@ -301,16 +310,27 @@ class Contact():
         shifted_unilat_nodes = [x + ks for x in self.unilat_nodes] + new_node_u
         self.unilat_nodes = [x for x in shifted_unilat_nodes if x > 0]
 
+        # update nodes for unilateral constraint
+        shifted_zero_force_nodes = [x + ks for x in self.zero_force_nodes] + new_node_zero_f
+        self.zero_force_nodes = [x for x in shifted_zero_force_nodes if x >= 0]
+
         erasing = True
         self._zero_vel_constr.setNodes(self.contact_nodes, erasing=erasing)  # state + starting from node 1
         self._unil_constr.setNodes(self.unilat_nodes, erasing=erasing)
 
         # update nodes (bounds) for force
-        shifted_lb = misc.shift_array(self.force.getLowerBounds(), ks, -np.inf)
-        shifted_ub = misc.shift_array(self.force.getUpperBounds(), ks, np.inf)
+        fzero = np.zeros(self.force.getDim())
 
-        self.force.setLowerBounds(shifted_lb)
-        self.force.setUpperBounds(shifted_ub)
+        self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
+                             ub=np.full(self.force.getDim(), np.inf))
+
+        self.force.setBounds(fzero, fzero, self.zero_force_nodes)
+
+        # shifted_lb = misc.shift_array(self.force.getLowerBounds(), ks, -np.inf)
+        # shifted_ub = misc.shift_array(self.force.getUpperBounds(), ks, np.inf)
+
+        # self.force.setLowerBounds(shifted_lb)
+        # self.force.setUpperBounds(shifted_ub)
 
 
         print(f'contact {self.name} nodes:')
