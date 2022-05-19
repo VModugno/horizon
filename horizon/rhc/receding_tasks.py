@@ -10,7 +10,18 @@ from horizon import misc_function as misc
 def _barrier(x):
     return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
 
-# todo if action is "elapsed" remove it from .recede() otherwise it will stay forever
+
+class Task:
+    def __init__(self, prb):
+        pass
+
+    def cartesianTask(self, frame, nodes):
+        raise NotImplementedError()
+
+    def contact(self, frame, nodes):
+        raise NotImplementedError()
+
+
 # todo name is useless
 class CartesianTask:
     def __init__(self, name, kin_dyn, prb: Problem, frame, dim=None):
@@ -53,97 +64,39 @@ class CartesianTask:
         # self.acc_constr = prb.createConstraint(f'{acc_frame_name}_task', ee_a[dim] - self.acc_tgt, nodes=[])
 
         self.ref = None
-        self.active_ref = None
-        self.action_nodes = list()
-        self.active_nodes = None
-        self.n_action = None
+        self.nodes = None
 
-    def activate(self, nodes, ref_traj):
+    def setRef(self, ref_traj):
+        self.ref = np.atleast_2d(ref_traj)
 
-        # todo centralize checking of nodes if in horizon, now is scattered everywhere
-        # adding all the nodes to action nodes, even if they are not in horizon
-        for k in nodes:
-            if k not in self.action_nodes:
-                self.action_nodes.append(k)
+    def setNodes(self, nodes):
 
-        # adding to active_nodes only nodes in horizon
-        # self.active_nodes = [k for k in nodes if k >= 0 and k < self.prb.getNNodes()]
-        self.active_nodes = [k for k in self.action_nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
-
-        self.n_action = len(self.active_nodes)
-
-        # todo probably not very efficient
-        if self.ref is None:
-            self.ref = np.atleast_2d(ref_traj)
-        else:
-            self.ref = np.append(self.ref, np.atleast_2d(ref_traj), 1)
-
-        self.active_ref = self.ref[:, -self.n_action:]
-
-        if self.n_action == 0:
-            return 0
+        self.nodes = nodes
+        self.n_active = len(self.nodes)
 
         # todo when to activate manual mode?
-        if self.active_ref.shape[1] != self.n_action:
-            raise ValueError(f'Wrong goal dimension inserted: ({self.active_ref.shape[1]} != {self.n_action})')
+        if self.ref.shape[1] != self.n_active:
+            raise ValueError(f'Wrong goal dimension inserted: ({self.ref.shape[1]} != {self.n_active})')
 
-        self.pos_constr.setNodes(self.active_nodes, erasing=True)  # <==== SET NODES
-        self.pos_tgt.assign(self.active_ref, nodes=self.active_nodes) # <==== SET TARGET
+        self.pos_constr.setNodes(self.nodes, erasing=True)  # <==== SET NODES
+        self.pos_tgt.assign(self.ref, nodes=self.nodes) # <==== SET TARGET
 
         print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
         print('===================================')
 
-    def recede(self, ks):
-
-        # if nodes is None, task is not active
-        if self.action_nodes is None:
-            self.active_nodes = None
-            self.n_action = None
-            self.ref = None
-            return 0
-
-        # todo recede action nodes and set new active nodes
-        self.action_nodes = [x + ks for x in self.action_nodes]
-        self.active_nodes = [k for k in self.action_nodes if k >= 0 and k < self.prb.getNNodes()]
-        # todo this is basically repeated code from activate
-        self.pos_constr.setNodes(self.active_nodes, erasing=True)  # <==== SET NODES
-
-        # if nodes is empty, reset and return
-        if not np.array(self.active_nodes).size:
-            self.n_action = None
-            # todo right now the non-active nodes of the parameter gets dirty,
-            #  because .assing() only assign a value to the current nodes, the other are left with the old value
-            #  better to reset?
-            # self.pos_tgt.reset()
-            return 0
-
-        # get only the right portion of param
-        self.active_ref = self.ref[:, -len(self.active_nodes):]
-        self.pos_tgt.assign(self.active_ref, nodes=self.active_nodes)
-
-        print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
-        # print(f'param task {self.name} nodes: {self.pos_tgt.getValues().tolist()}')
-        print(f'param task {self.name} nodes:', self.active_ref.tolist())
-
-    def setTarget(self, ref_traj):
-        """
-        manually overrides the goal
-        """
-        self.ref = ref_traj
+    def getNodes(self):
+        return self.nodes
 
     def reset(self):
 
-        self.active_nodes = []
-        self.pos_constr.setNodes(self.active_nodes, erasing=True)
+        self.nodes = []
+        self.pos_constr.setNodes(self.nodes, erasing=True)
 
 
-
-class Contact():
-
+class Contact:
     # todo this should be general, not action-dependent
-    # then one can activate/disable
-    # activate() # disable() # recede() #
+    # activate() # disable() # recede() -----> setNodes()
     def __init__(self, name, kin_dyn, kd_frame, prb, force, frame):
         """
         establish/break contact
@@ -171,63 +124,42 @@ class Contact():
         self.constraints.append(self._friction_constr)
         # ===========================================
 
+        self.nodes = []
         # initialize contact nodes
         # todo default action?
         # should I keep track of these?
-        self.lift_nodes = []
-        self.contact_nodes = []
-        self.unilat_nodes = []
-        self.zero_force_nodes = []
+        # self.lift_nodes = []
+        # self.contact_nodes = []
+        # self.unilat_nodes = []
+        # self.zero_force_nodes = []
         # self.contact_nodes = list(range(1, self.prb.getNNodes()))# all the nodes
         # self.unilat_nodes = list(range(self.prb.getNNodes() - 1))
         # todo reset all the other "contact" constraints on these nodes
         # self._reset_contact_constraints(self.action.frame, nodes_in_horizon_x)
 
-    def active(self, nodes, on):
+    def setNodes(self, nodes):
 
-        # todo prepare nodes of contact on/off:
-        nodes_in_horizon_x = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
-        node_in_horizon_u = [k for k in nodes if k >= 0 and k < self.prb.getNNodes() - 1]
-        # reset contact / unilaterality / friction
-        self._reset_constraints_and_force(nodes_in_horizon_x)
+        self.nodes = nodes
+        all_nodes = list(range(self.prb.getNNodes()))
+        self._reset(all_nodes)
 
-        if on == 1:
-            # if it's on:
-            # update nodes contact constraint
-            # simply add to the contact_nodes the new nodes
-            nodes_to_add = [k for k in nodes if k not in self.contact_nodes and k <= self.prb.getNNodes() - 1]
-            if nodes_to_add:
-                self.contact_nodes.extend(nodes_to_add)
+        # if it's on:
+        nodes_on_x = [k for k in self.nodes if k <= self.prb.getNNodes() - 1]
+        nodes_on_u = [k for k in self.nodes if k < self.prb.getNNodes() - 1]
 
-            nodes_to_add = [k for k in nodes if k not in self.unilat_nodes and k < self.prb.getNNodes() - 1]
-            # update nodes for unilateral constraint
-            # simply add to the unilat_nodes the new nodes
-            if nodes_to_add:
-                self.unilat_nodes.extend(nodes_to_add)
+        nodes_off_x = [k for k in all_nodes if k not in nodes_on_x]
+        nodes_off_u = [k for k in all_nodes if k not in nodes_on_u and k < self.prb.getNNodes() - 1]
 
-        elif on == 0:
+        # todo F=0 and v=0 must be activated on the same node otherwise there is one interval where F!=0 and v!=0
 
-            self.lift_nodes.extend(nodes)
-            erasing = True
-            # if it's off:
-            # update contact nodes
-            # todo F=0 and v=0 must be activated on the same node otherwise there is one interval where F!=0 and v!=0
-            self.contact_nodes = [k for k in self.contact_nodes if k not in nodes and k <= self.prb.getNNodes() - 1]
-            # update nodes for unilateral constraint
-            self.unilat_nodes = [k for k in self.unilat_nodes if k not in nodes]
-
-            # update nodes for zero-force constraint
-            nodes_to_add = [k for k in nodes if k not in self.zero_force_nodes and k < self.prb.getNNodes() - 1]
-            self.zero_force_nodes.extend(nodes_to_add)
-            # set forces to zero
-            f = self.force
-            fzero = np.zeros(f.getDim())
-            f.setBounds(fzero, fzero, self.zero_force_nodes)
-
+        # setting the nodes
         erasing = True
-        self._zero_vel_constr.setNodes(self.contact_nodes, erasing=erasing)  # state + starting from node 1
-        self._unil_constr.setNodes(self.unilat_nodes, erasing=erasing)
-        # self._friction_constr[self.frame].setNodes(self.unilat_nodes[self.frame], erasing=erasing)  # input
+        self._zero_vel_constr.setNodes(nodes_on_x, erasing=erasing)  # state + starting from node 1
+        self._unil_constr.setNodes(nodes_on_u, erasing=erasing)
+        # self._friction_constr[self.frame].setNodes(nodes_on_u, erasing=erasing)  # input
+        f = self.force
+        fzero = np.zeros(f.getDim())
+        f.setBounds(fzero, fzero, nodes_off_u)
 
         print(f'contact {self.name} nodes:')
         print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
@@ -269,7 +201,7 @@ class Contact():
         barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=[])
         return barrier
 
-    def _reset_constraints_and_force(self, nodes):
+    def _reset(self, nodes):
 
         # todo reset task
         # task.reset()
@@ -289,74 +221,8 @@ class Contact():
         self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
                              ub=np.full(self.force.getDim(), np.inf))
 
-    def recede(self, ks):
-
-        print("=============================================== ======== ===============================================")
-        print("=============================================== RECEDING ===============================================")
-        print("=============================================== ======== ===============================================")
-        self.lift_nodes = [x + ks for x in self.lift_nodes]
-
-        # update nodes for contact constraints
-        new_node_x = [] if self.prb.getNNodes() - 1 in self.lift_nodes else [self.prb.getNNodes() - 1]
-        new_node_u = [] if self.prb.getNNodes() - 2 in self.lift_nodes else [self.prb.getNNodes() - 2]
-        new_node_zero_f = [] if self.prb.getNNodes() - 2 not in self.lift_nodes else [self.prb.getNNodes() - 2]
-
-
-        # todo check if it is to add the new node or not
-        shifted_contact_nodes = [x + ks for x in self.contact_nodes] + new_node_x
-        self.contact_nodes = [x for x in shifted_contact_nodes if x > 0]
-
-        # update nodes for unilateral constraint
-        shifted_unilat_nodes = [x + ks for x in self.unilat_nodes] + new_node_u
-        self.unilat_nodes = [x for x in shifted_unilat_nodes if x > 0]
-
-        # update nodes for unilateral constraint
-        shifted_zero_force_nodes = [x + ks for x in self.zero_force_nodes] + new_node_zero_f
-        self.zero_force_nodes = [x for x in shifted_zero_force_nodes if x >= 0]
-
-        erasing = True
-        self._zero_vel_constr.setNodes(self.contact_nodes, erasing=erasing)  # state + starting from node 1
-        self._unil_constr.setNodes(self.unilat_nodes, erasing=erasing)
-
-        # update nodes (bounds) for force
-        fzero = np.zeros(self.force.getDim())
-
-        self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
-                             ub=np.full(self.force.getDim(), np.inf))
-
-        self.force.setBounds(fzero, fzero, self.zero_force_nodes)
-
-        # shifted_lb = misc.shift_array(self.force.getLowerBounds(), ks, -np.inf)
-        # shifted_ub = misc.shift_array(self.force.getUpperBounds(), ks, np.inf)
-
-        # self.force.setLowerBounds(shifted_lb)
-        # self.force.setUpperBounds(shifted_ub)
-
-
-        print(f'contact {self.name} nodes:')
-        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
-        print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
-        print(f'force: ')
-        print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
-        print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
-        print('===================================')
-
-        # alternative method
-        # for constr in self.constraints:
-        #     nodes = constr.getNodes()
-        #     shifted_nodes = [x + kd for x in nodes] + [self.prb.getNNodes()]
-        #     self.contact_nodes = [x for x in shifted_nodes if x > 0]
-
-
-
-            # elif isinstance(fun, Cost):
-            #     current_nodes = fun.getNodes().astype(int)
-            #     new_nodes = np.delete(current_nodes, nodes)
-            #     fun.setNodes(new_nodes)
-
-                ## todo should implement --> removeNodes()
-                ## todo should implement a function to reset to default values
-
+    def getNodes(self):
+        return self.nodes()
     # def _friction(self, frame):
     #     """
     #     inequality constraint
