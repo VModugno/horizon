@@ -214,9 +214,10 @@ class ActionManager:
         # contact
         self.setContact(frame, stance_nodes_in_horizon)
 
+        # todo think about this probably not necessary
         if n_swing_in_horizon == 0:
             return 0
-        
+
         # xy goal
         if self.N >= k_goal > 0 and step.goal.size > 0:
             self.foot_tgt_constr[frame].setRef(s.goal[:2])
