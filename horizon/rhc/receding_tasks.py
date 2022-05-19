@@ -71,6 +71,11 @@ class CartesianTask:
 
     def setNodes(self, nodes):
 
+        # todo manage better
+        if not nodes:
+            self.reset()
+            return 0
+
         self.nodes = nodes
         self.n_active = len(self.nodes)
 

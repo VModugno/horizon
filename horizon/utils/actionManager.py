@@ -92,25 +92,25 @@ class ActionManager:
         self.k0 = 0
 
         self.init_constraints()
-        self._init_default_action()
+        self._set_default_action()
 
         self.action_list = []
-    def compute_polynomial_trajectory(self, k_start, nodes, p_start, p_goal, clearance, dim=None):
+
+    def compute_polynomial_trajectory(self, k_start, nodes, nodes_duration, p_start, p_goal, clearance, dim=None):
 
         if dim is None:
             dim = [0, 1, 2]
 
         # todo check dimension of parameter before assigning it
-        nodes_in_horizon = [k for k in nodes if k >= 0]
 
-        traj_array = np.zeros(len(nodes_in_horizon))
+        traj_array = np.zeros(len(nodes))
 
         start = p_start[dim]
         goal = p_goal[dim]
 
         index = 0
-        for k in nodes_in_horizon:
-            tau = (k - k_start) / len(nodes)
+        for k in nodes:
+            tau = (k - k_start) / nodes_duration
             trj = _trj(tau) * clearance
             trj += (1 - tau) * start + tau * goal
             traj_array[index] = trj
@@ -118,23 +118,22 @@ class ActionManager:
 
         return np.array(traj_array)
 
-    def _init_default_action(self):
-
+    def _set_default_action(self):
         # todo for now the default is robot still, in contact
-        print('===================== initializing ========================')
-        print('===========================================================')
+
+        for frame, z_constr in self.z_constr.items():
+            z_constr.setNodes([])
+
         # contact nodes
         # contact and unilat nodes are slightly different. How to define?
         for frame, c_constr in self.contact_constr.items():
             c_constr.setNodes(list(range(self.N + 1)))
 
+
         # self.contact_nodes = {contact: list(range(1, self.N + 1)) for contact in contacts}  # all the nodes
         # self.unilat_nodes = {contact: list(range(self.N)) for contact in contacts}
         # self.clea_nodes = {contact: list() for contact in contacts}
         # self.contact_k = {contact: list() for contact in contacts}
-
-        print('===========================================================')
-        print('===========================================================')
 
         # default action
         # for frame, cnsrt_item in self._zero_vel_constr.items():
@@ -193,7 +192,7 @@ class ActionManager:
         # todo temporary
 
         all_nodes = list(range(self.prb.getNNodes()))
-        print(f'========= activating step {s.frame}: {s.k_start} - {s.k_goal} ==========')
+
         # todo how to define current cycle
         frame = s.frame
         k_start = s.k_start
@@ -204,15 +203,20 @@ class ActionManager:
 
         swing_nodes_in_horizon = [k for k in swing_nodes if k >= 0 and k <= self.N]
         stance_nodes_in_horizon = [k for k in stance_nodes if k >= 0 and k <= self.N]
+        n_swing_in_horizon = len(swing_nodes_in_horizon)
 
         # this step is outside the horizon!
-        if n_swing == 0:
-            return 0
+        # todo what to do with default action?
 
+
+        print(f'========= activating step {s.frame}: {swing_nodes_in_horizon} ==========')
         # break contact at swing nodes + z_trajectory + (optional) xy goal
         # contact
         self.setContact(frame, stance_nodes_in_horizon)
 
+        if n_swing_in_horizon == 0:
+            return 0
+        
         # xy goal
         if self.N >= k_goal > 0 and step.goal.size > 0:
             self.foot_tgt_constr[frame].setRef(s.goal[:2])
@@ -223,43 +227,42 @@ class ActionManager:
         goal = np.array([0, 0, self.default_foot_z[frame]]) if s.goal.size == 0 else s.goal
 
         # todo this way I can define my own trajectory goal (assign the parameter)
-        z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes, start, goal, s.clearance, dim=2)
+        z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes_in_horizon, n_swing, start, goal, s.clearance, dim=2)
         self.z_constr[frame].setRef(z_traj)
         self.z_constr[frame].setNodes(swing_nodes_in_horizon)
 
     def execute(self, solver):
         """
-        given the default, spin once shifting the horizon
+        set the actions and spin
         """
-        k0 = 1
+        self._update_initial_state(solver, -1)
 
-        print(self.action_list)
+        k0 = 1
+        self._set_default_action()
 
         for action in self.action_list:
             action.k_start = action.k_start - k0
             action.k_goal = action.k_goal - k0
             action_nodes = list(range(action.k_start, action.k_goal))
+            action_nodes_in_horizon = [k for k in action_nodes if k >= 0 and k <= self.N]
+            self._step(action)
 
-            if len(action_nodes) == 0:
+            if len(action_nodes_in_horizon) == 0:
                 self.action_list.remove(action)
 
-        self._update_initial_state(solver, -1)
+
+
+        for cnsrt_name, cnsrt in self.prb.getConstraints().items():
+            print(cnsrt_name)
+            print(cnsrt.getNodes().tolist())
+
 
         # todo check if constraint has inputs and remove last node
         # todo the default is all the contacts are active
-        # default: "renewing" nodes
-        # state
 
         print("=============================================== ======== ===============================================")
         print("=============================================== RECEDING ===============================================")
         print("=============================================== ======== ===============================================")
-
-        # if step, set all the nodes to the constraints of step
-        # ==============================================================================================================
-        # =====================================recede cartesian task ===================================================
-        for action in self.action_list:
-            self._step(action)
-
 
 
         # todo recede action nodes and set new active nodes
@@ -503,8 +506,8 @@ if __name__ == '__main__':
     s_3 = Step('lh_foot', k_start, k_end, goal=initial_lh_foot + step_len)
 
 
-    k_start = 10
-    k_end = 20
+    k_start = 45
+    k_end = 55
     s_4 = Step('rh_foot', k_start, k_end)
 
     # k_start = 8
@@ -526,7 +529,7 @@ if __name__ == '__main__':
 
     # ============== add steps!!!!!!!!! =======================
     am.setStep(s_1)
-    am.setStep(s_2)
+    # am.setStep(s_2)
     # am.setStep(s_3)
 
     step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
