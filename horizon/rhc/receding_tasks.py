@@ -171,7 +171,6 @@ class Contact:
         # print(f'contact {self.name} nodes:')
         # print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
         # print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
-        # print(f'force: imma here but im difficult to show')
         # print(f'force: ')
         # print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
         # print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')

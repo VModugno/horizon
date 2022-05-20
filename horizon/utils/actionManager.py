@@ -298,7 +298,7 @@ class ActionManager:
         #     print(cnsrt_name)
         #     print(cnsrt.getNodes().tolist())
         # remove expired actions
-        self.action_list = [x for x in self.action_list if len([k for k in list(range(action.k_start, action.k_goal)) if k >= 0]) != 0]
+        self.action_list = [action for action in self.action_list if len([k for k in list(range(action.k_start, action.k_goal)) if k >= 0]) != 0]
         # todo right now the non-active nodes of the parameter gets dirty,
         #  because .assing() only assign a value to the current nodes, the other are left with the old value
         #  better to reset?
@@ -480,8 +480,8 @@ if __name__ == '__main__':
     #
 
     # ============== add steps!!!!!!!!! =======================
-    # am.setStep(s_1)
-    # am.setStep(s_2)
+    am.setStep(s_1)
+    am.setStep(s_2)
     # am.setStep(s_3)
 
     step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
@@ -489,7 +489,7 @@ if __name__ == '__main__':
     k_start = 10
 
     step_list = list()
-    n_step = 15
+    n_step = 3
 
     for n in range(n_step):
         l = step_pattern[n % len(step_pattern)]
@@ -499,13 +499,8 @@ if __name__ == '__main__':
         k_start = k_end
         step_list.append(s)
     #
-    for s_i in step_list:
-        am.setStep(s_i)
-    #
-    # am.setStep(step_list[0])
-    # am.setStep(step_list[1])
-    # am.setStep(step_list[2])
-    # am.setStep(step_list[3])
+    # for s_i in step_list:
+    #     am.setStep(s_i)
 
     # create solver and solve initial seed
     # print('===========executing ...========================')
@@ -538,10 +533,14 @@ if __name__ == '__main__':
     # =========================================================================
     repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
     iteration = 0
+
+    k_start = 12
+    k_end = 18
+    s_lol = Step('rf_foot', k_start, k_end)
+
     while True:
         #
-        # if iteration == 20:
-        #     am.setStep(s_1)
+
         # if iteration % 20 == 0:
         #     am.setStep(s_1)
         #     am.setContact(0, 'rh_foot', range(5, 15))
@@ -551,7 +550,8 @@ if __name__ == '__main__':
         #
         am.execute(solver_bs)
 
-
+        # if iteration == 10:
+        #     am.setStep(s_lol)
         # for cnsrt_name, cnsrt in prb.getConstraints().items():
         #     print(cnsrt_name)
         #     print(cnsrt.getNodes())
