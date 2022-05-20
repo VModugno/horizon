@@ -124,8 +124,10 @@ class ActionManager:
         for frame, z_constr in self.z_constr.items():
             z_constr.setNodes([])
 
+        for frame, tgt_constr in self.foot_tgt_constr.items():
+            tgt_constr.setNodes([])
+
         # contact nodes
-        # contact and unilat nodes are slightly different. How to define?
         for frame, c_constr in self.contact_constr.items():
             c_constr.setNodes(list(range(self.N + 1)))
 
@@ -213,10 +215,6 @@ class ActionManager:
         # break contact at swing nodes + z_trajectory + (optional) xy goal
         # contact
         self.setContact(frame, stance_nodes_in_horizon)
-
-        # todo think about this probably not necessary
-        if n_swing_in_horizon == 0:
-            return 0
 
         # xy goal
         if self.N >= k_goal > 0 and step.goal.size > 0:
@@ -431,9 +429,9 @@ if __name__ == '__main__':
     ptgt = prb.createParameter('ptgt', 3)
 
     # goalx = prb.createFinalResidual("final_x",  1e3*(q[0] - ptgt[0]))
-    goalx = prb.createFinalConstraint("final_x", q[0] - ptgt[0])
-    goaly = prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
-    goalrz = prb.createFinalResidual("final_rz", 1e3 * (q[5] - ptgt[2]))
+    # goalx = prb.createFinalConstraint("final_x", q[0] - ptgt[0])
+    # goaly = prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
+    # goalrz = prb.createFinalResidual("final_rz", 1e3 * (q[5] - ptgt[2]))
     # base_goal_tasks = [goalx, goaly, goalrz]
 
     # final velocity
@@ -529,9 +527,9 @@ if __name__ == '__main__':
     #
 
     # ============== add steps!!!!!!!!! =======================
-    am.setStep(s_1)
+    # am.setStep(s_1)
     # am.setStep(s_2)
-    # am.setStep(s_3)
+    am.setStep(s_3)
 
     step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
     k_step_n = 6
@@ -587,27 +585,27 @@ if __name__ == '__main__':
     repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
     iteration = 0
     while True:
-    #
-    #     if iteration == 20:
-    #         am.setStep(s_1)
-    #     if iteration % 20 == 0:
-    #         am.setStep(s_1)
-    #         am.setContact(0, 'rh_foot', range(5, 15))
-        #
+
+        # if iteration == 20:
+        #     am.setStep(s_1)
+        # if iteration % 20 == 0:
+        #     am.setStep(s_1)
+            # am.setContact(0, 'rh_foot', range(5, 15))
+
         iteration = iteration + 1
         print(iteration)
-
+        #
         am.execute(solver_bs)
-
+        #
         solver_bs.solve()
         solution = solver_bs.getSolutionDict()
-
-
+        #
+        #
         repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
         repl.publish_joints(solution['q'][:, 0])
         repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
-
     #
+
     # set ROS stuff and launchfile
     plot = True
 
