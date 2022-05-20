@@ -293,14 +293,12 @@ class ActionManager:
             action_nodes_in_horizon = [k for k in action_nodes if k >= 0]
             self._step(action)
 
-            if len(action_nodes_in_horizon) == 0:
-                self.action_list.remove(action)
 
         # for cnsrt_name, cnsrt in self.prb.getConstraints().items():
         #     print(cnsrt_name)
         #     print(cnsrt.getNodes().tolist())
-
-
+        # remove expired actions
+        self.action_list = [x for x in self.action_list if len([k for k in list(range(action.k_start, action.k_goal)) if k >= 0]) != 0]
         # todo right now the non-active nodes of the parameter gets dirty,
         #  because .assing() only assign a value to the current nodes, the other are left with the old value
         #  better to reset?
@@ -335,7 +333,7 @@ if __name__ == '__main__':
     tf = 10.0
     dt = tf / ns
 
-    prb = Problem(ns, crash_if_suboptimal=True, receding=True)
+    prb = Problem(ns, receding=True)
     path_to_examples = os.path.dirname('../examples/')
 
     urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
@@ -515,6 +513,7 @@ if __name__ == '__main__':
     opts = {'ipopt.tol': 0.001,
             'ipopt.constr_viol_tol': 1e-3,
             'ipopt.max_iter': 1000,
+            'error_on_fail': True
             }
 
     solver_bs = Solver.make_solver('ipopt', prb, opts)
@@ -551,7 +550,12 @@ if __name__ == '__main__':
         print(iteration)
         #
         am.execute(solver_bs)
-        #
+
+
+        # for cnsrt_name, cnsrt in prb.getConstraints().items():
+        #     print(cnsrt_name)
+        #     print(cnsrt.getNodes())
+
         solver_bs.solve()
         solution = solver_bs.getSolutionDict()
 
