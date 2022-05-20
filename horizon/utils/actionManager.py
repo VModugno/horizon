@@ -129,17 +129,22 @@ class ActionManager:
         for frame, nodes in self.foot_tgt_constr_nodes.items():
             self.foot_tgt_constr_nodes[frame] = []
 
+        for frame, param in self._foot_z_param.items():
+            self._foot_z_param[frame] = None
+
+        for frame, param in self._foot_tgt_params.items():
+            self._foot_tgt_params[frame] = None
 
         for frame, z_constr in self.z_constr.items():
-            z_constr.setNodes([])
+            z_constr.setNodes(self.z_constr_nodes[frame])
 
         for frame, tgt_constr in self.foot_tgt_constr.items():
-            tgt_constr.setNodes([])
+            tgt_constr.setNodes(self.foot_tgt_constr_nodes[frame])
 
         # contact nodes
         # contact nodes
         for frame, c_constr in self.contact_constr.items():
-            c_constr.setNodes(list(range(self.N + 1)))
+            c_constr.setNodes(self.contact_constr_nodes[frame])
 
     def init_constraints(self):
 
@@ -525,35 +530,35 @@ if __name__ == '__main__':
 
 
     # single replay
-    q_sol = solution['q']
-    frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
-    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
-    repl.sleep(1.)
-    repl.replay(is_floating_base=True)
-    exit()
+    # q_sol = solution['q']
+    # frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
+    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
+    # repl.sleep(1.)
+    # repl.replay(is_floating_base=True)
+    # exit()
     # =========================================================================
-    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
-    # iteration = 0
-    # while True:
-
+    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+    iteration = 0
+    while True:
+        #
         # if iteration == 20:
         #     am.setStep(s_1)
         # if iteration % 20 == 0:
         #     am.setStep(s_1)
-            # am.setContact(0, 'rh_foot', range(5, 15))
+        #     am.setContact(0, 'rh_foot', range(5, 15))
+        #
+        iteration = iteration + 1
+        print(iteration)
+        #
+        am.execute(solver_bs)
+        #
+        solver_bs.solve()
+        solution = solver_bs.getSolutionDict()
 
-        # iteration = iteration + 1
-        # print(iteration)
 
-        # am.execute(solver_bs)
-
-        # solver_bs.solve()
-        # solution = solver_bs.getSolutionDict()
-
-
-        # repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
-        # repl.publish_joints(solution['q'][:, 0])
-        # repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+        repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
+        repl.publish_joints(solution['q'][:, 0])
+        repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
     #
 
     # set ROS stuff and launchfile
