@@ -63,6 +63,8 @@ class CartesianTask:
         # self.vel_constr = prb.createConstraint(f'{vel_frame_name}_task', ee_v[dim] - self.vel_tgt, nodes=[])
         # self.acc_constr = prb.createConstraint(f'{acc_frame_name}_task', ee_a[dim] - self.acc_tgt, nodes=[])
 
+        # todo should I keep track of the nodes here?
+        #  in other words: should be setNodes resetting?
         self.ref = None
         self.nodes = None
 
@@ -86,9 +88,9 @@ class CartesianTask:
         self.pos_constr.setNodes(self.nodes, erasing=True)  # <==== SET NODES
         self.pos_tgt.assign(self.ref, nodes=self.nodes) # <==== SET TARGET
 
-        print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
-        print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
-        print('===================================')
+        # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
+        # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
+        # print('===================================')
 
     def getNodes(self):
         return self.nodes
@@ -166,14 +168,14 @@ class Contact:
         fzero = np.zeros(f.getDim())
         f.setBounds(fzero, fzero, nodes_off_u)
 
-        print(f'contact {self.name} nodes:')
-        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
-        print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
+        # print(f'contact {self.name} nodes:')
+        # print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
+        # print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
         # print(f'force: imma here but im difficult to show')
-        print(f'force: ')
-        print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
-        print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
-        print('===================================')
+        # print(f'force: ')
+        # print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
+        # print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
+        # print('===================================')
 
     def _zero_velocity(self):
         """
@@ -227,7 +229,8 @@ class Contact:
                              ub=np.full(self.force.getDim(), np.inf))
 
     def getNodes(self):
-        return self.nodes()
+        return self.nodes
+
     # def _friction(self, frame):
     #     """
     #     inequality constraint

@@ -121,6 +121,15 @@ class ActionManager:
     def _set_default_action(self):
         # todo for now the default is robot still, in contact
 
+        # should set the nodes here too:
+        for frame, nodes in self.contact_constr_nodes.items():
+            self.contact_constr_nodes[frame] = list(range(self.N + 1))
+        for frame, nodes in self.z_constr_nodes.items():
+            self.z_constr_nodes[frame] = []
+        for frame, nodes in self.foot_tgt_constr_nodes.items():
+            self.foot_tgt_constr_nodes[frame] = []
+
+
         for frame, z_constr in self.z_constr.items():
             z_constr.setNodes([])
 
@@ -128,22 +137,9 @@ class ActionManager:
             tgt_constr.setNodes([])
 
         # contact nodes
+        # contact nodes
         for frame, c_constr in self.contact_constr.items():
             c_constr.setNodes(list(range(self.N + 1)))
-
-
-        # self.contact_nodes = {contact: list(range(1, self.N + 1)) for contact in contacts}  # all the nodes
-        # self.unilat_nodes = {contact: list(range(self.N)) for contact in contacts}
-        # self.clea_nodes = {contact: list() for contact in contacts}
-        # self.contact_k = {contact: list() for contact in contacts}
-
-        # default action
-        # for frame, cnsrt_item in self._zero_vel_constr.items():
-        #     cnsrt_item.setNodes(self.contact_nodes[frame])
-        #
-        # for frame, cnsrt_item in self._unil_constr.items():
-        #     cnsrt_item.setNodes(self.unilat_nodes[frame])
-
 
     def init_constraints(self):
 
@@ -157,6 +153,26 @@ class ActionManager:
         # self._foot_tgt_params = dict()
         # self._foot_z_param = dict()
 
+        # todo do i keep track of the nodes here or I implement it in the receding_task?
+        # ===================================================================================
+        self.contact_constr_nodes = dict()
+        self.z_constr_nodes = dict()
+        self.foot_tgt_constr_nodes = dict()
+
+        for frame in self.contacts:
+            self.contact_constr_nodes[frame] = []
+            self.z_constr_nodes[frame] = []
+            self.foot_tgt_constr_nodes[frame] = []
+
+        # ... and params
+        self._foot_tgt_params = dict()
+        self._foot_z_param = dict()
+
+        for frame in self.contacts:
+            self._foot_tgt_params[frame] = None
+            self._foot_z_param[frame] = None
+            # ==================================================================================
+
         self.contact_constr = dict()
         self.z_constr = dict()
         self.foot_tgt_constr = dict()
@@ -165,7 +181,6 @@ class ActionManager:
             self.contact_constr[frame] = receding_tasks.Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
             self.z_constr[frame] = receding_tasks.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
             self.foot_tgt_constr[frame] = receding_tasks.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0, 1])
-
 
     def setContact(self, frame, nodes):
         """
@@ -179,8 +194,21 @@ class ActionManager:
 
         self.contact_constr[frame].setNodes(nodes)
 
-    # def addAction(self, action):
-    #     self.action_list.append(action)
+    def _append_nodes(self, node_list, new_nodes):
+        for node in new_nodes:
+            if node not in node_list:
+                node_list.append(node)
+
+        return node_list
+
+    def _append_params(self, params_array, new_params):
+
+        if params_array is None:
+            params_array = new_params
+        else:
+            params_array = np.append(params_array, new_params)
+
+        return params_array
 
     def setStep(self, step):
         self.action_list.append(step)
@@ -193,14 +221,14 @@ class ActionManager:
         s = copy.deepcopy(step)
         # todo temporary
 
-        all_nodes = list(range(self.prb.getNNodes()))
-
         # todo how to define current cycle
         frame = s.frame
         k_start = s.k_start
         k_goal = s.k_goal
+        # all_contact_nodes = list(range(self.prb.getNNodes()))
+        all_contact_nodes = self.contact_constr_nodes[frame]
         swing_nodes = list(range(k_start, k_goal))
-        stance_nodes = [k for k in all_nodes if k not in swing_nodes]
+        stance_nodes = [k for k in all_contact_nodes if k not in swing_nodes]
         n_swing = len(swing_nodes)
 
         swing_nodes_in_horizon = [k for k in swing_nodes if k >= 0 and k <= self.N]
@@ -210,30 +238,44 @@ class ActionManager:
         # this step is outside the horizon!
         # todo what to do with default action?
 
-
+        if n_swing_in_horizon == 0:
+            print(f'========= skipping step {s.frame}. Not in horizon: {swing_nodes_in_horizon} ==========')
+            return 0
         print(f'========= activating step {s.frame}: {swing_nodes_in_horizon} ==========')
+        # adding nodes to the current ones (if any)
+        self.contact_constr_nodes[frame] = stance_nodes
+        self.foot_tgt_constr_nodes[frame] = self._append_nodes(self.foot_tgt_constr_nodes[frame], [k_goal])
+        self.z_constr_nodes[frame] = self._append_nodes(self.z_constr_nodes[frame], swing_nodes_in_horizon)
+
         # break contact at swing nodes + z_trajectory + (optional) xy goal
         # contact
-        self.setContact(frame, stance_nodes_in_horizon)
+        self.setContact(frame, self.contact_constr_nodes[frame])
 
         # xy goal
         if self.N >= k_goal > 0 and step.goal.size > 0:
-            self.foot_tgt_constr[frame].setRef(s.goal[:2])
-            self.foot_tgt_constr[frame].setNodes([k_goal])
+            # adding param:
+            self._foot_tgt_params[frame] = self._append_params(self._foot_tgt_params[frame], s.goal[:2])
+
+            self.foot_tgt_constr[frame].setRef(self._foot_tgt_params[frame]) # s.goal[:2]
+            self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame]) #[k_goal]
 
         # z goal
         start = np.array([0, 0, self.default_foot_z[frame]]) if s.start.size == 0 else s.start
         goal = np.array([0, 0, self.default_foot_z[frame]]) if s.goal.size == 0 else s.goal
 
-        # todo this way I can define my own trajectory goal (assign the parameter)
         z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes_in_horizon, n_swing, start, goal, s.clearance, dim=2)
-        self.z_constr[frame].setRef(z_traj)
-        self.z_constr[frame].setNodes(swing_nodes_in_horizon)
+        # adding param
+        self._foot_z_param[frame] = self._append_params(self._foot_z_param[frame], z_traj[:len(swing_nodes_in_horizon)])
+
+        self.z_constr[frame].setRef(self._foot_z_param[frame]) #z_traj
+        self.z_constr[frame].setNodes(self.z_constr_nodes[frame]) #swing_nodes_in_horizon
 
     def execute(self, solver):
         """
         set the actions and spin
         """
+
+
         self._update_initial_state(solver, -1)
 
         k0 = 1
@@ -243,116 +285,25 @@ class ActionManager:
             action.k_start = action.k_start - k0
             action.k_goal = action.k_goal - k0
             action_nodes = list(range(action.k_start, action.k_goal))
-            action_nodes_in_horizon = [k for k in action_nodes if k >= 0 and k <= self.N]
+            action_nodes_in_horizon = [k for k in action_nodes if k >= 0]
             self._step(action)
 
             if len(action_nodes_in_horizon) == 0:
                 self.action_list.remove(action)
 
+        # for cnsrt_name, cnsrt in self.prb.getConstraints().items():
+        #     print(cnsrt_name)
+        #     print(cnsrt.getNodes().tolist())
 
 
-        for cnsrt_name, cnsrt in self.prb.getConstraints().items():
-            print(cnsrt_name)
-            print(cnsrt.getNodes().tolist())
-
-
-        # todo check if constraint has inputs and remove last node
-        # todo the default is all the contacts are active
-
-        print("=============================================== ======== ===============================================")
-        print("=============================================== RECEDING ===============================================")
-        print("=============================================== ======== ===============================================")
-
-
-        # todo recede action nodes and set new active nodes
-        # self.action_nodes = [x + ks for x in self.action_nodes]
-        # self.active_nodes = [k for k in self.action_nodes if k >= 0 and k < self.prb.getNNodes()]
-        # todo this is basically repeated code from activate
-        # self.pos_constr.setNodes(self.active_nodes, erasing=True)  # <==== SET NODES
-
-        # if nodes is empty, reset and return
-        # if not np.array(self.active_nodes).size:
-        #     self.n_action = None
         # todo right now the non-active nodes of the parameter gets dirty,
         #  because .assing() only assign a value to the current nodes, the other are left with the old value
         #  better to reset?
         # self.pos_tgt.reset()
         # return 0
 
-        # get only the right portion of param
-        # self.active_ref = self.ref[:, -len(self.active_nodes):]
-        # self.pos_tgt.assign(self.active_ref, nodes=self.active_nodes)
-
-        # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
-        # print(f'param task {self.name} nodes: {self.pos_tgt.getValues().tolist()}')
-        # print(f'param task {self.name} nodes:', self.active_ref.tolist())
-        # ======================================= activate contact ====================================================
-        # todo prepare nodes of contact on/off:
-        #         nodes_in_horizon_x = [k for k in nodes if k >= 0 and k <= self.prb.getNNodes() - 1]
-        #         node_in_horizon_u = [k for k in nodes if k >= 0 and k < self.prb.getNNodes() - 1]
-        #         # reset contact / unilaterality / friction
-
-        # self.lift_nodes = [x + ks for x in self.lift_nodes]
-        #
-        # update nodes for contact constraints
-        # new_node_x = [] if self.prb.getNNodes() - 1 in self.lift_nodes else [self.prb.getNNodes() - 1]
-        # new_node_u = [] if self.prb.getNNodes() - 2 in self.lift_nodes else [self.prb.getNNodes() - 2]
-        # new_node_zero_f = [] if self.prb.getNNodes() - 2 not in self.lift_nodes else [self.prb.getNNodes() - 2]
-
-        # todo check if it is to add the new node or not
-        # shifted_contact_nodes = [x + ks for x in self.contact_nodes] + new_node_x
-        # self.contact_nodes = [x for x in shifted_contact_nodes if x > 0]
-
-        # update nodes for unilateral constraint
-        # shifted_unilat_nodes = [x + ks for x in self.unilat_nodes] + new_node_u
-        # self.unilat_nodes = [x for x in shifted_unilat_nodes if x > 0]
-
-        # update nodes for unilateral constraint
-        # shifted_zero_force_nodes = [x + ks for x in self.zero_force_nodes] + new_node_zero_f
-        # self.zero_force_nodes = [x for x in shifted_zero_force_nodes if x >= 0]
-
-        # erasing = True
-        # self.contact_constr[frame].setNodes(contact_nodes)
-        #
-        # print(f'contact {self.name} nodes:')
-        # print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
-        # print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
-        # print(f'force: ')
-        # print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
-        # print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
-        # print('===================================')
-
-        # alternative method
-        # for constr in self.constraints:
-        #     nodes = constr.getNodes()
-        #     shifted_nodes = [x + kd for x in nodes] + [self.prb.getNNodes()]
-        #     self.contact_nodes = [x for x in shifted_nodes if x > 0]
-
-        # elif isinstance(fun, Cost):
-        #     current_nodes = fun.getNodes().astype(int)
-        #     new_nodes = np.delete(current_nodes, nodes)
-        #     fun.setNodes(new_nodes)
-
         ## todo should implement --> removeNodes()
         ## todo should implement a function to reset to default values
-
-        # ==============================================================================================================
-        # ==============================================================================================================
-
-        # set constraints
-        # for c_name, c_constr in self.contact_constr.items():
-        #     c_constr.recede(shift_num)
-        #
-        # for c_name, c_constr in self.z_constr.items():
-        #     c_constr.recede(shift_num)
-        #
-        # for c_name, c_constr in self.foot_tgt_constr.items():
-        #     c_constr.recede(shift_num)
-
-        # todo
-        #  the difference here is which list of nodes get new entry nodes and which do not
-        #  can also shift only decaying nodes and fill everything else with default nodes
-        # difference between "action", which is decaying and "default", which is renewing
 
     def _update_initial_state(self, solver: Solver, shift_num):
 
@@ -373,14 +324,13 @@ class ActionManager:
 
         self.prb.setInitialState(x0=xig[:, 0])
 
-
 if __name__ == '__main__':
 
     ns = 40
     tf = 10.0
     dt = tf / ns
 
-    prb = Problem(ns, receding=True)
+    prb = Problem(ns, crash_if_suboptimal=True, receding=True)
     path_to_examples = os.path.dirname('../examples/')
 
     urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
@@ -473,7 +423,7 @@ if __name__ == '__main__':
         ee_v = dfk(q=q, qdot=v)['ee_vel_linear']
 
         # save foot height
-        default_foot_z[frame] = (fk(q=q0)['ee_pos'][2])
+        default_foot_z[frame] = (fk(q=q0)['ee_pos'][2]).toarray()
 
         # vertical contact frame
         rot_err = cs.sumsqr(ee_rot[2, :2])
@@ -529,7 +479,7 @@ if __name__ == '__main__':
     # ============== add steps!!!!!!!!! =======================
     # am.setStep(s_1)
     # am.setStep(s_2)
-    am.setStep(s_3)
+    # am.setStep(s_3)
 
     step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
     k_step_n = 6
@@ -538,17 +488,17 @@ if __name__ == '__main__':
     step_list = list()
     n_step = 15
 
-    # for n in range(n_step):
-    #     l = step_pattern[n % len(step_pattern)]
-    #     k_end = k_start + k_step_n
-    #     s = Step(l, k_start, k_end)
-    #     print(l, k_start, k_end)
-    #     k_start = k_end
-    #     step_list.append(s)
-
-    # for s_i in step_list:
-    #     am.setStep(s_i)
-
+    for n in range(n_step):
+        l = step_pattern[n % len(step_pattern)]
+        k_end = k_start + k_step_n
+        s = Step(l, k_start, k_end)
+        print(l, k_start, k_end)
+        k_start = k_end
+        step_list.append(s)
+    #
+    for s_i in step_list:
+        am.setStep(s_i)
+    #
     # am.setStep(step_list[0])
     # am.setStep(step_list[1])
     # am.setStep(step_list[2])
@@ -575,16 +525,16 @@ if __name__ == '__main__':
 
 
     # single replay
-    # q_sol = solution['q']
-    # frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
-    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
-    # repl.sleep(1.)
-    # repl.replay(is_floating_base=True)
-    # exit()
+    q_sol = solution['q']
+    frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
+    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
+    repl.sleep(1.)
+    repl.replay(is_floating_base=True)
+    exit()
     # =========================================================================
-    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
-    iteration = 0
-    while True:
+    # repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+    # iteration = 0
+    # while True:
 
         # if iteration == 20:
         #     am.setStep(s_1)
@@ -592,23 +542,23 @@ if __name__ == '__main__':
         #     am.setStep(s_1)
             # am.setContact(0, 'rh_foot', range(5, 15))
 
-        iteration = iteration + 1
-        print(iteration)
-        #
-        am.execute(solver_bs)
-        #
-        solver_bs.solve()
-        solution = solver_bs.getSolutionDict()
-        #
-        #
-        repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
-        repl.publish_joints(solution['q'][:, 0])
-        repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+        # iteration = iteration + 1
+        # print(iteration)
+
+        # am.execute(solver_bs)
+
+        # solver_bs.solve()
+        # solution = solver_bs.getSolutionDict()
+
+
+        # repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
+        # repl.publish_joints(solution['q'][:, 0])
+        # repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
     #
 
     # set ROS stuff and launchfile
     plot = True
-
+    #
     if plot:
         import matplotlib.pyplot as plt
 
