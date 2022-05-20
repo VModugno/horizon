@@ -29,14 +29,12 @@ class Problem:
     """
 
     # todo probably better to set logger, not logging_level
-    def __init__(self, N: int, casadi_type=cs.MX, crash_if_suboptimal: bool = False, receding=False,
-                 logging_level=logging.INFO):
+    def __init__(self, N: int, casadi_type=cs.MX, receding=False, logging_level=logging.INFO):
         """
         Initialize the optimization problem.
 
         Args:
             N: number of INTERMEDIATE nodes (transitions) in the optimization horizon. IMPORTANT: the final node is automatically generated. The problem will have N+1 nodes.
-            crash_if_suboptimal: returns an Error if the solver cannot find an optimal solution
             logging_level: accepts the level of logging from package logging (INFO, DEBUG, ...)
         """
         self.opts = None
@@ -51,8 +49,6 @@ class Problem:
         self.debug_mode = self.logger.isEnabledFor(logging.DEBUG)
         stdout_handler = logging.StreamHandler(sys.stdout)
         self.logger.addHandler(stdout_handler)
-
-        self.crash_if_suboptimal = crash_if_suboptimal
 
         self.nodes = N + 1
         # state variable to optimize
