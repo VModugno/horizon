@@ -14,7 +14,7 @@ import os, time
 from horizon.ros import utils as horizon_ros_utils
 from ttictoc import tic,toc
 import tf
-from geometry_msgs.msg import WrenchStamped, Point, PoseStamped
+from geometry_msgs.msg import WrenchStamped, Point, PoseStamped, TwistStamped
 from sensor_msgs.msg import Joy
 from numpy import linalg as LA
 from visualization_msgs.msg import Marker, MarkerArray
@@ -59,7 +59,7 @@ class steps_phase:
         self.stance = []
         self.cdot_bounds = []
         self.f_bounds = []
-        for k in range(0, nodes):
+        for k in range(0, nodes+1):
             self.stance.append([c_init_z])
             self.cdot_bounds.append([0., 0., 0.])
             self.f_bounds.append([max_force, max_force, max_force])
@@ -118,7 +118,7 @@ class steps_phase:
         self.action = ""
 
     def set(self, action):
-        t = self.nodes - self.step_counter # this goes FROM nodes TO 0
+        t = self.nodes - self.step_counter
 
         for k in range(max(t, 0), self.nodes + 1):
             ref_id = (k - t)%self.nodes
@@ -126,7 +126,7 @@ class steps_phase:
             if(ref_id == 0):
                 self.action = action
 
-            if action == "trot":
+            if self.action == "trot":
                 for i in [0, 3]:
                     self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
@@ -138,7 +138,7 @@ class steps_phase:
                     if k < self.nodes:
                         self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
 
-            elif action == "step":
+            elif self.action == "step":
                 for i in range(0, self.contact_model):
                     self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
@@ -150,7 +150,7 @@ class steps_phase:
                     if k < self.nodes:
                         self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
 
-            elif action == "jump":
+            elif self.action == "jump":
                 for i in range(0, len(c)):
                     self.c_ref[i].assign(self.jump_c[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1. * np.array(self.jump_cdot_bounds[ref_id]), np.array(self.jump_cdot_bounds[ref_id]), nodes=k)
@@ -276,41 +276,88 @@ def setWorld(frame, kindyn, q, base_link="base_link"):
     q[0:3] = w_T_bl_new[0:3, 3]
     q[3:7] = rho
 
+class cartesIO_struct:
+    def __init__(self, distal_link, base_link="world"):
+        self.pose_publisher = rospy.Publisher(f"/cartesian/{distal_link}/reference", PoseStamped, queue_size=1)
+        self.vel_publisher = rospy.Publisher(f"/cartesian/{distal_link}/velocity_reference", TwistStamped, queue_size=1)
+
+        self.pose = PoseStamped()
+        self.pose.pose.position.x = self.pose.pose.position.y = self.pose.pose.position.z = 0.
+        self.pose.pose.orientation.x = self.pose.pose.orientation.y = self.pose.pose.orientation.z = 0.
+        self.pose.pose.orientation.w = 1.
+        self.pose.header.frame_id = "world"
+
+        self.vel = TwistStamped()
+        self.vel.twist.angular.x = self.vel.twist.angular.y = self.vel.twist.angular.z = 0.
+        self.vel.header.frame_id = "world"
+
+    def setPosition(self, p):
+        self.pose.pose.position.x = p[0]
+        self.pose.pose.position.y = p[1]
+        self.pose.pose.position.z = p[2]
+
+    def setOrientation(self, o):
+        self.pose.pose.orientation.x = o[0]
+        self.pose.pose.orientation.y = o[1]
+        self.pose.pose.orientation.z = o[2]
+
+    def setLinearVelocity(self, v):
+        self.vel.twist.linear.x = v[0]
+        self.vel.twist.linear.y = v[1]
+        self.vel.twist.linear.z = v[2]
+
+    def setAngularVelocity(self, w):
+        self.vel.twist.angular.x = w[0]
+        self.vel.twist.angular.y = w[1]
+        self.vel.twist.angular.z = w[2]
+
+    def publish(self, t):
+        self.pose.header.stamp = t
+        self.vel.header.stamp = t
+        self.pose_publisher.publish(self.pose)
+        self.vel_publisher.publish(self.vel)
+
+
+
 class cartesIO:
-    def __init__(self):
-        self.com_publisher = rospy.Publisher("/cartesian/com/reference", PoseStamped, queue_size=1)
-        self.base_link_publisher = rospy.Publisher("/cartesian/base_link/reference", PoseStamped, queue_size=1)
+    def __init__(self, contact_frames):
+        self.contacts = dict()
+        for frame in contact_frames:
+            self.contacts[frame] = cartesIO_struct(frame)
 
-        self.com_ref = PoseStamped()
-        self.com_ref.pose.orientation.x = 0.
-        self.com_ref.pose.orientation.y = 0.
-        self.com_ref.pose.orientation.z = 0.
-        self.com_ref.pose.orientation.w = 1.
-        self.com_ref.header.frame_id = "world"
+        self.com = cartesIO_struct("com")
 
-        self.base_link_ref = PoseStamped()
-        self.base_link_ref.header.frame_id = "world"
+        self.base_link = cartesIO_struct("base_link")
 
-    def publish(self, r, o, t):
-        self.com_ref.header.stamp = t
-        self.com_ref.pose.position.x = r[0]
-        self.com_ref.pose.position.y = r[1]
-        self.com_ref.pose.position.z = r[2]
+    #c is a dict {contact_frame: [contacts]}
+    def publish(self, r, rdot, o, w,  c, cdot, t):
 
-        self.base_link_ref.header.stamp = t
-        self.base_link_ref.pose.orientation.x = o[0]
-        self.base_link_ref.pose.orientation.y = o[1]
-        self.base_link_ref.pose.orientation.z = o[2]
-        self.base_link_ref.pose.orientation.w = o[3]
+        self.com.setPosition(r)
+        #self.com.setLinearVelocity(rdot)
 
-        self.com_publisher.publish(self.com_ref)
-        self.base_link_publisher.publish(self.base_link_ref)
+        self.base_link.setOrientation(o)
+        #self.base_link.setAngularVelocity(w)
+
+        for frame in c:
+            contact_list = c[frame]
+            if len(contact_list) == 2: #line feet
+                p0 = contact_list[0]
+                p1 = contact_list[1]
+                p = (p0 + p1)/2.
+                self.contacts[frame].setPosition(p)
+
+            #self.contacts[frame].setLinearVelocity(cdot[frame][0])
+
+        self.com.publish(t)
+        self.base_link.publish(t)
+        for frame in c:
+            self.contacts[frame].publish(t)
 
 
 
 #horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
-#horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo_line_feet.launch")
-horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
+horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo_line_feet.launch")
+#horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
 time.sleep(3.)
 
 """
@@ -410,7 +457,7 @@ Formulate discrete time dynamics using multiple_shooting and RK2 integrator
 x, xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars(), base_velocity_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 prb.setDynamics(xdot)
 prb.setDt(T/ns)
-transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
+transcription_method = rospy.get_param("transcription_method", 'multiple_shooting')  # can choose between 'multiple_shooting' and 'direct_collocation'
 transcription_opts = dict(integrator='RK2') # integrator used by the multiple_shooting
 if transcription_method == 'direct_collocation':
     transcription_opts = dict()
@@ -537,6 +584,9 @@ min_qddot_gain = rospy.get_param("min_qddot_gain", 1e0)
 print(f"min_qddot_gain: {min_qddot_gain}")
 prb.createCost("min_qddot", min_qddot_gain * cs.sumsqr(qddot.getVars()), nodes=list(range(0, ns)))
 
+#for i in range(len(cdot)):
+#    prb.createCost("min_cdot" + str(i), 1e2 * cs.sumsqr(cdot[i]))
+
 """
 Set up som CONSTRAINTS
 """
@@ -584,6 +634,7 @@ for i in range(0, nc):
     c_ref[i] = prb.createParameter("c_ref" + str(i), 1)
     c_ref[i].assign(initial_foot_position[i][2], nodes=range(0, ns+1))
     prb.createConstraint("cz_tracking" + str(i), c[i][2] - c_ref[i])
+    #prb.createCost("cz_tracking" + str(i), 1e6 * cs.sumsqr(c[i][2] - c_ref[i]))
 
 
 """
@@ -711,7 +762,7 @@ solver = solver.Solver.make_solver('ipopt', prb, opts)
 Walking patter generator and scheduler
 """
 wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns, number_of_legs=number_of_legs, contact_model=contact_model, max_force=max_contact_force, max_velocity=max_contact_velocity)
-ci = cartesIO()
+ci = cartesIO(["left_sole_link", "right_sole_link"])
 while not rospy.is_shutdown():
     """
     Automatically set initial guess from solution to variables in variables_dict
@@ -803,7 +854,14 @@ while not rospy.is_shutdown():
     srbd_msg.wrench.torque.z = srbd_0[5]
     srbd_pub.publish(srbd_msg)
 
-    ci.publish(solution["r"][:, 1], solution["o"][:, 1], t)
+
+    ci.publish(solution["r"][:, 1], solution["rdot"][:, 1],
+               solution["o"][:, 1], solution["w"][:, 1],
+               {"left_sole_link": [solution['c' + str(0)][:, 1], solution['c' + str(1)][:, 1]],
+                "right_sole_link": [solution['c' + str(2)][:, 1], solution['c' + str(3)][:, 1]] },
+               {"left_sole_link": [solution['cdot' + str(0)][:, 1], solution['cdot' + str(1)][:, 1]],
+                "right_sole_link": [solution['cdot' + str(2)][:, 1], solution['cdot' + str(3)][:, 1]]},
+               t)
 
 
     rate.sleep()
