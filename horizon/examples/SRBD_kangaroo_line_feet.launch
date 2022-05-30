@@ -16,7 +16,10 @@
     <param name="contact_model" value="2"/>
     <param name="number_of_legs" value="2"/>
 
+    <param name="transcription_method" value="multiple_shooting"/>
     <param name="max_iteration" value="5"/>
+
+    <param name="world_frame_link" value="left_sole_link"/>
 
     <rosparam param = "foot_frames">["left_foot_upper",  "left_foot_lower",
                                      "right_foot_upper", "right_foot_lower"]</rosparam>
