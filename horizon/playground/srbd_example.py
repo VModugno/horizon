@@ -14,12 +14,13 @@ import os, time
 from horizon.ros import utils as horizon_ros_utils
 from ttictoc import tic,toc
 import tf
-from geometry_msgs.msg import WrenchStamped, Point
+from geometry_msgs.msg import WrenchStamped, Point, PoseStamped
 from sensor_msgs.msg import Joy
 from numpy import linalg as LA
 from visualization_msgs.msg import Marker, MarkerArray
 from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
+from scipy.spatial.transform import Rotation as R
 
 class steps_phase:
     def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, number_of_legs, contact_model, max_force, max_velocity):
@@ -138,12 +139,12 @@ class steps_phase:
                         self.f[i].setBounds(-1.*np.array(self.r_f_bounds[ref_id]), np.array(self.r_f_bounds[ref_id]), nodes=k)
 
             elif action == "step":
-                for i in range(0, contact_model):
+                for i in range(0, self.contact_model):
                     self.c_ref[i].assign(self.l_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.l_cdot_bounds[ref_id]), np.array(self.l_cdot_bounds[ref_id]), nodes=k)
                     if k < self.nodes:
                         self.f[i].setBounds(-1.*np.array(self.l_f_bounds[ref_id]), np.array(self.l_f_bounds[ref_id]), nodes=k)
-                for i in range(contact_model, contact_model * number_of_legs):
+                for i in range(self.contact_model, self.contact_model * self.number_of_legs):
                     self.c_ref[i].assign(self.r_cycle[ref_id], nodes = k)
                     self.cdot[i].setBounds(-1.*np.array(self.r_cdot_bounds[ref_id]), np.array(self.r_cdot_bounds[ref_id]), nodes=k)
                     if k < self.nodes:
@@ -253,11 +254,63 @@ def SRBDViewer(I, base_frame, t, number_of_contacts):
 
     pub2 = rospy.Publisher('contacts', MarkerArray, queue_size=10).publish(marker_array)
 
+def setWorld(frame, kindyn, q, base_link="base_link"):
+    FRAME = cs.Function.deserialize(kindyn.fk(frame))
+    w_p_f = FRAME(q=q)['ee_pos']
+    w_r_f = FRAME(q=q)['ee_rot']
+    w_T_f = np.identity(4)
+    w_T_f[0:3, 0:3] = w_r_f
+    w_T_f[0:3, 3] = cs.transpose(w_p_f)
+
+    BASE_LINK = cs.Function.deserialize(kindyn.fk(base_link))
+    w_p_bl = BASE_LINK(q=q)['ee_pos']
+    w_r_bl = BASE_LINK(q=q)['ee_rot']
+    w_T_bl = np.identity(4)
+    w_T_bl[0:3, 0:3] = w_r_bl
+    w_T_bl[0:3, 3] = cs.transpose(w_p_bl)
+
+    w_T_bl_new = np.dot(np.linalg.inv(w_T_f), w_T_bl)
+
+    rho = R.from_matrix(w_T_bl_new[0:3, 0:3]).as_quat()
+
+    q[0:3] = w_T_bl_new[0:3, 3]
+    q[3:7] = rho
+
+class cartesIO:
+    def __init__(self):
+        self.com_publisher = rospy.Publisher("/cartesian/com/reference", PoseStamped, queue_size=1)
+        self.base_link_publisher = rospy.Publisher("/cartesian/base_link/reference", PoseStamped, queue_size=1)
+
+        self.com_ref = PoseStamped()
+        self.com_ref.pose.orientation.x = 0.
+        self.com_ref.pose.orientation.y = 0.
+        self.com_ref.pose.orientation.z = 0.
+        self.com_ref.pose.orientation.w = 1.
+        self.com_ref.header.frame_id = "world"
+
+        self.base_link_ref = PoseStamped()
+        self.base_link_ref.header.frame_id = "world"
+
+    def publish(self, r, o, t):
+        self.com_ref.header.stamp = t
+        self.com_ref.pose.position.x = r[0]
+        self.com_ref.pose.position.y = r[1]
+        self.com_ref.pose.position.z = r[2]
+
+        self.base_link_ref.header.stamp = t
+        self.base_link_ref.pose.orientation.x = o[0]
+        self.base_link_ref.pose.orientation.y = o[1]
+        self.base_link_ref.pose.orientation.z = o[2]
+        self.base_link_ref.pose.orientation.w = o[3]
+
+        self.com_publisher.publish(self.com_ref)
+        self.base_link_publisher.publish(self.base_link_ref)
 
 
-horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
+
+#horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
 #horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo_line_feet.launch")
-#horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
+horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
 time.sleep(3.)
 
 """
@@ -374,6 +427,12 @@ joint_init = rospy.get_param("joint_init")
 if len(joint_init) == 0:
     print("joint_init parameter is mandatory, exiting...")
     exit()
+
+if rospy.has_param("world_frame_link"):
+    world_frame_link = rospy.get_param("world_frame_link")
+    setWorld(world_frame_link, kindyn, joint_init)
+    print(f"world_frame_link: {world_frame_link}")
+
 print(f"joint_init: {joint_init}")
 
 """
@@ -652,6 +711,7 @@ solver = solver.Solver.make_solver('ipopt', prb, opts)
 Walking patter generator and scheduler
 """
 wpg = steps_phase(f, c, cdot, initial_foot_position[0][2].__float__(), c_ref, ns, number_of_legs=number_of_legs, contact_model=contact_model, max_force=max_contact_force, max_velocity=max_contact_velocity)
+ci = cartesIO()
 while not rospy.is_shutdown():
     """
     Automatically set initial guess from solution to variables in variables_dict
@@ -742,6 +802,8 @@ while not rospy.is_shutdown():
     srbd_msg.wrench.torque.y = srbd_0[4]
     srbd_msg.wrench.torque.z = srbd_0[5]
     srbd_pub.publish(srbd_msg)
+
+    ci.publish(solution["r"][:, 1], solution["o"][:, 1], t)
 
 
     rate.sleep()
