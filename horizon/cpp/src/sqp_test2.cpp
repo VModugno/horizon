@@ -9,6 +9,8 @@ int main()
     auto p = casadi::SX::sym("p", 1);
     auto dt = casadi::SX::sym("dt", 1);
 
+    auto lp = casadi::SX::sym("lp", 1);
+
     std::vector<casadi::Matrix<casadi::SXElem>> f_vec;
     for(unsigned int i = 0; i < N; ++i)
         f_vec.push_back(x(i+1) - (x(i) + dt*u(i)));
@@ -21,12 +23,12 @@ int main()
     std::cout<<"cf: "<<cf<<std::endl;
 
     std::vector<casadi::Matrix<casadi::SXElem>> l_vec;
-    l_vec.push_back(u(0)*1e-6);
+    l_vec.push_back(lp*u(0)*1e-6);
     l_vec.push_back(u(1)*1e-6);
     auto ll = casadi::SX::vertcat(l_vec);
     std::cout<<"ll: "<<ll<<std::endl;
 
-    auto l = casadi::Function("l", {casadi::SX::vertcat({x,u})}, {ll}, {"x"}, {"l"});
+    auto l = casadi::Function("l", {casadi::SX::vertcat({x,u}), lp}, {ll}, {"x", "lp"}, {"l"});
 
     auto g = casadi::Function("g", {casadi::SX::vertcat({x,u}), dt, p},
                               {casadi::SX::vertcat({f, cf})},
@@ -82,6 +84,10 @@ int main()
     Eigen::MatrixXd dt_values;
     dt_values.setConstant(1, 1, 0.1);
     sqp.setParameterValue("dt", dt_values);
+
+    Eigen::MatrixXd lp_values;
+    lp_values.setConstant(1, 1, 1.0);
+    sqp.setParameterValue("lp", lp_values);
 
     auto solution = sqp.solve(x0, lb, ub, lg, ug);
     std::cout<<"solution: "<<solution["x"]<<"   f: "<<solution["f"]<<"  g: "<<solution["g"]<<std::endl;

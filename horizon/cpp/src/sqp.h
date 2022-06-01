@@ -151,6 +151,12 @@ public:
         _g = g;
         _dg = _g.factory("dg", {g.name_in()}, {"jac:" + g.name_out(0) + ":" + g.name_in(0)});
 
+        for(const auto &input : _g.name_in())
+        {
+            _g_dict.input[input] = casadi::DM();
+            _A_dict.input[input] = casadi::DM();
+        }
+
         parseOptions();
 
         _variable_trj.resize(_max_iter+1, casadi::DM(f.size1_in(0), f.size2_in(0)));
@@ -172,9 +178,9 @@ public:
     void set_param_inputs(const ParamsHandler& params, casadi_utils::WrappedFunction& f)
 
     {
-        for(unsigned int i = 1; i < f.function().n_in(); ++i)
+        for(unsigned int i = 1; i < f.function().name_in().size(); ++i)
         {
-            f.setInput(i, params.getEigenParam(f.function().name_in(i)));
+            f.setInput(i, params.getEigenParam(f.function().name_in()[i]));
         }
     }
 
@@ -182,7 +188,12 @@ public:
 
     {
         for(auto & el : params.getMap())
-            f_dict[el.first] = params.getCasadiParam(el.first);
+        {
+            if(f_dict.find(el.first) != f_dict.end())
+            {
+                f_dict[el.first] = params.getCasadiParam(el.first);
+            }
+        }
     }
 
 
