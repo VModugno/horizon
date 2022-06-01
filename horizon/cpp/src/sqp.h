@@ -19,7 +19,68 @@ namespace horizon{
 typedef Eigen::Ref<const Eigen::VectorXd> VecConstRef;
 typedef Eigen::Ref<const Eigen::MatrixXd> MatConstRef;
 
-typedef std::shared_ptr<std::map<std::string, Eigen::MatrixXd>> ParameterMapPtr;
+template <typename T>
+using ParameterMap = std::map<std::string, T>;
+
+template <typename T>
+using ParameterMapPtr = std::shared_ptr<ParameterMap<T> >;
+
+class ParamsHandler
+{
+public:
+    typedef std::shared_ptr<ParamsHandler> Ptr;
+
+    ParamsHandler()
+    {
+
+    }
+
+    void addParam(const std::string& name, const Eigen::MatrixXd& p)
+    {
+        if(_params.find(name) == _params.end()) //params does not exists
+        {
+            std::pair<casadi::DM, Eigen::MatrixXd> param;
+            param.second = p;
+
+            casadi_utils::toCasadiMatrix(param.second, param.first);
+            _params[name] = param;
+        }
+        else
+        {
+            _params[name].second = p;
+            casadi_utils::toCasadiMatrix(_params[name].second, _params[name].first);
+        }
+    }
+
+    const Eigen::MatrixXd& getEigenParam(const std::string& name) const
+    {
+        return _params.at(name).second;
+    }
+
+    const casadi::DM& getCasadiParam(const std::string& name) const
+    {
+        return _params.at(name).first;
+    }
+
+    unsigned int count(const std::string& key)
+    {
+        return _params.count(key);
+    }
+
+    const ParameterMap< std::pair<casadi::DM, Eigen::MatrixXd> >& getMap() const
+    {
+        return _params;
+    }
+
+    ~ParamsHandler()
+    {
+
+    }
+
+private:
+    ParameterMap< std::pair<casadi::DM, Eigen::MatrixXd> > _params;
+
+};
 
 
 template <class CASADI_TYPE> ///casadi::SX or casadi::MX
@@ -82,16 +143,13 @@ public:
         _has_param(false)
     {
 
-        _param_map = std::make_shared<ParameterMapPtr::element_type>();
+        _param_map = std::make_shared<ParamsHandler>();
 
         _f = f;
-        add_param_to_map(_f.function());
         _df = f.factory("df", {f.name_in()}, {"jac:" + f.name_out(0) +":" + f.name_in(0)});
 
         _g = g;
-        add_param_to_map(_g);
         _dg = _g.factory("dg", {g.name_in()}, {"jac:" + g.name_out(0) + ":" + g.name_in(0)});
-
 
         parseOptions();
 
@@ -102,83 +160,29 @@ public:
         _line_search_time.reserve(_max_iter);
     }
 
-    void add_param_to_map(const casadi::Function& f)
-    {
-        // add parameters from this function
-        for(int i = 1; i < f.n_in(); i++)
-        {
-
-            // check if already exists
-            if(_param_map->count(f.name()))
-            {
-                continue;
-            }
-
-            // add to map
-            (*_param_map)[f.name_in(i)].setConstant(0,
-                                             0, /* so we do not need to add the number of nodes,
-                                                   first assignment will not be real-time safe */
-                                             std::numeric_limits<double>::quiet_NaN()
-                                             );
-
-            std::cout << "adding parameter '" << f.name_in(i) << std::endl;
-        }
-    }
-
     void setParameterValue(const std::string& pname, const Eigen::MatrixXd& value)
     {
-        auto it = _param_map->find(pname);
-
-        if(it == _param_map->end())
-        {
-            throw std::invalid_argument("undefined parameter name '" + pname + "'");
-        }
-
-        if(it->second.rows() > 0)
-        {
-            if(it->second.rows() != value.rows())
-            {
-                throw std::invalid_argument("wrong parameter value rows for parameter name '"
-                    + pname + "'");
-            }
-        }
-
-        if(it->second.cols() > 0)
-        {
-            if(it->second.cols() != value.cols())
-            {
-                throw std::invalid_argument("wrong parameter value cols for parameter name '"
-                    + pname + "'");
-            }
-        }
-
-        it->second = value;
+        _param_map->addParam(pname, value);
         _has_param = true;
 
         std::cout << "setting parameter '" << pname << "', " <<
-                     "value = " << it->second << "\n";
+                     "value = " << _param_map->getEigenParam(pname) << "\n";
     }
 
-    void set_param_inputs(std::shared_ptr<std::map<std::string, Eigen::MatrixXd>> params,
-                          casadi_utils::WrappedFunction& f)
+    void set_param_inputs(const ParamsHandler& params, casadi_utils::WrappedFunction& f)
 
     {
-        for(int i = 1; i < f.function().n_in(); i++)
+        for(unsigned int i = 1; i < f.function().n_in(); ++i)
         {
-            f.setInput(i, params->at(f.function().name_in(i)));
+            f.setInput(i, params.getEigenParam(f.function().name_in(i)));
         }
     }
 
-    void set_param_inputs(std::shared_ptr<std::map<std::string, Eigen::MatrixXd>> params,
-                          casadi::DMDict& f_dict)
+    void set_param_inputs(const ParamsHandler& params, casadi::DMDict& f_dict)
 
     {
-        casadi::DM tmp;
-        for(const auto & el : *params)
-        {
-            casadi_utils::toCasadiMatrix(el.second, tmp); ///TODO: REMOVE!
-            f_dict[el.first] = tmp;
-        }
+        for(auto & el : params.getMap())
+            f_dict[el.first] = params.getCasadiParam(el.first);
     }
 
 
@@ -317,10 +321,10 @@ public:
 
         if(_has_param)
         {
-            set_param_inputs(_param_map, _f);
-            set_param_inputs(_param_map, _df);
-            set_param_inputs(_param_map, _g_dict.input);
-            set_param_inputs(_param_map, _A_dict.input);
+            set_param_inputs(*_param_map, _f);
+            set_param_inputs(*_param_map, _df);
+            set_param_inputs(*_param_map, _g_dict.input);
+            set_param_inputs(*_param_map, _A_dict.input);
         }
 
         for(unsigned int k = 0; k < _max_iter; ++k) ///BREAK CRITERIA #1
@@ -791,7 +795,7 @@ private:
 
     bool _use_gr;
 
-    ParameterMapPtr _param_map;
+    ParamsHandler::Ptr _param_map;
     bool _has_param;
 
 };
