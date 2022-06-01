@@ -19,6 +19,9 @@ namespace horizon{
 typedef Eigen::Ref<const Eigen::VectorXd> VecConstRef;
 typedef Eigen::Ref<const Eigen::MatrixXd> MatConstRef;
 
+typedef std::shared_ptr<std::map<std::string, Eigen::MatrixXd>> ParameterMapPtr;
+
+
 template <class CASADI_TYPE> ///casadi::SX or casadi::MX
 class SQPGaussNewton
 {
@@ -75,24 +78,19 @@ public:
         _qp_opts(opts),
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6),_alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
-        _fpr(0, 0, 0) ///TODO: this needs to be improved!
+        _fpr(0, 0, 0), ///TODO: this needs to be improved!
+        _has_param(false)
     {
 
-        if(f.n_in() != 1)
-            throw std::runtime_error("Expected inputs for f is 1");
-        if(f.n_out() != 1)
-            throw std::runtime_error("Expected outputs for f is 1");
-        if(g.n_in() != 1)
-            throw std::runtime_error("Expected inputs for g is 1");
-        if(g.n_out() != 1)
-            throw std::runtime_error("Expected ouptuts for g is 1");
-
+        _param_map = std::make_shared<ParameterMapPtr::element_type>();
 
         _f = f;
-        _df = f.factory("df", {f.name_in(0)}, {"jac:" + f.name_out(0) +":" + f.name_in(0)});
+        add_param_to_map(_f.function());
+        _df = f.factory("df", {f.name_in()}, {"jac:" + f.name_out(0) +":" + f.name_in(0)});
 
         _g = g;
-        _dg = _g.factory("dg", {g.name_in(0)}, {"jac:" + g.name_out(0) + ":" + g.name_in(0)});
+        add_param_to_map(_g);
+        _dg = _g.factory("dg", {g.name_in()}, {"jac:" + g.name_out(0) + ":" + g.name_in(0)});
 
 
         parseOptions();
@@ -103,6 +101,87 @@ public:
         _qp_computation_time.reserve(_max_iter);
         _line_search_time.reserve(_max_iter);
     }
+
+    void add_param_to_map(const casadi::Function& f)
+    {
+        // add parameters from this function
+        for(int i = 1; i < f.n_in(); i++)
+        {
+
+            // check if already exists
+            if(_param_map->count(f.name()))
+            {
+                continue;
+            }
+
+            // add to map
+            (*_param_map)[f.name_in(i)].setConstant(0,
+                                             0, /* so we do not need to add the number of nodes,
+                                                   first assignment will not be real-time safe */
+                                             std::numeric_limits<double>::quiet_NaN()
+                                             );
+
+            std::cout << "adding parameter '" << f.name_in(i) << std::endl;
+        }
+    }
+
+    void setParameterValue(const std::string& pname, const Eigen::MatrixXd& value)
+    {
+        auto it = _param_map->find(pname);
+
+        if(it == _param_map->end())
+        {
+            throw std::invalid_argument("undefined parameter name '" + pname + "'");
+        }
+
+        if(it->second.rows() > 0)
+        {
+            if(it->second.rows() != value.rows())
+            {
+                throw std::invalid_argument("wrong parameter value rows for parameter name '"
+                    + pname + "'");
+            }
+        }
+
+        if(it->second.cols() > 0)
+        {
+            if(it->second.cols() != value.cols())
+            {
+                throw std::invalid_argument("wrong parameter value cols for parameter name '"
+                    + pname + "'");
+            }
+        }
+
+        it->second = value;
+        _has_param = true;
+
+        std::cout << "setting parameter '" << pname << "', " <<
+                     "value = " << it->second << "\n";
+    }
+
+    void set_param_inputs(std::shared_ptr<std::map<std::string, Eigen::MatrixXd>> params,
+                          casadi_utils::WrappedFunction& f)
+
+    {
+        for(int i = 1; i < f.function().n_in(); i++)
+        {
+            f.setInput(i, params->at(f.function().name_in(i)));
+        }
+    }
+
+    void set_param_inputs(std::shared_ptr<std::map<std::string, Eigen::MatrixXd>> params,
+                          casadi::DMDict& f_dict)
+
+    {
+        casadi::DM tmp;
+        for(const auto & el : *params)
+        {
+            casadi_utils::toCasadiMatrix(el.second, tmp); ///TODO: REMOVE!
+            f_dict[el.first] = tmp;
+        }
+    }
+
+
 
     /**
      * @brief SQPGaussNewton SQP method with Gauss-Newton approximaiton (Hessian = J'J)
@@ -124,7 +203,8 @@ public:
         _qp_opts(opts),
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6), _alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
-        _fpr(0, 0, 0) ///TODO: this needs to be improved!
+        _fpr(0, 0, 0), ///TODO: this needs to be improved!
+        _has_param(false)
     {
         _f = casadi::Function("f", {x}, {f}, {"x"}, {"f"});
         _df = _f.function().factory("df", {"x"}, {"jac:f:x"});
@@ -222,11 +302,10 @@ public:
      * @param ubx upper variables bound
      * @param lbg lower constraints bound
      * @param ubg upper constraints bound
-     * @param p parameters (NOT USED AT THE MOMENT!)
      * @return solution dictionary containing: "x" solution, "f" 0.5*norm2 cost function, "g" norm2 constraints vector
      */
     const casadi::DMDict& solve(const casadi::DM& initial_guess_x, const casadi::DM& lbx, const casadi::DM& ubx,
-                                const casadi::DM& lbg, const casadi::DM& ubg, const casadi::DM& p = casadi::DM())
+                                const casadi::DM& lbg, const casadi::DM& ubg)
     {
         _hessian_computation_time.clear();
         _qp_computation_time.clear();
@@ -236,6 +315,14 @@ public:
         _variable_trj[0] = x0_;
         _iteration_to_solve = 0;
 
+        if(_has_param)
+        {
+            set_param_inputs(_param_map, _f);
+            set_param_inputs(_param_map, _df);
+            set_param_inputs(_param_map, _g_dict.input);
+            set_param_inputs(_param_map, _A_dict.input);
+        }
+
         for(unsigned int k = 0; k < _max_iter; ++k) ///BREAK CRITERIA #1
         {
             //1. Cost function is linearized around actual x0
@@ -244,10 +331,15 @@ public:
             _J = _df.getSparseOutput(0);
 
             //2. Constraints are linearized around actual x0
-            eval(_g, _g_dict, x0_);
-            eval(_dg, _A_dict, x0_);
+            _g_dict.input[_g.name_in(0)] = x0_;
+            _A_dict.input[_dg.name_in(0)] = x0_;
+            eval(_g, _g_dict);
+            eval(_dg, _A_dict);
             g_ = _g_dict.output[_g.name_out(0)];
             A_ = _A_dict.output[_dg.name_out(0)];
+
+            std::cout<<"g: "<<g_<<std::endl;
+            std::cout<<"A: "<<A_<<std::endl;
 
             //2. We compute Gauss-Newton Hessian approximation and gradient function
             auto tic = std::chrono::high_resolution_clock::now();
@@ -419,7 +511,8 @@ public:
             double candidate_cost = computeCost(_f);
 
             casadi_utils::toCasadiMatrix(x, _x_);
-            eval(_g, _g_dict, _x_);
+            _g_dict.input[_g.name_in(0)] = _x_;
+            eval(_g, _g_dict);
             casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], g);
             double candidate_constraint_violation = computeConstraintViolation(g, x, _lbg_, _ubg_, _lbx_, _ubx_);
 
@@ -497,7 +590,7 @@ public:
             return false;
 
         _g = g;
-        _dg = _g.factory("dg", {g.name_in(0)}, {"jac:" + g.name_out(0) + ":" + g.name_in(0)});
+        _dg = g.factory("dg", {g.name_in(0)}, {"jac:" + g.name_out(0) + ":" + g.name_in(0)});
 
         return true;
     }
@@ -614,16 +707,16 @@ private:
     }
 
     /**
-     * @brief eval to evaluate casadi Function on point x
+     * @brief eval to evaluate casadi Function on input map
      * @param cf casadi Function to evaluate
      * @param dict input/output dict
-     * @param x point
+     * @param input_map
      */
-    void eval(casadi::Function& cf, IODMDict& dict, const casadi::DM& x)
+    void eval(casadi::Function& cf, IODMDict& dict)
     {
-        dict.input[cf.name_in(0)] = x;
         cf.call(dict.input, dict.output);
     }
+
 
     bool checkIsStationary(const Eigen::VectorXd& grad, const double tol)
     {
@@ -697,6 +790,9 @@ private:
     double _merit_derivative_tolerance;
 
     bool _use_gr;
+
+    ParameterMapPtr _param_map;
+    bool _has_param;
 
 };
 
