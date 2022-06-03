@@ -425,10 +425,8 @@ public:
 
 
             casadi_utils::toEigen(x0_, _sol);
-            Eigen::VectorXd dx;
-            casadi_utils::toEigen(_conic_dict.output["x"], dx);
             tic = std::chrono::high_resolution_clock::now();
-            bool success = lineSearch(_sol, dx, _lam_a, _lam_x, lbg, ubg, lbx, ubx);
+            bool success = lineSearch(_sol, _dx, _lam_a, _lam_x, lbg, ubg, lbx, ubx);
             toc = std::chrono::high_resolution_clock::now();
             _line_search_time.push_back((toc-tic).count()*1E-9);
             if(success)
@@ -579,7 +577,10 @@ public:
         }
 
         if(!accepted)
+        {
+            x = _x0_;
             return false;
+        }
         return true;
     }
 
