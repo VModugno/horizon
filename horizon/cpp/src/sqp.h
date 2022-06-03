@@ -534,7 +534,7 @@ public:
         double merit_der = cost_derr - norminf_lam * constraint_violation;
         double initial_merit = initial_cost + norminf_lam*constraint_violation;
 
-        _alpha = ((_grad.transpose() * _grad).cast<double>()/(_grad.transpose() * _H * _grad).cast<double>()).value();
+        _alpha = 0.5;
         bool accepted = false;
         while( _alpha > _alpha_min)
         {
