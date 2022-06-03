@@ -140,7 +140,8 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6),_alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _has_param(false)
+        _has_param(false),
+        _merit_eps(1e-6)
     {
 
         _param_map = std::make_shared<ParamsHandler>();
@@ -171,8 +172,8 @@ public:
         _param_map->addParam(pname, value);
         _has_param = true;
 
-        std::cout << "setting parameter '" << pname << "', " <<
-                     "value = " << _param_map->getEigenParam(pname) << "\n";
+//        std::cout << "setting parameter '" << pname << "', " <<
+//                     "value = " << _param_map->getEigenParam(pname) << "\n";
     }
 
     void set_param_inputs(const ParamsHandler& params, casadi_utils::WrappedFunction& f)
@@ -219,7 +220,8 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6), _alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _has_param(false)
+        _has_param(false),
+        _merit_eps(1e-6)
     {
         _f = casadi::Function("f", {x}, {f}, {"x"}, {"f"});
         _df = _f.function().factory("df", {"x"}, {"jac:f:x"});
@@ -287,6 +289,12 @@ public:
             _qp_opts.erase("use_golden_ratio_update");
         }
 
+        if(_qp_opts.count("merit_eps"))
+        {
+            _merit_eps = _qp_opts.at("merit_eps");
+            _qp_opts.erase("merit_eps");
+        }
+
     }
 
     void printConicOptions(std::ostream &stream=casadi::uout()) const
@@ -324,6 +332,7 @@ public:
     {
         _hessian_computation_time.clear();
         _qp_computation_time.clear();
+        _line_search_time.clear();
 
         x0_ = initial_guess_x;
         casadi_utils::toEigen(x0_, _sol);
@@ -353,14 +362,14 @@ public:
             g_ = _g_dict.output[_g.name_out(0)];
             A_ = _A_dict.output[_dg.name_out(0)];
 
-            std::cout<<"g: "<<g_<<std::endl;
-            std::cout<<"A: "<<A_<<std::endl;
-
             //2. We compute Gauss-Newton Hessian approximation and gradient function
             auto tic = std::chrono::high_resolution_clock::now();
             _H.resize(_J.cols(), _J.cols());
+            _I.resize(_H.rows(), _H.cols());
+            _I.setIdentity();
 //            _H.selfadjointView<Eigen::Lower>().rankUpdate(_J.transpose());
-            _H = _J.transpose() * _J;
+            _H = _J.transpose() * _J;// + 1e-6*_I;
+
             auto toc = std::chrono::high_resolution_clock::now();
             _hessian_computation_time.push_back((toc-tic).count()*1E-9);
 
@@ -432,7 +441,20 @@ public:
                 _fpr.iter = _iteration_to_solve;
             }
             else
-                throw std::runtime_error("Linesearch failed, unable to solve");
+            {
+                _sol += _dx;
+
+                casadi_utils::toCasadiMatrix(_sol, x0_);
+                // store trajectory
+                _variable_trj[k+1] = x0_;
+
+                _iteration_to_solve++;
+                _fpr.iter = _iteration_to_solve;
+
+
+                //throw std::runtime_error("Linesearch failed, unable to solve");
+                std::cout<<"Linesearch failed, taking full step"<<std::endl;
+            }
 
             if(_iter_cb)
             {
@@ -491,14 +513,12 @@ public:
                     const casadi::DM& lbg, const casadi::DM& ubg,
                     const casadi::DM& lbx, const casadi::DM& ubx)
     {
-        Eigen::VectorXd _lbg_, _ubg_, _lbx_, _ubx_;
         casadi_utils::toEigen(lbg, _lbg_);
         casadi_utils::toEigen(ubg, _ubg_);
         casadi_utils::toEigen(lbx, _lbx_);
         casadi_utils::toEigen(ubx, _ubx_);
 
-        Eigen::VectorXd x0 = x;
-
+        _x0_ = x;
 
         const double merit_safety_factor = 2.0;
         double norminf_lam_x = lam_x.lpNorm<Eigen::Infinity>();
@@ -509,37 +529,36 @@ public:
 
         double cost_derr = computeCostDerivative(dx, _grad);
 
-        casadi::DM _x_;
-        Eigen::VectorXd g;
-        casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], g);
-        double constraint_violation = computeConstraintViolation(g, x0, _lbg_, _ubg_, _lbx_, _ubx_);
+        casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], _g_);
+        double constraint_violation = computeConstraintViolation(_g_, _x0_, _lbg_, _ubg_, _lbx_, _ubx_);
 
         double merit_der = cost_derr - norminf_lam * constraint_violation;
         double initial_merit = initial_cost + norminf_lam*constraint_violation;
 
-        _alpha = 1.;
+        _alpha = ((_grad.transpose() * _grad).cast<double>()/(_grad.transpose() * _H * _grad).cast<double>()).value();
         bool accepted = false;
         while( _alpha > _alpha_min)
         {
-            x = x0 + _alpha*dx;
+            x = _x0_ + _alpha*dx;
             eval(_f, 0, x, false);
             double candidate_cost = computeCost(_f);
 
             casadi_utils::toCasadiMatrix(x, _x_);
             _g_dict.input[_g.name_in(0)] = _x_;
             eval(_g, _g_dict);
-            casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], g);
-            double candidate_constraint_violation = computeConstraintViolation(g, x, _lbg_, _ubg_, _lbx_, _ubx_);
+            casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], _g_);
+            double candidate_constraint_violation = computeConstraintViolation(_g_, x, _lbg_, _ubg_, _lbx_, _ubx_);
 
             double candidate_merit = candidate_cost + norminf_lam*candidate_constraint_violation;
 
             // evaluate Armijo's condition
-            accepted = candidate_merit <= initial_merit + _beta*_alpha*merit_der;
+            accepted = fabs(candidate_merit - (initial_merit + _beta*_alpha*merit_der)) <= _merit_eps;
 
             _fpr.alpha = _alpha;
             _fpr.cost = candidate_cost;
             _fpr.constraint_violation = candidate_constraint_violation;
             _fpr.merit = candidate_merit;
+            _fpr.armijo_merit = initial_merit + _beta*_alpha*merit_der;
             _fpr.step_length = _alpha * dx.norm();
             _fpr.accepted = accepted;
             _fpr.defect_norm = NAN;
@@ -549,9 +568,9 @@ public:
             _fpr.mu_f = NAN;
 
 
-
             if(accepted)
                 break;
+
 
             if(_use_gr)
                 _alpha *= 1./GR;
@@ -775,6 +794,7 @@ private:
 
     Eigen::SparseMatrix<double> _J;
     Eigen::SparseMatrix<double> _H;
+    Eigen::SparseMatrix<double> _I;
     Eigen::VectorXd _grad;
     casadi::DM grad_;
     casadi::DM g_;
@@ -808,6 +828,14 @@ private:
 
     ParamsHandler::Ptr _param_map;
     bool _has_param;
+
+    //line search
+    Eigen::VectorXd _lbg_, _ubg_, _lbx_, _ubx_;
+    Eigen::VectorXd _x0_;
+    casadi::DM _x_;
+    Eigen::VectorXd _g_;
+    double _merit_eps;
+
 
 };
 
