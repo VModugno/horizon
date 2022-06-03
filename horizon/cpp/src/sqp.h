@@ -368,7 +368,8 @@ public:
             _I.resize(_H.rows(), _H.cols());
             _I.setIdentity();
 //            _H.selfadjointView<Eigen::Lower>().rankUpdate(_J.transpose());
-            _H = _J.transpose() * _J;// + 1e-6*_I;
+            _H = _J.transpose() * _J + 1e-6*_I;
+
 
             auto toc = std::chrono::high_resolution_clock::now();
             _hessian_computation_time.push_back((toc-tic).count()*1E-9);
@@ -401,18 +402,18 @@ public:
             _conic_dict.input["lbx"] = lbx - x0_;
             _conic_dict.input["ubx"] = ubx - x0_;
             _conic_dict.input["x0"] = x0_;
-//            if(_lam_a.size() > 0)
-//            {
-//                casadi::DM lama;
-//                casadi_utils::toCasadiMatrix(_lam_a, lama);
-//                _conic_dict.input["lam_a0"] = lama;
-//            }
-//            if(_lam_x.size() > 0)
-//            {
-//                casadi::DM lamx;
-//                casadi_utils::toCasadiMatrix(_lam_x, lamx);
-//                _conic_dict.input["lam_x0"] = lamx;
-//            }
+            if(_lam_a.size() > 0)
+            {
+                casadi::DM lama;
+                casadi_utils::toCasadiMatrix(_lam_a, lama);
+                _conic_dict.input["lam_a0"] = lama;
+            }
+            if(_lam_x.size() > 0)
+            {
+                casadi::DM lamx;
+                casadi_utils::toCasadiMatrix(_lam_x, lamx);
+                _conic_dict.input["lam_x0"] = lamx;
+            }
 
             tic = std::chrono::high_resolution_clock::now();
             _conic->call(_conic_dict.input, _conic_dict.output);
@@ -426,7 +427,7 @@ public:
 
             casadi_utils::toEigen(x0_, _sol);
             tic = std::chrono::high_resolution_clock::now();
-            bool success = lineSearch(_sol, _dx, _lam_a, _lam_x, lbg, ubg, lbx, ubx);
+            bool success = lineSearch(_sol, _dx, _lam_x, _lam_a, lbg, ubg, lbx, ubx);
             toc = std::chrono::high_resolution_clock::now();
             _line_search_time.push_back((toc-tic).count()*1E-9);
             if(success)
