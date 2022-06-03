@@ -782,6 +782,7 @@ if SOLVER() == 'gnsqp':
     opts = {"gnsqp.qp_solver": "osqp",
             "max_iter": 1,
             "alpha_min": 1e-9,
+            #'beta': 1.,
             "use_golden_ratio_update": True,
             'solution_convergence': 1e-3,
             'merit_derivative_tolerance': 1e-4,
@@ -789,11 +790,14 @@ if SOLVER() == 'gnsqp':
 
             'warm_start_primal': True,
             'warm_start_dual': True,
-            'osqp.polish': True, # without this
+            #'osqp.polish': True, # without this
+            #'osqp.polish_refine_iter': 100,
+            #'osqp.eps_abs': 1e-3,
+            #'osqp.eps_rel': 1e-3,
             'osqp.verbose': False,
-            'osqp.rho': 0.1,
+            #'osqp.rho': 0.01,
             #'osqp.sigma': 1e-6,
-            #'osqp.scaling': 5,
+            #'osqp.scaling': 1,
             'osqp.scaled_termination': True
 
             # 'sparse': True,
