@@ -137,6 +137,7 @@ public:
         double step_length;
         double constraint_violation;
         double defect_norm;
+        double armijo_merit;
         int iter;
         bool accepted;
 
