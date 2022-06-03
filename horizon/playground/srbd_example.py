@@ -22,6 +22,14 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 from scipy.spatial.transform import Rotation as R
 
+SOLVER = lambda: 'gnsqp'
+
+def cost(K, fun):
+    if SOLVER() == 'gnsqp':
+        return K * fun
+    return K * K * cs.sumsqr(fun)
+
+
 class steps_phase:
     def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, number_of_legs, contact_model, max_force, max_velocity):
         self.f = f
@@ -554,35 +562,35 @@ rz_tracking is used to keep the com height around the initial value
 """
 rz_tracking_gain = rospy.get_param("rz_tracking_gain", 2e3)
 print(f"rz_tracking_gain: {rz_tracking_gain}")
-prb.createCost("rz_tracking", 2e3 * cs.sumsqr(r[2] - com[2]), nodes=range(1, ns+1))
+prb.createCost("rz_tracking", cost(np.sqrt(rz_tracking_gain),  r[2] - com[2]), nodes=range(1, ns+1))
 
 """
 o_tracking is used to keep the base orientation at identity, its gain is initialize at 0 and set to non-0 only when a button is pressed
 """
 Wo = prb.createParameter('Wo', 1)
 Wo.assign(0.)
-prb.createCost("o_tracking", Wo * cs.sumsqr(o - joint_init[3:7]), nodes=range(1, ns+1))
+prb.createCost("o_tracking", cost(cs.sqrt(Wo), o - joint_init[3:7]), nodes=range(1, ns+1))
 
 """
 rdot_tracking is used to track a desired velocity of the CoM
 """
 rdot_tracking_gain = rospy.get_param("rdot_tracking_gain", 1e4)
 print(f"rdot_tracking_gain: {rdot_tracking_gain}")
-prb.createCost("rdot_tracking", rdot_tracking_gain * cs.sumsqr(rdot - rdot_ref), nodes=range(1, ns+1))
+prb.createCost("rdot_tracking", cost(np.sqrt(rdot_tracking_gain), rdot - rdot_ref), nodes=range(1, ns+1))
 
 """
 w_tracking is used to track a desired angular velocity of the base
 """
 w_tracking_gain = rospy.get_param("w_tracking_gain", 1e4)
 print(f"w_tracking_gain: {w_tracking_gain}")
-prb.createCost("w_tracking", w_tracking_gain * cs.sumsqr(w - w_ref), nodes=range(1, ns+1))
+prb.createCost("w_tracking", cost(np.sqrt(w_tracking_gain), w - w_ref), nodes=range(1, ns+1))
 
 """
 min_qddot is to minimize the acceleration control effort
 """
 min_qddot_gain = rospy.get_param("min_qddot_gain", 1e0)
 print(f"min_qddot_gain: {min_qddot_gain}")
-prb.createCost("min_qddot", min_qddot_gain * cs.sumsqr(qddot.getVars()), nodes=list(range(0, ns)))
+prb.createCost("min_qddot", cost(np.sqrt(min_qddot_gain), qddot.getVars()), nodes=list(range(0, ns)))
 
 #for i in range(len(cdot)):
 #    prb.createCost("min_cdot" + str(i), 1e2 * cs.sumsqr(cdot[i]))
@@ -626,7 +634,7 @@ for i in range(0, nc):
     """
     min_f try to minimze the contact forces (can be seen as distribute equally the contact forces)
     """
-    prb.createCost("min_f" + str(i), min_f_gain * cs.sumsqr(f[i]), nodes=list(range(0, ns)))
+    prb.createCost("min_f" + str(i), cost(np.sqrt(min_f_gain), f[i]), nodes=list(range(0, ns)))
 
     """
     cz_tracking is used to track the z reference for the feet: notice that is a constraint
@@ -683,7 +691,7 @@ Create solver
 max_iteration = rospy.get_param("max_iteration", 20)
 print(f"max_iteration: {max_iteration}")
 
-ipopt_opts = {
+i_opts = {
         'ipopt.tol': 0.001,
         'ipopt.constr_viol_tol': 0.001,
         'ipopt.max_iter': 100,
@@ -691,9 +699,25 @@ ipopt_opts = {
         'ipopt.warm_start_init_point': 'no',
         'ipopt.fast_step_computation': 'no',
 }
+if SOLVER() == 'gnsqp':
+    i_opts = {"gnsqp.qp_solver": "osqp",
+            "max_iter": 1000,
+            "alpha_min": 1e-9,
+            "use_golden_ratio_update": False,
+            'warm_start_primal': True,
+            'warm_start_dual': True,
+            'solution_convergence': 1e-3,
+            'merit_derivative_tolerance': 1e-4,
+            'constraint_violation_tolerance': ns * 1e-5,
+            'osqp.polish': True, # without this
+            #'osqp.delta': 1e-6,  # and this, it does not converge!
+            'osqp.verbose': False,
+            #'osqp.rho': 0.02,
+            'osqp.scaled_termination': False
+    }
 
-
-solver_offline = solver.Solver.make_solver('ipopt', prb, ipopt_opts)
+solver_offline = solver.Solver.make_solver(SOLVER(), prb, i_opts)
+#solver_offline.set_iteration_callback()
 
 solver_offline.solve()
 solution = solver_offline.getSolutionDict()
@@ -754,8 +778,46 @@ opts = {
         'ipopt.sb': 'yes',
         'print_time': 0
 }
+if SOLVER() == 'gnsqp':
+    opts = {"gnsqp.qp_solver": "osqp",
+            "max_iter": 1,
+            "alpha_min": 1e-9,
+            "use_golden_ratio_update": True,
+            'solution_convergence': 1e-3,
+            'merit_derivative_tolerance': 1e-4,
+            'constraint_violation_tolerance': ns * 1e-5,
 
-solver = solver.Solver.make_solver('ipopt', prb, opts)
+            'warm_start_primal': True,
+            'warm_start_dual': True,
+            'osqp.polish': True, # without this
+            'osqp.verbose': False,
+            'osqp.rho': 0.1,
+            #'osqp.sigma': 1e-6,
+            #'osqp.scaling': 5,
+            'osqp.scaled_termination': True
+
+            # 'sparse': True,
+            # 'enableEqualities': True,
+            # 'enableInertiaCorrection': True,
+            # 'linsol_plugin': "ma27",
+            # 'numRefinementSteps': 0,
+            #
+            # 'initialStatusBounds': "inactive",
+            # 'enableDriftCorrection': 0,
+            # 'terminationTolerance': 10e9 * 1e-16,
+            # 'enableFlippingBounds': False,
+            # 'enableNZCTests': False,
+            # 'enableRamping':  False,
+            # 'enableRegularisation': True,
+            # 'numRegularisationSteps': 2,
+            # 'epsRegularisation': 5. * 10e3 * 1e-16
+
+    }
+
+
+
+solver = solver.Solver.make_solver(SOLVER(), prb, opts)
+#solver.set_iteration_callback()
 
 
 """
@@ -824,6 +886,12 @@ while not rospy.is_shutdown():
     tic()
     if not solver.solve():
         print("UNABLE TO SOLVE")
+
+    #print(f"line search: {solver.getLineSearchComputationTime()}")
+    #print(f"QP: {solver.getQPComputationTime()}")
+    #print(f"Hessian: {solver.getHessianComputationTime()}")
+
+
     solution_time_pub.publish(toc())
     solution = solver.getSolutionDict()
 
