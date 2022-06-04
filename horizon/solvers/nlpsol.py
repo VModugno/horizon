@@ -122,6 +122,9 @@ class NlpsolSolver(Solver):
         # solve
         sol = self.solver(**self.dict_sol)
 
+        if not self.solver.stats()['success']:
+            raise Exception('Optimal solution NOT found.')
+
         if self.cond_warm_start:
             self.dict_sol['lam_x0'] = sol['lam_x']
             self.dict_sol['lam_g0'] = sol['lam_g']

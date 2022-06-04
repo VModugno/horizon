@@ -44,7 +44,7 @@ class Step(Action):
     simple class representing a step, contains the main info about the step
     """
 
-    def __init__(self, frame: str, k_start: int, k_goal: int, start=np.array([]), goal=np.array([]), clearance=0.10):
+    def __init__(self, frame: str, k_start: int, k_goal: int, start=np.array([]), goal=np.array([]), clearance=0.08):
         super().__init__(frame, k_start, k_goal, start, goal)
         self.clearance = clearance
 
@@ -121,7 +121,6 @@ class ActionManager:
     def _set_default_action(self):
         # todo for now the default is robot still, in contact
 
-        # should set the nodes here too:
         for frame, nodes in self.contact_constr_nodes.items():
             self.contact_constr_nodes[frame] = list(range(self.N + 1))
         for frame, nodes in self.z_constr_nodes.items():
@@ -135,13 +134,14 @@ class ActionManager:
         for frame, param in self._foot_tgt_params.items():
             self._foot_tgt_params[frame] = None
 
+        # clearance nodes
         for frame, z_constr in self.z_constr.items():
             z_constr.setNodes(self.z_constr_nodes[frame])
 
+        # xy trajectory nodes
         for frame, tgt_constr in self.foot_tgt_constr.items():
             tgt_constr.setNodes(self.foot_tgt_constr_nodes[frame])
 
-        # contact nodes
         # contact nodes
         for frame, c_constr in self.contact_constr.items():
             c_constr.setNodes(self.contact_constr_nodes[frame])
@@ -230,7 +230,6 @@ class ActionManager:
         frame = s.frame
         k_start = s.k_start
         k_goal = s.k_goal
-        # all_contact_nodes = list(range(self.prb.getNNodes()))
         all_contact_nodes = self.contact_constr_nodes[frame]
         swing_nodes = list(range(k_start, k_goal))
         stance_nodes = [k for k in all_contact_nodes if k not in swing_nodes]
@@ -275,16 +274,74 @@ class ActionManager:
         self.z_constr[frame].setRef(self._foot_z_param[frame]) #z_traj
         self.z_constr[frame].setNodes(self.z_constr_nodes[frame]) #swing_nodes_in_horizon
 
+    # todo unify the actions below, these are just different pattern of actions
+    def _jump(self, nodes):
+
+        # todo add parameters for step
+        for contact in self.contacts:
+            k_start = nodes[0]
+            k_end = nodes[-1]
+            s = Step(contact, k_start, k_end)
+            self.setStep(s)
+
+    def _walk(self, nodes):
+
+        # todo add parameters for step
+        step_list = list()
+        k_step_n = 5 # default duration (in nodes) of swing step
+        k_start = nodes[0] # first node to begin walk
+        k_end = nodes[1]
+
+        n_step = (k_end - k_start) // k_step_n # integer divide
+        # default step pattern of classic walking (crawling)
+        step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
+        print(n_step)
+        # =========================================
+        for n in range(n_step):
+            l = step_pattern[n % len(step_pattern)]
+            k_end_rounded = k_start + k_step_n
+            s = Step(l, k_start, k_end_rounded)
+            print(l, k_start, k_end_rounded)
+            k_start = k_end_rounded
+            step_list.append(s)
+
+        for s_i in step_list:
+            am.setStep(s_i)
+
+    def _trot(self, nodes):
+
+        # todo add parameters for step
+        k_start = nodes[0]
+        k_step_n = 5 # default swing duration
+        k_end = nodes[1]
+
+        n_step = (k_end - k_start) // k_step_n  # integer divide
+        step_list = []
+        for n in range(n_step):
+            if n % 2 == 0:
+                l1 = 'lf_foot'
+                l2 = 'rh_foot'
+            else:
+                l1 = 'lh_foot'
+                l2 = 'rf_foot'
+            k_end = k_start + k_step_n
+            s1 = Step(l1, k_start, k_end, clearance=0.03)
+            s2 = Step(l2, k_start, k_end, clearance=0.03)
+            k_start = k_end
+            step_list.append(s1)
+            step_list.append(s2)
+
+        for s_i in step_list:
+            am.setStep(s_i)
+
     def execute(self, solver):
         """
         set the actions and spin
         """
-
-
         self._update_initial_state(solver, -1)
 
-        k0 = 1
         self._set_default_action()
+        k0 = 1
 
         for action in self.action_list:
             action.k_start = action.k_start - k0
@@ -329,12 +386,13 @@ class ActionManager:
 
 if __name__ == '__main__':
 
-    ns = 40
-    tf = 10.0
+    ns = 50
+    tf = 2.0 # 10s
     dt = tf / ns
 
     prb = Problem(ns, receding=True)
     path_to_examples = os.path.dirname('../examples/')
+    solver_type = 'ilqr'
 
     urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
     urdf = open(urdffile, 'r').read()
@@ -377,13 +435,13 @@ if __name__ == '__main__':
     prb.createIntermediateConstraint('dynamics', tau[:6])
 
     # final goal (a.k.a. integral velocity control)
-    ptgt_final = [0.2, 0, 0]
+    ptgt_final = [0., 0., 0.]
     vmax = [0.05, 0.05, 0.05]
     ptgt = prb.createParameter('ptgt', 3)
 
     # goalx = prb.createFinalResidual("final_x",  1e3*(q[0] - ptgt[0]))
-    # goalx = prb.createFinalConstraint("final_x", q[0] - ptgt[0])
-    # goaly = prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
+    goalx = prb.createFinalConstraint("final_x", q[0] - ptgt[0])
+    goaly = prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
     # goalrz = prb.createFinalResidual("final_rz", 1e3 * (q[5] - ptgt[2]))
     # base_goal_tasks = [goalx, goaly, goalrz]
 
@@ -404,7 +462,10 @@ if __name__ == '__main__':
     prb.createFinalResidual("min_qf", 1e0 * (q[7:] - q0[7:]))
 
     # regularize input
-    prb.createIntermediateResidual("min_q_ddot", 1e-1 * a)
+    # prb.createIntermediateResidual("min_q_ddot", 1e-1 * a)
+    prb.createIntermediateResidual("min_q_ddot", 1e-2 * a)
+
+    # prb.createFinalConstraint('q_fb', q[:6] - q0[:6])
 
     for f in forces:
         prb.createIntermediateResidual(f"min_{f.getName()}", 1e-2 * (f - f0))
@@ -465,8 +526,8 @@ if __name__ == '__main__':
     # k_start = 8
     # k_end = 15
     # s_2 = Step('rf_foot', k_start, k_end)
-
-    Transcriptor.make_method('multiple_shooting', prb)
+    if solver_type != 'ilqr':
+        Transcriptor.make_method('multiple_shooting', prb)
 
 
     # set initial condition and initial guess
@@ -477,30 +538,54 @@ if __name__ == '__main__':
 
     for f in forces:
         f.setInitialGuess(f0)
-    #
 
+    # k_start = 25
+    # k_end = 36
+    # s_lf = Step('lf_foot', k_start, k_end)
+    # s_rf = Step('rf_foot', k_start, k_end)
+    # s_lh = Step('lh_foot', k_start, k_end)
+    # s_rh = Step('rh_foot', k_start, k_end)
     # ============== add steps!!!!!!!!! =======================
-    am.setStep(s_1)
-    am.setStep(s_2)
+    # am.setStep(s_lf)
+    # am.setStep(s_rf)
+    # am.setStep(s_lh)
+    # am.setStep(s_rh)
+
+    # am._jump(list(range(25, 36)))
+    # am._jump(list(range(40, 51)))
+    # am._jump(list(range(55, 66)))
+    # am._jump(list(range(70, 81)))
+    # am.setStep(s_1)
+    # am.setStep(s_2)
+    # am._jump(list(range(40, 51)))
     # am.setStep(s_3)
 
-    step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
-    k_step_n = 6
-    k_start = 10
+    # all_nodes = prb.getNNodes()
+    # swing_nodes = [k for k in list(range(all_nodes)) if k not in list(range(k_start, k_end))]
+    # am.setContact('rf_foot', nodes=swing_nodes)
+    # am.setContact('lf_foot', nodes=swing_nodes)
+    # am.setContact('rh_foot', nodes=swing_nodes)
+    # am.setContact('lh_foot', nodes=swing_nodes)
 
-    step_list = list()
-    n_step = 3
+    am._walk([10, 200])
+    # am._trot([10, 200])
+    # am._jump([80, 90])
 
-    for n in range(n_step):
-        l = step_pattern[n % len(step_pattern)]
-        k_end = k_start + k_step_n
-        s = Step(l, k_start, k_end)
-        print(l, k_start, k_end)
-        k_start = k_end
-        step_list.append(s)
+    # =========================================
+
+    # k_start = 20
+    # k_end = 25
+    # s_lf = Step('lf_foot', k_start, k_end)
+    # s_rh = Step('rh_foot', k_start, k_end)
+    # k_start = 25
+    # k_end = 30
+    # s_lh = Step('lh_foot', k_start, k_end)
+    # s_rf = Step('rf_foot', k_start, k_end)
     #
-    # for s_i in step_list:
-    #     am.setStep(s_i)
+    # am.setStep(s_lf)
+    # am.setStep(s_rf)
+    # am.setStep(s_lh)
+    # am.setStep(s_rh)
 
     # create solver and solve initial seed
     # print('===========executing ...========================')
@@ -508,13 +593,31 @@ if __name__ == '__main__':
     opts = {'ipopt.tol': 0.001,
             'ipopt.constr_viol_tol': 1e-3,
             'ipopt.max_iter': 1000,
-            'error_on_fail': True
+            'error_on_fail': True,
+            'ilqr.max_iter': 200,
+            'ilqr.alpha_min': 0.01,
+            'ilqr.use_filter': False,
+            'ilqr.hxx_reg': 0.0,
+            'ilqr.integrator': 'RK4',
+            'ilqr.merit_der_threshold': 1e-6,
+            'ilqr.step_length_threshold': 1e-9,
+            'ilqr.line_search_accept_ratio': 1e-4,
+            'ilqr.kkt_decomp_type': 'qr',
+            'ilqr.constr_decomp_type': 'qr',
+            'ilqr.verbose': True,
+            'ipopt.linear_solver': 'ma57',
             }
 
-    solver_bs = Solver.make_solver('ipopt', prb, opts)
-    # solver_rti = Solver.make_solver('ipopt', prb, opts)
+    opts_rti = opts.copy()
+    opts_rti['ilqr.enable_line_search'] = False
+    opts_rti['ilqr.max_iter'] = 4
 
-    # ptgt.assign(ptgt_final, nodes=ns)
+
+    solver_bs = Solver.make_solver(solver_type, prb, opts)
+    solver_rti = Solver.make_solver(solver_type, prb, opts_rti)
+
+
+    ptgt.assign(ptgt_final, nodes=ns)
     solver_bs.solve()
     solution = solver_bs.getSolutionDict()
 
@@ -534,12 +637,18 @@ if __name__ == '__main__':
     repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
     iteration = 0
 
-    k_start = 12
-    k_end = 18
-    s_lol = Step('rf_foot', k_start, k_end)
-
+    solver_rti.solution_dict['x_opt'] = solver_bs.getSolutionState()
+    solver_rti.solution_dict['u_opt'] = solver_bs.getSolutionInput()
     while True:
+
+        # if iteration > 100:
+        #     am._trot([40, 80])
         #
+        # if iteration > 100:
+        #     ptgt.assign([1., 0., 0], nodes=ns)
+
+        # if iteration > 160:
+        #     ptgt.assign([0., 0., 0], nodes=ns)
 
         # if iteration % 20 == 0:
         #     am.setStep(s_1)
@@ -548,16 +657,18 @@ if __name__ == '__main__':
         iteration = iteration + 1
         print(iteration)
         #
-        am.execute(solver_bs)
+        am.execute(solver_rti)
 
         # if iteration == 10:
         #     am.setStep(s_lol)
         # for cnsrt_name, cnsrt in prb.getConstraints().items():
         #     print(cnsrt_name)
         #     print(cnsrt.getNodes())
-
-        solver_bs.solve()
-        solution = solver_bs.getSolutionDict()
+        # if iteration == 20:
+        #     am._jump(list(range(25, 36)))
+        # solver_bs.solve()
+        solver_rti.solve()
+        solution = solver_rti.getSolutionDict()
 
 
         repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
