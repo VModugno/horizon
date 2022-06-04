@@ -7,7 +7,7 @@ except ImportError as e:
 from horizon.variables import Parameter
 from horizon.solvers import Solver
 from horizon.problem import Problem
-from horizon.functions import Function, Constraint, Residual
+from horizon.functions import Function, Constraint, Residual, RecedingResidual
 from typing import Dict, List
 from horizon.transcriptions import integrators
 import casadi as cs
@@ -160,6 +160,12 @@ class SolverILQR(Solver):
 
         return self.dt_solution
 
+    def getSolutionState(self):
+        return self.solution_dict['x_opt']
+
+    def getSolutionInput(self):
+        return self.solution_dict['u_opt']
+
     def print_timings(self):
 
         prof_info = self.ilqr.getProfilingInfo()
@@ -223,7 +229,7 @@ class SolverILQR(Solver):
             param_list = f.getParameters()
 
             # save function value
-            if isinstance(f, Residual):
+            if isinstance(f, (Residual, RecedingResidual)):
                 value = cs.sumsqr(f.getFunction()(*input_list, *param_list))
             else:
                 value = f.getFunction()(*input_list, *param_list)
@@ -235,7 +241,8 @@ class SolverILQR(Solver):
                             [outname]
                             )
 
-
+            print(f)
+            print(l)
             set_to_ilqr(f.getNodes(), l)
         
     
@@ -249,7 +256,7 @@ class SolverILQR(Solver):
         for p in params:
             # todo small hack:
             #  the parameters inside the ilqr are defined on ALL nodes
-            #  horizon allows to define parameters only on desired nodes
+            #  horizon allows to define parameters also only on desired nodes
             #  so i'm masking the parameter values with a matrix of nan of N+1 dimension
             p_vals_temp = p.getValues()
             p_vals = np.empty((p.getDim(), self.N+1))
