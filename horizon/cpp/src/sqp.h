@@ -490,15 +490,6 @@ public:
         return dx.dot(grad);
     }
 
-    double getCostDerivative(const Eigen::VectorXd& x, const Eigen::VectorXd& dx)
-    {
-        _df.setInput(0, x); // cost function Jacobian
-        _df.call(true);
-        _J = _df.getSparseOutput(0);
-        Eigen::VectorXd grad = _J.transpose()*_f.getOutput(0);
-        return dx.dot(grad);
-    }
-
     double computeConstraintViolation(const Eigen::VectorXd& g, const Eigen::VectorXd& x,
                                       const Eigen::VectorXd& lbg, const Eigen::VectorXd& ubg,
                                       const Eigen::VectorXd& lbx, const Eigen::VectorXd& ubx)
