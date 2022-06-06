@@ -71,6 +71,8 @@ public:
      */
     void setCost(std::vector<int> indices, const casadi::Function& inter_cost);
 
+    void setResidual(std::vector<int> indices, const casadi::Function& inter_cost);
+
     /**
      * @brief set the final cost
      * @param final_cost: a function with required signature (x, u) -> (l),
@@ -163,7 +165,9 @@ private:
     struct Constraint;
     struct IntermediateCost;
     struct ConstraintEntity;
+    struct CostEntityBase;
     struct IntermediateCostEntity;
+    struct IntermediateResidualEntity;
     struct Temporaries;
     struct ConstraintToGo;
     struct BackwardPassResult;
@@ -175,7 +179,7 @@ private:
     typedef std::shared_ptr<std::map<std::string, Eigen::MatrixXd>>
         ParameterMapPtr;
 
-    typedef std::map<std::string, std::shared_ptr<IntermediateCostEntity>>
+    typedef std::map<std::string, std::shared_ptr<CostEntityBase>>
         CostPtrMap;
 
     typedef std::map<std::string, std::shared_ptr<ConstraintEntity>>

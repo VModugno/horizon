@@ -163,7 +163,7 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
 
 void IterativeLQR::setStateBounds(const Eigen::MatrixXd& lb, const Eigen::MatrixXd& ub)
 {
-    if(_x_lb.rows() != lb.rows() || _x_lb.cols() != lb.cols() || 
+    if(_x_lb.rows() != lb.rows() || _x_lb.cols() != lb.cols() ||
         _x_ub.rows() != ub.rows() || _x_ub.cols() != ub.cols()
         )
     {
@@ -173,10 +173,10 @@ void IterativeLQR::setStateBounds(const Eigen::MatrixXd& lb, const Eigen::Matrix
     _x_lb = lb;
     _x_ub = ub;
 }
-    
+
 void IterativeLQR::setInputBounds(const Eigen::MatrixXd& lb, const Eigen::MatrixXd& ub)
 {
-    if(_u_lb.rows() != lb.rows() || _u_lb.cols() != lb.cols() || 
+    if(_u_lb.rows() != lb.rows() || _u_lb.cols() != lb.cols() ||
         _u_ub.rows() != ub.rows() || _u_ub.cols() != ub.cols()
         )
     {
@@ -222,6 +222,55 @@ void IterativeLQR::setCost(std::vector<int> indices, const casadi::Function& int
                hess);
 
     if(_verbose) std::cout << "adding cost '" << inter_cost << "' at k = ";
+
+    for(int k : indices)
+    {
+        if(k > _N || k < 0)
+        {
+            throw std::invalid_argument("wrong intermediate cost node index");
+        }
+
+        if(_verbose) std::cout << k << " ";
+
+        _cost[k].addCost(c);
+    }
+
+    if(_verbose) std::cout << "\n";
+}
+
+void IterativeLQR::setResidual(std::vector<int> indices,
+                               const casadi::Function& residual)
+{
+
+    // add parameters to param_map
+    add_param_to_map(residual);
+
+    // create cost entity
+    auto c = std::make_shared<IntermediateResidualEntity>();
+
+    // add to map
+    _cost_map[residual.name()] = c;
+
+    // set param map
+    c->param = _param_map;
+
+    // set indices
+    c->indices = indices;
+
+    // set cost and derivatives
+    auto cost = residual;
+    auto jac = IntermediateResidualEntity::Jacobian(cost);
+
+    // codegen if required (we skip it for quadratic costs)
+    if(_codegen_enabled)
+    {
+        cost = utils::codegen(cost, _codegen_workdir);
+        jac = utils::codegen(jac, _codegen_workdir);
+    }
+
+    c->setResidual(cost, jac);
+
+    if(_verbose) std::cout << "adding residual '" << cost << "' at k = ";
 
     for(int k : indices)
     {
@@ -503,6 +552,7 @@ void IterativeLQR::linearize_quadratize()
         THROW_NAN(_cost[i].P());
         THROW_NAN(_cost[i].r());
         THROW_NAN(_cost[i].q());
+
     }
 
     // handle final cost and constraint
@@ -677,6 +727,15 @@ casadi::Function IterativeLQR::Dynamics::Jacobian(const casadi::Function &f)
     return df;
 }
 
+void IterativeLQR::IntermediateCostEntity::setCost(casadi::Function _l,
+                                                   casadi::Function _dl,
+                                                   casadi::Function _ddl)
+{
+    l = _l;
+    dl = _dl;
+    ddl = _ddl;
+}
+
 const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::Q() const
 {
     return ddl.getOutput(0);
@@ -700,22 +759,6 @@ Eigen::Ref<const Eigen::VectorXd> IterativeLQR::IntermediateCostEntity::r() cons
 const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::P() const
 {
     return ddl.getOutput(2);
-}
-
-void IterativeLQR::IntermediateCostEntity::setCost(const casadi::Function &cost)
-{
-    l = cost;
-    dl = Gradient(cost);  // note: use grad to obtain a column vector!
-    ddl = Hessian(dl.function());
-}
-
-void IterativeLQR::IntermediateCostEntity::setCost(const casadi::Function &f,
-                                                   const casadi::Function &df,
-                                                   const casadi::Function &ddf)
-{
-    l = f;
-    dl = df;
-    ddl = ddf;
 }
 
 double IterativeLQR::IntermediateCostEntity::evaluate(VecConstRef x,
@@ -761,6 +804,72 @@ casadi::Function IterativeLQR::IntermediateCostEntity::Hessian(const casadi::Fun
     return df.factory(df.name() + "_hess",
                       df.name_in(),
                       {"jac:grad_l_x:x", "jac:grad_l_u:u", "jac:grad_l_u:x"});
+}
+
+void IterativeLQR::IntermediateResidualEntity::setResidual(casadi::Function _res,
+                                                           casadi::Function _dres)
+{
+    res = _res;
+    dres = _dres;
+
+    int nx = _res.size1_in(0);
+    int nu = _res.size1_in(1);
+
+    _Q.setZero(nx, nx);
+    _R.setZero(nu, nu);
+    _P.setZero(nu, nx);
+    _q.setZero(nx);
+    _r.setZero(nu);
+}
+
+double IterativeLQR::IntermediateResidualEntity::evaluate(VecConstRef x,
+                                                          VecConstRef u,
+                                                          int k)
+{
+    res.setInput(0, x);
+    res.setInput(1, u);
+    set_param_inputs(param, k, res);
+    res.call();
+
+    return res.getOutput(0).squaredNorm();
+}
+
+void IterativeLQR::IntermediateResidualEntity::quadratize(VecConstRef x,
+                                                          VecConstRef u,
+                                                          int k)
+{
+    evaluate(x, u, k);
+
+    // compute residual jacobian
+    dres.setInput(0, x);
+    dres.setInput(1, u);
+    set_param_inputs(param, k, dres);
+    dres.call();
+
+    // dres -> Jx, Ju
+    // q = 2*Jx'*res
+    // r = 2*Ju'*res
+    // Q = 2*Jx'*Jx
+    // R = 2*Ju'*Ju
+    // P = 2*Ju'*Jx
+
+    // |r(x, u)|^2
+    // Jx'*r
+
+    const auto& Jx = dres.getOutput(0);
+    const auto& Ju = dres.getOutput(1);
+    const auto& r = res.getOutput(0);
+
+    _q.noalias() = 2.0 * Jx.transpose()*r;
+    _r.noalias() = 2.0 * Ju.transpose()*r;
+    _Q.noalias() = 2.0 * Jx.transpose()*Jx;
+    _R.noalias() = 2.0 * Ju.transpose()*Ju;
+    _P.noalias() = 2.0 * Ju.transpose()*Jx;
+}
+
+casadi::Function IterativeLQR::IntermediateResidualEntity::Jacobian(const casadi::Function &f)
+{
+    return f.factory(f.name() + "_jac", f.name_in(), {"jac:res:x", "jac:res:u"});
 }
 
 const Eigen::MatrixXd& IterativeLQR::IntermediateCost::Q() const
@@ -846,7 +955,7 @@ void IterativeLQR::IntermediateCost::clear()
     items.clear();
 }
 
-void IterativeLQR::IntermediateCost::addCost(IntermediateCostEntity::Ptr cost)
+void IterativeLQR::IntermediateCost::addCost(CostEntityBase::Ptr cost)
 {
     items.emplace_back(cost);
 }

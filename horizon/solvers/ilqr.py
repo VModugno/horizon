@@ -63,6 +63,9 @@ class SolverILQR(Solver):
         # create ilqr solver
         self.ilqr = IterativeLQR(self.dyn, self.N, self.opts)
 
+        # should we use GN approx for residuals?
+        self.use_gn = self.opts.get('ilqr.enable_gn', False)
+
         # set constraints, costs, bounds
         self._set_constraint()
         self._set_cost()
@@ -94,6 +97,7 @@ class SolverILQR(Solver):
         if cb is None:
             self.ilqr.setIterationCallback(self._iter_callback)
         else:
+            print('setting custom iteration callback')
             self.ilqr.setIterationCallback(cb)
 
 
@@ -111,7 +115,7 @@ class SolverILQR(Solver):
         # update initial guess
         self.ilqr.setStateInitialGuess(xinit)
         self.ilqr.setInputInitialGuess(uinit)
-        self.ilqr.setIterationCallback(self._iter_callback)
+        # self.ilqr.setIterationCallback(self._iter_callback)
         
         # update parameters
         self._set_param_values()
@@ -194,7 +198,6 @@ class SolverILQR(Solver):
         self._set_fun(container=self.prb.function_container.getCost(),
                 set_to_ilqr=self.ilqr.setIntermediateCost, 
                 outname='l')
-
     
     def _set_constraint(self):
 
@@ -221,12 +224,18 @@ class SolverILQR(Solver):
             input_list = f.getVariables()
             param_list = f.getParameters()
 
-            # save function value
-            if isinstance(f, ResidualFunction):
-                value = cs.sumsqr(f.getFunction()(*input_list, *param_list))
-            else:
-                value = f.getFunction()(*input_list, *param_list)
+            # fn value
+            value = f.getFunction()(*input_list, *param_list)
 
+            # save function value
+            if isinstance(f, ResidualFunction) and self.use_gn:
+                outname = 'res'
+                set_to_ilqr = self.ilqr.setIntermediateResidual
+                print('got residual')
+            elif isinstance(f, ResidualFunction) and not self.use_gn:
+                value = cs.sumsqr(value)
+                print('got residual disables')
+                
             # wrap function
             l = cs.Function(fname, 
                             [self.x, self.u] + param_list, [value], 
@@ -240,42 +249,64 @@ class SolverILQR(Solver):
     
     def _set_param_values(self):
 
+
+        # apparently ilqr creates the parameters with dimensions: par_dim x n+1
+        # generally speaking, this is not necessarily true
         params = self.prb.var_container.getParList()
+
         for p in params:
-            self.ilqr.setParameterValue(p.getName(), p.getValues())
+            # todo small hack:
+            #  the parameters inside the ilqr are defined on ALL nodes
+            #  horizon allows to define parameters only on desired nodes
+            #  so i'm masking the parameter values with a matrix of nan of N+1 dimension
+            p_vals_temp = p.getValues()
+            p_vals = np.empty((p.getDim(), self.N+1))
+            p_vals[:] = np.nan
+            p_vals[:, p.getNodes()] = p_vals_temp
+            self.ilqr.setParameterValue(p.getName(), p_vals)
 
     
     def _iter_callback(self, fpres):
-        
+
         if not fpres.accepted:
             return
-
+        else:
+            print('*', end='', flush=True)
+            
         fpres.print()
 
         if self.plot_iter:
 
             if self.dax is None:
                 _, (self.dax, self.hax) = plt.subplots(2)
+                self.dax.set_yscale('log')
+                self.hax.set_yscale('log')
+                
+                plt.sca(self.dax)
+                self.dline = plt.plot(np.linalg.norm(fpres.defect_values, axis=1))[0]
+                plt.grid()
+                plt.title(f'Dynamics gaps (iter {fpres.iter})')
+                plt.xlabel('Node [-]')
+                plt.ylabel('Gap')
+                plt.legend([f'd{i}' for i in range(self.nx)])
+                
+                plt.sca(self.hax)
+                self.hline = plt.plot(fpres.constraint_values)[0]
+                plt.grid()
+                plt.title(f'Constraint violation (iter {fpres.iter})')
+                plt.xlabel('Node [-]')
+                plt.ylabel('Constraint 1-norm')
+                
+                plt.ion()
+                plt.show()
+
             
-
-            plt.sca(self.dax)
-            plt.cla()
-            plt.plot(np.linalg.norm(fpres.defect_values, axis=1))
-            plt.grid()
-            plt.title(f'Dynamics gaps (iter {fpres.iter})')
-            plt.xlabel('Node [-]')
-            plt.ylabel('Gap')
-            plt.legend([f'd{i}' for i in range(self.nx)])
-
-            plt.sca(self.hax)
-            plt.cla()
-            plt.plot(fpres.constraint_values)
-            plt.grid()
-            plt.title(f'Constraint violation (iter {fpres.iter})')
-            plt.xlabel('Node [-]')
-            plt.ylabel('Constraint 1-norm')
-
-            plt.draw()
-            print("Press a button!")
-            plt.waitforbuttonpress()
+            self.dline.set_ydata(np.linalg.norm(fpres.defect_values, axis=1))
+            self.hline.set_ydata(fpres.constraint_values)
+            self.dax.relim()
+            self.hax.relim()
+            self.dax.autoscale_view()
+            self.hax.autoscale_view()
+            plt.pause(0.01)
+            # plt.waitforbuttonpress()
 
