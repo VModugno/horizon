@@ -318,11 +318,12 @@ void IterativeLQR::line_search(int iter)
         }
 
         // if full step ok, we can reduce regularization
-        if(_fp_res->accepted && alpha == _step_length)
+        if(_fp_res->accepted)
         {
             ++_fp_accepted;
         }
-        else 
+
+        if(alpha < _step_length/4.)
         {
             _fp_accepted = 0;
         }
@@ -332,7 +333,7 @@ void IterativeLQR::line_search(int iter)
         {
             _fp_res->accepted = true;
         }
-        
+
 
         // invoke user defined callback
         report_result(*_fp_res);
@@ -355,7 +356,7 @@ void IterativeLQR::line_search(int iter)
         return;
     }
 
-    
+
     if(_fp_accepted > 5 && _enable_line_search)
     {
         reduce_regularization();
