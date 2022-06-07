@@ -22,7 +22,7 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 from scipy.spatial.transform import Rotation as R
 
-SOLVER = lambda: 'gnsqp'
+SOLVER = lambda: 'ipopt'
 
 def cost(K, fun):
     if SOLVER() == 'gnsqp':
@@ -462,12 +462,6 @@ for i in range(0, nc):
 """
 Formulate discrete time dynamics using multiple_shooting and RK2 integrator
 """
-
-#TODO: BUG: there dependency on the base orientation w_R_b!
-# because I am writing Euler equation in the world frame then I would have:
-#           I_base =      w_R_b * b_I_base * w_R_b.T
-# I_base is constant (i.e. time invariant) only in expressed in the base (local) frame!
-
 x, xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars(), base_velocity_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 prb.setDynamics(xdot)
 prb.setDt(T/ns)
@@ -686,9 +680,11 @@ m = kindyn.mass()
 print(f"mass: {m}")
 M = cs.Function.deserialize(kindyn.crba())
 I = M(q=joint_init)['B'][3:6, 3:6]
-print(f"I centroidal: {I}")
+print(f"I centroidal in base: {I}")
 
-SRBD = kin_dyn.SRBD(m, I, f, r, rddot, c, w, wdot)
+w_R_b = utils.toRot(o)
+
+SRBD = kin_dyn.SRBD(m, w_R_b * I * w_R_b.T, f, r, rddot, c, w, wdot)
 prb.createConstraint("SRBD", SRBD, bounds=dict(lb=np.zeros(6), ub=np.zeros(6)), nodes=list(range(0, ns)))
 
 """
