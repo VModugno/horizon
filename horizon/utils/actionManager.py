@@ -65,7 +65,6 @@ class ActionManager:
         # todo list of contact is fixed?
 
         self.constraints = list()
-        self.nodes = None
         self.current_cycle = 0  # what to do here?
 
         self.contacts = contacts_map.keys()
@@ -129,10 +128,12 @@ class ActionManager:
             self.foot_tgt_constr_nodes[frame] = []
 
         for frame, param in self._foot_z_param.items():
-            self._foot_z_param[frame] = None
+            self._foot_z_param[frame] = np.empty((1, self.N + 1))
+            self._foot_z_param[frame][:] = np.NaN
 
         for frame, param in self._foot_tgt_params.items():
-            self._foot_tgt_params[frame] = None
+            self._foot_tgt_params[frame] = np.empty((2, self.N + 1))
+            self._foot_tgt_params[frame][:] = np.NaN
 
         # clearance nodes
         for frame, z_constr in self.z_constr.items():
@@ -176,6 +177,7 @@ class ActionManager:
         for frame in self.contacts:
             self._foot_tgt_params[frame] = None
             self._foot_z_param[frame] = None
+
             # ==================================================================================
 
         self.contact_constr = dict()
@@ -206,12 +208,9 @@ class ActionManager:
 
         return node_list
 
-    def _append_params(self, params_array, new_params):
+    def _append_params(self, params_array, new_params, nodes):
 
-        if params_array is None:
-            params_array = new_params
-        else:
-            params_array = np.append(params_array, new_params)
+        params_array[nodes] = np.append(params_array, new_params)
 
         return params_array
 
@@ -258,9 +257,9 @@ class ActionManager:
         # xy goal
         if self.N >= k_goal > 0 and step.goal.size > 0:
             # adding param:
-            self._foot_tgt_params[frame] = self._append_params(self._foot_tgt_params[frame], s.goal[:2])
+            self._foot_tgt_params[frame][:, swing_nodes_in_horizon] = s.goal[:2]
 
-            self.foot_tgt_constr[frame].setRef(self._foot_tgt_params[frame]) # s.goal[:2]
+            self.foot_tgt_constr[frame].setRef(self._foot_tgt_params[frame][self.foot_tgt_constr_nodes[frame]]) # s.goal[:2]
             self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame]) #[k_goal]
 
         # z goal
@@ -269,9 +268,8 @@ class ActionManager:
 
         z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes_in_horizon, n_swing, start, goal, s.clearance, dim=2)
         # adding param
-        self._foot_z_param[frame] = self._append_params(self._foot_z_param[frame], z_traj[:len(swing_nodes_in_horizon)])
-
-        self.z_constr[frame].setRef(self._foot_z_param[frame]) #z_traj
+        self._foot_z_param[frame][:, swing_nodes_in_horizon] = z_traj[:len(swing_nodes_in_horizon)]
+        self.z_constr[frame].setRef(self._foot_z_param[frame][:, self.z_constr_nodes[frame]]) #z_traj
         self.z_constr[frame].setNodes(self.z_constr_nodes[frame]) #swing_nodes_in_horizon
 
     # todo unify the actions below, these are just different pattern of actions
@@ -288,13 +286,13 @@ class ActionManager:
 
         # todo add parameters for step
         step_list = list()
-        k_step_n = 5 # default duration (in nodes) of swing step
+        k_step_n = 10 # default duration (in nodes) of swing step
         k_start = nodes[0] # first node to begin walk
         k_end = nodes[1]
 
         n_step = (k_end - k_start) // k_step_n # integer divide
         # default step pattern of classic walking (crawling)
-        step_pattern = ['lf_foot', 'rh_foot', 'rf_foot', 'lh_foot']
+        step_pattern = ['arm_1_TCP', 'arm_2_TCP', 'arm_3_TCP']
         print(n_step)
         # =========================================
         for n in range(n_step):
@@ -306,7 +304,7 @@ class ActionManager:
             step_list.append(s)
 
         for s_i in step_list:
-            am.setStep(s_i)
+            self.setStep(s_i)
 
     def _trot(self, nodes):
 
@@ -568,8 +566,8 @@ if __name__ == '__main__':
     # am.setContact('lh_foot', nodes=swing_nodes)
 
     am._walk([10, 200])
-    # am._trot([10, 200])
-    # am._jump([80, 90])
+    # am._trot([50, 100])
+    # am._jump([55, 65])
 
     # =========================================
 
@@ -639,10 +637,14 @@ if __name__ == '__main__':
 
     solver_rti.solution_dict['x_opt'] = solver_bs.getSolutionState()
     solver_rti.solution_dict['u_opt'] = solver_bs.getSolutionInput()
+
+    flag_action = 1
     while True:
 
-        # if iteration > 100:
-        #     am._trot([40, 80])
+
+        if flag_action == 1 and iteration > 50:
+            flag_action = 0
+            am._trot([40, 80])
         #
         # if iteration > 100:
         #     ptgt.assign([1., 0., 0], nodes=ns)
