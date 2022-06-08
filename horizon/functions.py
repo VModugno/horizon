@@ -341,6 +341,8 @@ class RecedingFunction(AbstractFunction):
         else:
             self.thread_map_num = thread_map_num
 
+        self.weight_mask = None
+
         total_nodes = np.array(range(self._active_nodes_array.size))
         self._feas_nodes_array = self._getFeasNodes(used_vars, used_pars, total_nodes)
 
