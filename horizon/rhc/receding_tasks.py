@@ -121,19 +121,31 @@ class Contact:
 
         # ======== initialize constraints ==========
         # todo are these part of the contact class? Should they belong somewhere else?
+        # todo auto-generate constraints here given the method (inheriting the name of the method
         self.constraints = list()
         self._zero_vel_constr = self._zero_velocity()
         self._unil_constr = self._unilaterality()
         self._friction_constr = self._friction()
+        # for mirror robot
+        self._vertical_takeoff_consrt = self._vertical_takeoff()
 
         self.constraints.append(self._zero_vel_constr)
         self.constraints.append(self._unil_constr)
         self.constraints.append(self._friction_constr)
+        self.constraints.append(self._vertical_takeoff_consrt)
         # ===========================================
 
         self.nodes = []
         # initialize contact nodes
         # todo default action?
+        # todo probably better to keep track of nodes, divided by action
+        self.actions = []
+        # setNodes(nodes1) ---> self.actions.append(nodes1)
+        # setNodes(nodes2) ---> self.actions.append(nodes2)
+        # self.actions = [[nodes1], [nodes2]]
+        # setNodes(nodes3, reset)
+        # self.actions = [[nodes3]]
+        # self.removeAction()
         # should I keep track of these?
         # self.lift_nodes = []
         # self.contact_nodes = []
@@ -143,6 +155,7 @@ class Contact:
         # self.unilat_nodes = list(range(self.prb.getNNodes() - 1))
         # todo reset all the other "contact" constraints on these nodes
         # self._reset_contact_constraints(self.action.frame, nodes_in_horizon_x)
+        self._vertical_takeoff_nodes = []
 
     def setNodes(self, nodes):
 
@@ -164,17 +177,35 @@ class Contact:
         self._zero_vel_constr.setNodes(nodes_on_x, erasing=erasing)  # state + starting from node 1
         self._unil_constr.setNodes(nodes_on_u, erasing=erasing)
         # self._friction_constr[self.frame].setNodes(nodes_on_u, erasing=erasing)  # input
+
+        if nodes_off_x:
+            nodes_ver = [nodes_off_x[0], nodes_off_x[-1]]
+            self._vertical_takeoff_nodes.extend(nodes_ver)
+            self._vertical_takeoff_consrt.setNodes(self._vertical_takeoff_nodes, erasing=erasing)
+
         f = self.force
         fzero = np.zeros(f.getDim())
         f.setBounds(fzero, fzero, nodes_off_u)
 
-        # print(f'contact {self.name} nodes:')
-        # print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
-        # print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
+        print(f'contact {self.name} nodes:')
+        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
+        print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
+        print(f'vertical_takeoff: {self._vertical_takeoff_consrt.getNodes().tolist()}')
         # print(f'force: ')
         # print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
         # print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
         # print('===================================')
+
+    # def _zero_velocity(self):
+    #     """
+    #     equality constraint
+    #     """
+    #     dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
+    #     # todo how do I find that there is a variable called 'v' which represent velocity?
+    #     ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+    #
+    #     constr = self.prb.createConstraint(f"{self.frame}_vel", ee_v, nodes=[])
+    #     return constr
 
     def _zero_velocity(self):
         """
@@ -183,9 +214,11 @@ class Contact:
         dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
         # todo how do I find that there is a variable called 'v' which represent velocity?
         ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+        ee_v_ang = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_angular']
 
-        constr = self.prb.createConstraint(f"{self.frame}_vel", ee_v, nodes=[])
+        constr = self.prb.createConstraint(f"{self.frame}_vel", cs.vertcat(ee_v, ee_v_ang), nodes=[])
         return constr
+
 
     def _unilaterality(self):
         """
@@ -206,6 +239,16 @@ class Contact:
         fcost = _barrier(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
         barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=[])
         return barrier
+
+    def _vertical_takeoff(self):
+
+        dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
+        ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+        ee_v_ang = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_angular']
+        lat_vel = cs.vertcat(ee_v[0:2], ee_v_ang)
+        vert = self.prb.createConstraint(f"{self.frame}_vert", lat_vel, nodes=[])
+
+        return vert
 
     def _reset(self, nodes):
 
