@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import logging
 
 import rospy
@@ -9,10 +9,11 @@ from horizon.utils import utils, kin_dyn, resampler_trajectory, mat_storer
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers import solver
 from horizon.ros.replay_trajectory import *
+import horizon.ros.cartesian_utils as horizon_cartesian_utils
 import matplotlib.pyplot as plt
 import os, time
 from horizon.ros import utils as horizon_ros_utils
-from ttictoc import tic,toc
+from ttictoc import tic, toc
 import tf
 from geometry_msgs.msg import WrenchStamped, Point
 from sensor_msgs.msg import Joy
@@ -20,6 +21,9 @@ from numpy import linalg as LA
 from visualization_msgs.msg import Marker, MarkerArray
 from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
+import numpy as np
+from scipy.spatial.transform import Rotation as R
+import moveit_ros_planning_interface._moveit_roscpp_initializer as roscpp_init
 
 class steps_phase:
     def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, number_of_legs, contact_model, max_force, max_velocity):
@@ -255,10 +259,14 @@ def SRBDViewer(I, base_frame, t, number_of_contacts):
 
 
 
-horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
+# horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
 #horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo_line_feet.launch")
-#horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
+horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
 time.sleep(3.)
+
+rospy.init_node('srbd_mpc_test', anonymous=True)
+cpp_args = list()
+roscpp_init.roscpp_init('srbd_mpc_test', cpp_args)
 
 """
 Creates HORIZON problem. 
@@ -385,11 +393,9 @@ if len(foot_frames) == 0:
     print("foot_frames parameter is mandatory, exiting...")
     exit()
 if(len(foot_frames) != nc):
-    print(f"foot frames number shopuld match with number of contacts! {len(foot_frames)} != {nc}")
+    print(f"foot frames number should match with number of contacts! {len(foot_frames)} != {nc}")
     exit()
 print(f"foot_frames: {foot_frames}")
-
-
 
 max_contact_force = rospy.get_param("max_contact_force", 1000.)
 print(f"max_contact_force: {max_contact_force}")
@@ -558,13 +564,17 @@ Single Rigid Body Dynamics constraint: data are taken from the loaded urdf model
         m(rddot - g) - sum(f) = 0
         Iwdot + w x Iw - sum(r - p) x f = 0
 """
-m = kindyn.mass()
-print(f"mass: {m}")
+# m = kindyn.mass()
+# print(f"mass: {m}")
 M = cs.Function.deserialize(kindyn.crba())
+m = M(q=joint_init)['B'][0,0]
+print(f"mass: {m}")
 I = M(q=joint_init)['B'][3:6, 3:6]
 print(f"I centroidal: {I}")
+w_R_b = utils.toRot(o)
 
-SRBD = kin_dyn.SRBD(m, I, f, r, rddot, c, w, wdot)
+SRBD = kin_dyn.SRBD(m, w_R_b * I * w_R_b.T, f, r, rddot, c, w, wdot)
+# SRBD = kin_dyn.SRBD(m, I, f, r, rddot, c, w, wdot)
 prb.createConstraint("SRBD", SRBD, bounds=dict(lb=np.zeros(6), ub=np.zeros(6)), nodes=list(range(0, ns)))
 
 """
@@ -599,12 +609,20 @@ for i in range(0, nc):
     variables_dict["cddot" + str(i)] = cddot[i]
     variables_dict["f" + str(i)] = f[i]
 
-rospy.init_node('srbd_mpc_test', anonymous=True)
-
-hz = rospy.get_param("hz", 10)
+hz = rospy.get_param("hz", 20)
 print(f"hz: {hz}")
 rate = rospy.Rate(hz)  # 10hz
 rospy.Subscriber('/joy', Joy, joy_cb)
+
+"""
+Initialize CartesianInterface IK solver
+"""
+srdf = rospy.get_param("robot_description_semantic", "")
+if srdf == "":
+    print("missing robot_description_semantic, exiting")
+    exit()
+ci = horizon_cartesian_utils.CartesianUtils(urdf, srdf, foot_frames, 1/hz)
+
 global joy_msg
 joy_msg = rospy.wait_for_message("joy", Joy)
 
@@ -674,7 +692,8 @@ while not rospy.is_shutdown():
         alphaY = 0.3
 
     rdot_ref.assign([alphaX * joy_msg.axes[1], alphaY * joy_msg.axes[0], 0.1 * joy_msg.axes[7]], nodes=range(1, ns+1)) #com velocities
-    w_ref.assign([1. * joy_msg.axes[6], -1. * joy_msg.axes[4], 1. * joy_msg.axes[3]], nodes=range(1, ns + 1)) #base angular velocities
+    # w_ref.assign([1. * joy_msg.axes[6], -1. * joy_msg.axes[4], 1. * joy_msg.axes[3]], nodes=range(1, ns + 1)) #base angular velocities xbox pad
+    w_ref.assign([1. * joy_msg.axes[3], -1. * joy_msg.axes[5], 1. * joy_msg.axes[2]], nodes=range(1, ns + 1)) #base angular velocities ps4 pad
 
     if(joy_msg.buttons[3]):
         Wo.assign(1e5)
@@ -707,26 +726,37 @@ while not rospy.is_shutdown():
         relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
         relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
 
-
-
-
     tic()
     if not solver.solve():
         print("UNABLE TO SOLVE")
     solution_time_pub.publish(toc())
     solution = solver.getSolutionDict()
 
+    # IK dict references
+    IK_refs = dict()
+
     c0_hist = dict()
     for i in range(0, nc):
         c0_hist['c' + str(i)] = solution['c' + str(i)][:, 0]
+        IK_refs[foot_frames[i]] = list(solution['c' + str(i)][:, 0])
 
     t = rospy.Time().now()
     SRBDTfBroadcaster(solution['r'][:, 0], solution['o'][:, 0], c0_hist, t)
+    IK_refs['com'] = solution['r'][:, 0]
+    IK_refs['base_link'] = solution['o'][:, 0]
+
+    rpy = R.from_quat(joint_init[3:7])
+    IK_refs['Postural'] = list(joint_init[0:3]) + list(rpy.as_euler('xyz')) + list(joint_init[7:])
     for i in range(0, nc):
         publishContactForce(t, solution['f' + str(i)][:, 0], 'c' + str(i))
         publishPointTrj(solution["c" + str(i)], t, 'c' + str(i), "world", color=[0., 0., 1.])
     SRBDViewer(I, "SRB", t, nc)
     publishPointTrj(solution["r"], t, "SRB", "world")
+
+    # solve IK
+    ci.setPoseReferences(IK_refs)
+    ci.solve(t.to_sec())
+    ci.publishTransforms()
 
     cc = dict()
     ff = dict()
