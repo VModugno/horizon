@@ -10,7 +10,7 @@ from horizon.problem import Problem
 from horizon.utils import utils, kin_dyn, plotter
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
-from horizon.rhc import receding_tasks_mirror as rcdt
+from horizon.rhc import receding_tasks_spot as rcdt
 from horizon.ros import replay_trajectory
 from horizon import misc_function as misc
 import rospy

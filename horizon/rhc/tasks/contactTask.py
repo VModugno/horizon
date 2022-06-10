@@ -1,8 +1,6 @@
 import casadi as cs
-from horizon.problem import Problem
 import numpy as np
-from horizon.rhc.cartesianTask import CartesianTask
-from horizon.rhc.interactionTask import InteractionTask
+from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.functions import RecedingConstraint, RecedingCost
 
 def _barrier(x):
@@ -119,7 +117,7 @@ class ContactTask:
         fcost = _barrier(self.force[2] - self.fmin)
 
         # todo or createIntermediateCost?
-        barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e-3 * fcost, nodes=active_nodes)
+        barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e2 * fcost, nodes=active_nodes)
         return barrier
 
     def _friction(self, nodes=None):
