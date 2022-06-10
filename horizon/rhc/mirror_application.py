@@ -1,14 +1,8 @@
-from horizon.problem import Problem
-from horizon.utils import utils, kin_dyn, plotter
-from casadi_kin_dyn import pycasadi_kin_dyn
-from horizon.rhc.cartesianTask import CartesianTask
-from horizon.rhc.interactionTask import InteractionTask
-from horizon.utils.actionManager import Step, ActionManager
+from horizon.utils import plotter
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.ros import replay_trajectory
 from horizon.solvers.solver import Solver
-from horizon.rhc.taskInterface import TaskInterface, ModelDescription
-from typing import List, Dict
+from horizon.rhc.taskInterface import TaskInterface
 import numpy as np
 import rospkg
 import casadi as cs
@@ -70,14 +64,6 @@ task_base_x.setRef(ptgt_final)
 
 task_base_y = ti.getTask('final_base_y')
 task_base_y.setRef(ptgt_final)
-
-# print('CONSTRAINTS:')
-# for cnsrt, obj in ti.prb.getConstraints().items():
-#     print(cnsrt,':', obj.getNodes(), type(obj))
-#
-# print('COSTS:')
-# for cnsrt, obj in ti.prb.getCosts().items():
-#     print(cnsrt,':', obj.getNodes(), type(obj))
 
 # todo: next section to wrap up like the lines above
 contacts = [f'arm_{i+1}_TCP' for i in range(3)]
@@ -228,12 +214,12 @@ solution = solver_bs.getSolutionDict()
 # rospy.loginfo("'spot' visualization started.")
 
 ## single replay
-# q_sol = solution['q']
-# frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(3)}
-# repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.kd_frame, ti.kd)
-# repl.sleep(1.)
-# repl.replay(is_floating_base=True)
-
+q_sol = solution['q']
+frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(3)}
+repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.kd_frame, ti.kd)
+repl.sleep(1.)
+repl.replay(is_floating_base=True)
+exit()
 
 plot_flag = True
 if plot_flag:

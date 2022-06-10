@@ -1,9 +1,9 @@
 from horizon.problem import Problem
-from horizon.utils import utils, kin_dyn, plotter
+from horizon.utils import utils, kin_dyn
 from casadi_kin_dyn import pycasadi_kin_dyn
-from horizon.rhc.cartesianTask import CartesianTask
-from horizon.rhc.interactionTask import InteractionTask
-from horizon.rhc.contactTask import ContactTask
+from horizon.rhc.tasks.cartesianTask import CartesianTask
+from horizon.rhc.tasks.interactionTask import InteractionTask
+from horizon.rhc.tasks.contactTask import ContactTask
 from typing import List, Dict
 import numpy as np
 
@@ -145,7 +145,7 @@ class TaskInterface:
                 cartesian_type = task_description['options']['cartesian_type']
             else:
                 cartesian_type = 'position'
-            task = CartesianTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_dim, cartesian_type, fun_type=task_fun_type, weight=task_weight)
+            task = CartesianTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_dim, task_weight, cartesian_type=cartesian_type, fun_type=task_fun_type)
         elif task_type == 'force':
             # todo this generates another variable (f_c) for the frame of the contact: when to initialize the model?
             self.model.setContactFrame(task_frame)
