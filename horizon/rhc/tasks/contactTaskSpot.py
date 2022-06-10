@@ -1,130 +1,36 @@
-import copy
-
-import numpy as np
 import casadi as cs
-from horizon.problem import Problem
-import casadi_kin_dyn.py3casadi_kin_dyn as pycasadi_kin_dyn
+import numpy as np
+from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.functions import RecedingConstraint, RecedingCost
-from horizon import misc_function as misc
 
 def _barrier(x):
     return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
 
-class Task:
-    def __init__(self, prb):
-        pass
-
-    def cartesianTask(self, frame, nodes):
-        raise NotImplementedError()
-
-    def contact(self, frame, nodes):
-        raise NotImplementedError()
-
-
-# todo name is useless
-class CartesianTask:
-    def __init__(self, name, kin_dyn, prb: Problem, frame, dim=None):
-
-        # todo name can be part of action
-        self.prb = prb
-        self.name = name
-        self.frame = frame
-
-        if dim is None:
-            dim = np.array([0, 1, 2]).astype(int)
-        else:
-            dim = np.array(dim)
-
-        fk = cs.Function.deserialize(kin_dyn.fk(frame))
-
-        # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-        # dfk = cs.Function.deserialize(kin_dyn.frameVelocity(frame, kd_frame))
-        # ddfk = cs.Function.deserialize(kin_dyn.frameAcceleration(frame, kd_frame))
-
-        # todo this is bad
-        q = self.prb.getVariables('q')
-        # v = self.prb.getVariables('v')
-
-        ee_p = fk(q=q)['ee_pos']
-        # ee_v = dfk(q=q, qdot=v)['ee_vel_linear']
-        # ee_a = ddfk(q=q, qdot=v)['ee_acc_linear']
-
-        # todo or in problem or here check name of variables and constraints
-        pos_frame_name = f'{self.name}_{self.frame}_pos'
-        # vel_frame_name = f'{self.name}_{self.frame}_vel'
-        # acc_frame_name = f'{self.name}_{self.frame}_acc'
-
-        self.pos_tgt = prb.createParameter(f'{pos_frame_name}_tgt', dim.size)
-        # self.vel_tgt = prb.createParameter(f'{vel_frame_name}_tgt', dim.size)
-        # self.acc_tgt = prb.createParameter(f'{acc_frame_name}_tgt', dim.size)
-
-        self.pos_constr = prb.createConstraint(f'{pos_frame_name}_task', ee_p[dim] - self.pos_tgt, nodes=[])
-        # self.vel_constr = prb.createConstraint(f'{vel_frame_name}_task', ee_v[dim] - self.vel_tgt, nodes=[])
-        # self.acc_constr = prb.createConstraint(f'{acc_frame_name}_task', ee_a[dim] - self.acc_tgt, nodes=[])
-
-        # todo should I keep track of the nodes here?
-        #  in other words: should be setNodes resetting?
-        self.ref = None
-        self.nodes = None
-
-    def setRef(self, ref_traj):
-        self.ref = np.atleast_2d(ref_traj)
-
-    def setNodes(self, nodes):
-
-        # todo manage better
-        if not nodes:
-            self.reset()
-            return 0
-
-        self.nodes = nodes
-        self.n_active = len(self.nodes)
-
-        # todo when to activate manual mode?
-        if self.ref.shape[1] != self.n_active:
-            raise ValueError(f'Wrong goal dimension inserted: ({self.ref.shape[1]} != {self.n_active})')
-
-        self.pos_constr.setNodes(self.nodes, erasing=True)  # <==== SET NODES
-        self.pos_tgt.assign(self.ref, nodes=self.nodes) # <==== SET TARGET
-
-        # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
-        # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
-        # print('===================================')
-
-    def getNodes(self):
-        return self.nodes
-
-    def reset(self):
-
-        self.nodes = []
-        self.pos_constr.setNodes(self.nodes, erasing=True)
-
-
-class Contact:
-    # todo this should be general, not action-dependent
-    # activate() # disable() # recede() -----> setNodes()
-    def __init__(self, name, kin_dyn, kd_frame, prb, force, frame):
+# todo this is a composition of atomic tasks: how to do?
+class ContactTask:
+    def __init__(self, name, prb, kin_dyn, frame, force, nodes=None):
         """
         establish/break contact
         """
         # todo name can be part of action
         self.prb = prb
         self.name = name
-        self.force = force
         self.frame = frame
+        self.initial_nodes = [] if nodes is None else nodes
         # todo add in opts
         self.fmin = 10.
 
+        # todo: force should be retrieved from frame!!!!!!!!!!
+        self.force = force
         self.kin_dyn = kin_dyn
-        self.kd_frame = kd_frame
 
         # ======== initialize constraints ==========
         # todo are these part of the contact class? Should they belong somewhere else?
         # todo auto-generate constraints here given the method (inheriting the name of the method
         self.constraints = list()
-        self._zero_vel_constr = self._zero_velocity()
-        self._unil_constr = self._unilaterality()
-        self._friction_constr = self._friction()
+        self._zero_vel_constr = self._zero_velocity(self.initial_nodes) # this is easily a cartesianTask
+        self._unil_constr = self._unilaterality(self.initial_nodes)
+        self._friction_constr = self._friction(self.initial_nodes)
 
         self.constraints.append(self._zero_vel_constr)
         self.constraints.append(self._unil_constr)
@@ -151,7 +57,6 @@ class Contact:
         # self.unilat_nodes = list(range(self.prb.getNNodes() - 1))
         # todo reset all the other "contact" constraints on these nodes
         # self._reset_contact_constraints(self.action.frame, nodes_in_horizon_x)
-        self._vertical_takeoff_nodes = []
 
     def setNodes(self, nodes):
 
@@ -178,44 +83,52 @@ class Contact:
         fzero = np.zeros(f.getDim())
         f.setBounds(fzero, fzero, nodes_off_u)
 
-        # print(f'contact {self.name} nodes:')
-        # print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
-        # print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
-        # print(f'vertical_takeoff: {self._vertical_takeoff_consrt.getNodes().tolist()}')
-        # print(f'force: ')
-        # print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
-        # print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
-        # print('===================================')
+        print(f'contact {self.name} nodes:')
+        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
+        print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
+        print(f'force: ')
+        print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
+        print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
+        print('===================================')
 
-    def _zero_velocity(self):
+    def _zero_velocity(self, nodes=None):
         """
         equality constraint
         """
-        dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
-        # todo how do I find that there is a variable called 'v' which represent velocity?
-        ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+        active_nodes = [] if nodes is None else nodes
 
-        constr = self.prb.createConstraint(f"{self.frame}_vel", ee_v, nodes=[])
+        # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
+        cartesian_constr = CartesianTask('zero_velocity', self.prb, self.kin_dyn, self.frame, nodes=self.initial_nodes, indices=[0, 1, 2], cartesian_type='velocity')
+        constr = cartesian_constr.getConstraint()
+        # dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
+        # todo how do I find that there is a variable called 'v' which represent velocity?
+        # ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+        #
+        # constr = self.prb.createConstraint(f"{self.frame}_vel", ee_v, nodes=[])
         return constr
 
-    def _unilaterality(self):
+    def _unilaterality(self, nodes=None):
         """
         barrier cost
         """
+        active_nodes = [] if nodes is None else nodes
+
         fcost = _barrier(self.force[2] - self.fmin)
 
         # todo or createIntermediateCost?
-        barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e-3 * fcost, nodes=[])
+        barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e2 * fcost, nodes=active_nodes)
         return barrier
 
-    def _friction(self):
+    def _friction(self, nodes=None):
         """
         barrier cost
         """
+        active_nodes = [] if nodes is None else nodes
+
         f = self.force
         mu = 0.5
         fcost = _barrier(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
-        barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=[])
+        barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=active_nodes)
         return barrier
 
     def _reset(self, nodes):
@@ -240,6 +153,9 @@ class Contact:
 
     def getNodes(self):
         return self.nodes
+
+    def getName(self):
+        return self.name
 
     # def _friction(self, frame):
     #     """
