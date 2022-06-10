@@ -1,0 +1,33 @@
+<launch>
+    <!-- parameters -->
+    <param name="robot_description" textfile="$(find draco3_muvt)/draco3_description/draco3.urdf"/>
+    <param name="robot_description_semantic" textfile="$(find draco3_muvt)/draco3_description/draco3.srdf"/>
+
+    <param name="contact_model" value="4"/>
+    <param name="number_of_legs" value="2"/>
+
+    <rosparam param="foot_frames">
+        ["l_foot_contact_upper_left", "l_foot_contact_upper_right", "l_foot_contact_lower_left", "l_foot_contact_lower_right",
+         "r_foot_contact_upper_left", "r_foot_contact_upper_right", "r_foot_contact_lower_left", "r_foot_contact_lower_right"]
+    </rosparam>
+
+    <rosparam param="joint_init">
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+         0.0, 0.0, -0.785, 0.785, 0.785, -0.785, 0.0,   <!-- l_hip_ie, l_hip_aa, l_hip_fe, l_knee_fe_jp, l_knee_fe_jd, l_ankle_fe, l_ankle_ie -->
+         0.0, 0.523, 0.0, -1.57, 0.0, 0.0,              <!-- l_shoulder_fe, l_shoulder_aa, l_shoulder_ie, l_elbow_fe, l_wrist_ps, l_wrist_pitch -->
+         0.0,                                           <!-- neck_pitch -->
+         0.0, 0.0, -0.785, 0.785, 0.785, -0.785, 0.0,   <!-- r_hip_ie, r_hip_aa, r_hip_fe, r_knee_fe_jp, r_knee_fe_jd, r_ankle_fe, r_ankle_ie -->
+         0.0, -0.523, 0.0, -1.57, 0.0, 0.0]             <!-- r_shoulder_fe, r_shoulder_aa, r_shoulder_ie, r_elbow_fe, r_wrist_ps, r_wrist_pitch -->
+    </rosparam>
+
+    <!-- JOY node -->
+    <node pkg="joy" type="joy_node" name="joy_node">
+        <param name="dev" type="string" value="/dev/input/js0" />
+        <!-- param name="autorepeat_rate" type="double" value="10." / -->
+        <param name="deadzone" type="double" value="0.2" />
+    </node>
+
+    <!-- RVIZ -->
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find horizon_examples)/SRBD_horizon_draco3.rviz"/>
+
+</launch>
