@@ -4,11 +4,13 @@ import matplotlib.pyplot
 import numpy as np
 from casadi_kin_dyn import pycasadi_kin_dyn
 import casadi as cs
+from typing import List
+
 from horizon.problem import Problem
 from horizon.utils import utils, kin_dyn, plotter
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
-from horizon.rhc import receding_tasks
+from horizon.rhc import receding_tasks_mirror as rcdt
 from horizon.ros import replay_trajectory
 from horizon import misc_function as misc
 import rospy
@@ -185,9 +187,9 @@ class ActionManager:
         self.foot_tgt_constr = dict()
 
         for frame in self.contacts:
-            self.contact_constr[frame] = receding_tasks.Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
-            self.z_constr[frame] = receding_tasks.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
-            self.foot_tgt_constr[frame] = receding_tasks.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0, 1])
+            self.contact_constr[frame] = rcdt.Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
+            self.z_constr[frame] = rcdt.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
+            self.foot_tgt_constr[frame] = rcdt.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0, 1])
 
     def setContact(self, frame, nodes):
         """
@@ -282,21 +284,20 @@ class ActionManager:
             s = Step(contact, k_start, k_end)
             self.setStep(s)
 
-    def _walk(self, nodes):
+    def _walk(self, nodes, step_pattern=None, step_nodes_duration=None):
 
         # todo add parameters for step
         step_list = list()
-        k_step_n = 10 # default duration (in nodes) of swing step
+        k_step_n = 5 if step_nodes_duration is None else step_nodes_duration # default duration (in nodes) of swing step
         k_start = nodes[0] # first node to begin walk
         k_end = nodes[1]
 
         n_step = (k_end - k_start) // k_step_n # integer divide
         # default step pattern of classic walking (crawling)
-        step_pattern = ['arm_1_TCP', 'arm_2_TCP', 'arm_3_TCP']
-        print(n_step)
+        pattern = step_pattern if step_pattern is not None else list(range(len(self.contacts)))
         # =========================================
         for n in range(n_step):
-            l = step_pattern[n % len(step_pattern)]
+            l = list(self.contacts)[pattern[n % len(pattern)]]
             k_end_rounded = k_start + k_step_n
             s = Step(l, k_start, k_end_rounded)
             print(l, k_start, k_end_rounded)
@@ -565,7 +566,7 @@ if __name__ == '__main__':
     # am.setContact('rh_foot', nodes=swing_nodes)
     # am.setContact('lh_foot', nodes=swing_nodes)
 
-    am._walk([10, 200])
+    am._walk([10, 200], [0, 2, 1, 3])
     # am._trot([50, 100])
     # am._jump([55, 65])
 
