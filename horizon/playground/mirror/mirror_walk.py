@@ -12,7 +12,6 @@ from horizon.solvers.solver import Solver
 from horizon.ros import replay_trajectory
 import rospy, rospkg
 import os
-import subprocess
 
 
 ns = 50
@@ -155,7 +154,7 @@ for f in forces:
 
 # am.setStep(s1)
 # am.setStep(s2)
-am._walk([10, 200])
+am._walk([10, 200], step_pattern=[0, 2, 1], step_nodes_duration=10)
 # am._trot([50, 100])
 # am._jump([55, 65])
 
