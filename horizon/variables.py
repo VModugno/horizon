@@ -79,10 +79,19 @@ class AbstractVariableView(cs.SX):
         super().__init__(var_slice)
         self._parent = parent
         self._indices = indices
-        self._dim = len(range(*self._indices.indices(self._parent.shape[0]))) if isinstance(self._indices, slice) else 1
+        # todo debug
+        if isinstance(self._indices, slice):
+            self._dim = len(range(*self._indices.indices(self._parent.shape[0])))
+        elif hasattr(self._indices, '__len__'):
+            self._dim = len(self._indices)
+        else:
+            self._dim = 1
 
     def getName(self):
         return self._parent.getName()
+
+    def getDim(self):
+        return self._dim
 
     def __getitem__(self, item):
         var_slice = super().__getitem__(item)
