@@ -140,8 +140,7 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6),_alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _has_param(false),
-        _merit_eps(1e-6)
+        _has_param(false)
     {
 
         _param_map = std::make_shared<ParamsHandler>();
@@ -220,8 +219,7 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6), _alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _has_param(false),
-        _merit_eps(1e-6)
+        _has_param(false)
     {
         _f = casadi::Function("f", {x}, {f}, {"x"}, {"f"});
         _df = _f.function().factory("df", {"x"}, {"jac:f:x"});
@@ -287,12 +285,6 @@ public:
         {
             _use_gr = _qp_opts.at("use_golden_ratio_update");
             _qp_opts.erase("use_golden_ratio_update");
-        }
-
-        if(_qp_opts.count("merit_eps"))
-        {
-            _merit_eps = _qp_opts.at("merit_eps");
-            _qp_opts.erase("merit_eps");
         }
 
     }
@@ -368,7 +360,9 @@ public:
             _I.resize(_H.rows(), _H.cols());
             _I.setIdentity();
 //            _H.selfadjointView<Eigen::Lower>().rankUpdate(_J.transpose());
-            _H = _J.transpose() * _J + 1e-6*_I;
+            double initial_reg = 1e-6;
+            _fpr.hxx_reg = initial_reg;
+            _H = _J.transpose() * _J + _fpr.hxx_reg*_I;
 
 
             auto toc = std::chrono::high_resolution_clock::now();
@@ -438,6 +432,8 @@ public:
 
                 _iteration_to_solve++;
                 _fpr.iter = _iteration_to_solve;
+                _fpr.hxx_reg = initial_reg;
+
             }
             else
             {
@@ -452,7 +448,8 @@ public:
 
 
                 //throw std::runtime_error("Linesearch failed, unable to solve");
-                std::cout<<"Linesearch failed, taking full step"<<std::endl;
+                std::cout<<"Linesearch failed, increasing regularisation"<<std::endl;
+                _fpr.hxx_reg *= 1e1;
             }
 
             if(_iter_cb)
@@ -498,8 +495,36 @@ public:
                (lbx-x).cwiseMax(0.).lpNorm<1>() + (ubx-x).cwiseMin(0.).lpNorm<1>();
     }
 
+    std::pair<double, double> compute_merit_weights(const Eigen::VectorXd& lam_x, const Eigen::VectorXd& lam_g)
+    {
+        double lam_x_max = lam_x.cwiseAbs().maxCoeff();
+        double lam_g_max = lam_g.cwiseAbs().maxCoeff();
 
-    bool lineSearch(Eigen::VectorXd& x, const Eigen::VectorXd& dx, const Eigen::VectorXd& lam_x, const Eigen::VectorXd& lam_a,
+        const double merit_safety_factor = 2.0;
+        double mu_f = lam_x_max * merit_safety_factor;
+        double mu_c = std::max(lam_g_max * merit_safety_factor, 0.0);
+
+        return {mu_f, mu_c};
+    }
+
+    double compute_merit_value(double mu_f, double mu_c,
+                               double cost, double defect_norm, double constr_viol)
+    {
+        return cost + mu_f*defect_norm + mu_c*constr_viol;
+    }
+
+    double compute_merit_slope(double mu_f, double mu_c, double der,
+                               double defect_norm, double constr_viol)
+    {
+        // see Nocedal and Wright, Theorem 18.2, pg. 541
+        // available online http://www.apmath.spbu.ru/cnsa/pdf/monograf/Numerical_Optimization2006.pdf
+
+        return der - mu_f*defect_norm - mu_c*constr_viol;
+    }
+
+
+    bool lineSearch(Eigen::VectorXd& x, const Eigen::VectorXd& dx,
+                    const Eigen::VectorXd& lam_x, const Eigen::VectorXd& lam_a,
                     const casadi::DM& lbg, const casadi::DM& ubg,
                     const casadi::DM& lbx, const casadi::DM& ubx)
     {
@@ -510,53 +535,54 @@ public:
 
         _x0_ = x;
 
-        const double merit_safety_factor = 2.0;
-        double norminf_lam_x = lam_x.lpNorm<Eigen::Infinity>();
-        double norminf_lam_a = lam_a.lpNorm<Eigen::Infinity>();
-        double norminf_lam = merit_safety_factor*std::max(norminf_lam_x, norminf_lam_a);
-
-        double initial_cost = computeCost(_f);
-
-        double cost_derr = computeCostDerivative(dx, _grad);
+        auto [mu_f, mu_c] = compute_merit_weights(lam_x, lam_a);
 
         casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], _g_);
         double constraint_violation = computeConstraintViolation(_g_, _x0_, _lbg_, _ubg_, _lbx_, _ubx_);
+        double merit = compute_merit_value(mu_f, mu_c,
+                        computeCost(_f),
+                        0.0, // defect norm
+                        constraint_violation);
 
-        double merit_der = cost_derr - norminf_lam * constraint_violation;
-        double initial_merit = initial_cost + norminf_lam*constraint_violation;
+        double merit_der = compute_merit_slope(mu_f, mu_c, computeCostDerivative(dx, _grad),
+                                                0.0, // defect norm
+                                                constraint_violation);
 
-        _alpha = 0.5;
+
+        _alpha = 1.0;
         bool accepted = false;
         while( _alpha > _alpha_min)
         {
             x = _x0_ + _alpha*dx;
+
             eval(_f, 0, x, false);
-            double candidate_cost = computeCost(_f);
 
             casadi_utils::toCasadiMatrix(x, _x_);
             _g_dict.input[_g.name_in(0)] = _x_;
             eval(_g, _g_dict);
             casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], _g_);
-            double candidate_constraint_violation = computeConstraintViolation(_g_, x, _lbg_, _ubg_, _lbx_, _ubx_);
 
-            double candidate_merit = candidate_cost + norminf_lam*candidate_constraint_violation;
-
+            // compute merit
+            double candidate_merit = compute_merit_value(mu_f, mu_c,
+                                     computeCost(_f),
+                                     0.0, // defect norm
+                                     computeConstraintViolation(_g_, _x0_, _lbg_, _ubg_, _lbx_, _ubx_));
             // evaluate Armijo's condition
-            accepted = fabs(candidate_merit - (initial_merit + _beta*_alpha*merit_der)) <= _merit_eps;
+            double armijo_merit = merit + _beta*_alpha*merit_der;
+            accepted = candidate_merit <= armijo_merit;// <= _merit_eps;
 
             _fpr.alpha = _alpha;
-            _fpr.cost = candidate_cost;
-            _fpr.constraint_violation = candidate_constraint_violation;
+            _fpr.cost = computeCost(_f);
+            _fpr.constraint_violation = computeConstraintViolation(_g_, _x0_, _lbg_, _ubg_, _lbx_, _ubx_);
             _fpr.merit = candidate_merit;
-            _fpr.armijo_merit = initial_merit + _beta*_alpha*merit_der;
+            _fpr.armijo_merit = armijo_merit;
             _fpr.step_length = _alpha * dx.norm();
             _fpr.accepted = accepted;
             _fpr.defect_norm = NAN;
             _fpr.hxx_reg = 0.0;
             _fpr.merit_der = merit_der;
-            _fpr.mu_c = norminf_lam;
-            _fpr.mu_f = NAN;
-
+            _fpr.mu_c = mu_c;
+            _fpr.mu_f = mu_f;
 
             if(accepted)
                 break;
@@ -573,6 +599,7 @@ public:
             x = _x0_;
             return false;
         }
+
         return true;
     }
 
@@ -827,7 +854,6 @@ private:
     Eigen::VectorXd _x0_;
     casadi::DM _x_;
     Eigen::VectorXd _g_;
-    double _merit_eps;
 
 
 };

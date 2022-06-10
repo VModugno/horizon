@@ -66,7 +66,6 @@ bool checkOptions(const std::string& key, py::handle& value, casadi::Dict& dict)
     if(setOption    <int>           (key,   "max_iter",                         value, dict)) return true;
     if(setOption    <bool>          (key,   "reinitialize_qpsolver",            value, dict)) return true;
     if(setOption    <double>        (key,   "merit_derivative_tolerance",       value, dict)) return true;
-    if(setOption    <double>        (key,   "merit_eps",                        value, dict)) return true;
     if(setOption    <double>        (key,   "constraint_violation_tolerance",   value, dict)) return true;
     if(setOption    <double>        (key,   "solution_convergence",             value, dict)) return true;
     if(setOption    <bool>          (key,   "use_golden_ratio_update",          value, dict)) return true;
