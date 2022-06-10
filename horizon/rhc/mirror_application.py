@@ -7,6 +7,12 @@ import numpy as np
 import rospkg
 import casadi as cs
 
+"""
+This application is basically what /playground/mirror/mirror_walk.py does, but using the tasks for everthing.
+There should be:
+- a config file with all the problem setting, constraints/costs
+- an execute file to set parameters, use the actionManager...
+"""
 urdf_path = rospkg.RosPack().get_path('mirror_urdf') + '/urdf/mirror.urdf'
 urdf = open(urdf_path, 'r').read()
 
