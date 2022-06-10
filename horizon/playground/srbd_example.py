@@ -22,7 +22,7 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 from scipy.spatial.transform import Rotation as R
 
-SOLVER = lambda: 'ipopt'
+SOLVER = lambda: 'gnsqp'
 
 def cost(K, fun):
     if SOLVER() == 'gnsqp':
@@ -621,11 +621,15 @@ for l in range(0, number_of_legs):
 
 
 d_initial_1 = -(initial_foot_position[fpi[0]][0:2] - initial_foot_position[fpi[2]][0:2])
-relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[fpi[0]][1] + c[fpi[2]][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
-relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[fpi[0]][0] + c[fpi[2]][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
+#relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[fpi[0]][1] + c[fpi[2]][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
+relative_pos_y_1_4 = prb.createCost("relative_pos_y_1_4", cost(1e2, -c[fpi[0]][1] + c[fpi[2]][1] - d_initial_1[1]))
+#relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[fpi[0]][0] + c[fpi[2]][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
+relative_pos_x_1_4 = prb.createCost("relative_pos_x_1_4", cost(1e2, -c[fpi[0]][0] + c[fpi[2]][0] - d_initial_1[0]))
 d_initial_2 = -(initial_foot_position[fpi[1]][0:2] - initial_foot_position[fpi[3]][0:2])
-relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[fpi[1]][1] + c[fpi[3]][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1] - max_clearance_y))
-relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[fpi[1]][0] + c[fpi[3]][0], bounds=dict(ub= d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x))
+#relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[fpi[1]][1] + c[fpi[3]][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1] - max_clearance_y))
+relative_pos_y_3_6 = prb.createCost("relative_pos_y_3_6", cost(1e2, -c[fpi[1]][1] + c[fpi[3]][1] - d_initial_2[1]))
+#relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[fpi[1]][0] + c[fpi[3]][0], bounds=dict(ub= d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x))
+relative_pos_x_3_6 = prb.createCost("relative_pos_x_3_6", cost(1e2, -c[fpi[1]][0] + c[fpi[3]][0] - d_initial_2[0]))
 
 min_f_gain = rospy.get_param("min_f_gain", 1e-2)
 print(f"min_f_gain: {min_f_gain}")
@@ -706,8 +710,8 @@ if SOLVER() == 'gnsqp':
             "max_iter": 1000,
             "alpha_min": 1e-9,
             "use_golden_ratio_update": False,
-            'warm_start_primal': True,
-            'warm_start_dual': True,
+            'warm_start_primal': False,
+            'warm_start_dual': False,
             'solution_convergence': 1e-3,
             'merit_derivative_tolerance': 1e-4,
             'constraint_violation_tolerance': ns * 1e-5,
@@ -792,14 +796,15 @@ if SOLVER() == 'gnsqp':
 
             'warm_start_primal': True,
             'warm_start_dual': True,
-            #'osqp.polish': True, # without this
-            #'osqp.polish_refine_iter': 100,
-            #'osqp.eps_abs': 1e-3,
-            #'osqp.eps_rel': 1e-3,
+            'osqp.polish': True, # without this
+            'osqp.polish_refine_iter': 100,
+            'osqp.eps_abs': 1e-3,
+            'osqp.eps_rel': 1e-3,
             'osqp.verbose': False,
-            #'osqp.rho': 0.01,
-            #'osqp.sigma': 1e-6,
-            #'osqp.scaling': 1,
+            'osqp.rho': 1e-6,
+            #'osqp.adaptive_rho': 1,
+            'osqp.sigma': 1e-6,
+            'osqp.scaling': 1,
             'osqp.scaled_termination': True
 
             # 'sparse': True,
@@ -863,28 +868,28 @@ while not rospy.is_shutdown():
     if(joy_msg.buttons[4]):
         if contact_model == 1 and number_of_legs == 4: #quadrupedal case
             wpg.set("trot")
-            relative_pos_y_1_4.setBounds(ub=d_initial_1[1] + max_clearance_y, lb=d_initial_1[1] - max_clearance_y)
-            relative_pos_y_3_6.setBounds(ub=d_initial_2[1] + max_clearance_y, lb=d_initial_2[1] - max_clearance_y)
+            #relative_pos_y_1_4.setBounds(ub=d_initial_1[1] + max_clearance_y, lb=d_initial_1[1] - max_clearance_y)
+            #relative_pos_y_3_6.setBounds(ub=d_initial_2[1] + max_clearance_y, lb=d_initial_2[1] - max_clearance_y)
         else:
             wpg.set("step")
-            relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - max_clearance_y)
-            relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - max_clearance_y)
-        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
-        relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
+            #relative_pos_y_1_4.setBounds(ub=d_initial_1[1], lb=d_initial_1[1] - max_clearance_y)
+            #relative_pos_y_3_6.setBounds(ub=d_initial_2[1], lb=d_initial_2[1] - max_clearance_y)
+        #relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
+        #relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
     elif (joy_msg.buttons[5]):
         wpg.set("jump")
         d_actual_1 = -(solution['c' + str(fpi[0])][0:2, 1] - solution['c' + str(fpi[2])][0:2, 1])
         d_actual_2 = -(solution['c' + str(fpi[1])][0:2, 1] - solution['c' + str(fpi[3])][0:2, 1])
-        relative_pos_y_1_4.setBounds(ub=d_actual_1[1], lb=d_actual_1[1] - max_clearance_y)
-        relative_pos_y_3_6.setBounds(ub=d_actual_2[1], lb=d_actual_2[1])
-        relative_pos_x_1_4.setBounds(ub=d_actual_1[0], lb=d_actual_1[0])
-        relative_pos_x_3_6.setBounds(ub=d_actual_2[0] + max_clearance_x, lb=d_actual_2[0] - max_clearance_x)
+        #relative_pos_y_1_4.setBounds(ub=d_actual_1[1], lb=d_actual_1[1] - max_clearance_y)
+        #relative_pos_y_3_6.setBounds(ub=d_actual_2[1], lb=d_actual_2[1])
+        #relative_pos_x_1_4.setBounds(ub=d_actual_1[0], lb=d_actual_1[0])
+        #relative_pos_x_3_6.setBounds(ub=d_actual_2[0] + max_clearance_x, lb=d_actual_2[0] - max_clearance_x)
     else:
         wpg.set("cazzi")
-        relative_pos_y_1_4.setBounds(ub=d_initial_1[1] + max_clearance_y, lb=d_initial_1[1] - max_clearance_y)
-        relative_pos_y_3_6.setBounds(ub=d_initial_2[1] + max_clearance_y, lb=d_initial_2[1] - max_clearance_y)
-        relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
-        relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
+        #relative_pos_y_1_4.setBounds(ub=d_initial_1[1] + max_clearance_y, lb=d_initial_1[1] - max_clearance_y)
+        #relative_pos_y_3_6.setBounds(ub=d_initial_2[1] + max_clearance_y, lb=d_initial_2[1] - max_clearance_y)
+        #relative_pos_x_1_4.setBounds(ub=d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x)
+        #relative_pos_x_3_6.setBounds(ub=d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x)
 
 
 
