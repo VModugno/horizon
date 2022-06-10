@@ -2,13 +2,15 @@ import casadi as cs
 import numpy as np
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.functions import RecedingConstraint, RecedingCost
+from casadi_kin_dyn import pycasadi_kin_dyn
 
 def _barrier(x):
     return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
 
+
 # todo this is a composition of atomic tasks: how to do?
 class ContactTask:
-    def __init__(self, name, prb, kin_dyn, frame, force, nodes):
+    def __init__(self, name, prb, kin_dyn, frame, force, nodes=None, kd_frame=None):
         """
         establish/break contact
         """
@@ -16,7 +18,9 @@ class ContactTask:
         self.prb = prb
         self.name = name
         self.frame = frame
-        self.initial_nodes = nodes
+        self.initial_nodes = [] if nodes is None else nodes
+        self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED if kd_frame is None else kd_frame
+
         # todo add in opts
         self.fmin = 10.
 
@@ -28,35 +32,19 @@ class ContactTask:
         # todo are these part of the contact class? Should they belong somewhere else?
         # todo auto-generate constraints here given the method (inheriting the name of the method
         self.constraints = list()
-        self._zero_vel_constr = self._zero_velocity(self.initial_nodes) # this is easily a cartesianTask
+        self._zero_vel_constr = self._zero_velocity(self.initial_nodes)  # this is easily a cartesianTask
         self._unil_constr = self._unilaterality(self.initial_nodes)
         self._friction_constr = self._friction(self.initial_nodes)
+        self._vertical_takeoff_consrt = self._vertical_takeoff()
 
         self.constraints.append(self._zero_vel_constr)
         self.constraints.append(self._unil_constr)
         self.constraints.append(self._friction_constr)
+        self.constraints.append(self._vertical_takeoff_consrt)
         # ===========================================
 
         self.nodes = []
-        # initialize contact nodes
-        # todo default action?
-        # todo probably better to keep track of nodes, divided by action
         self.actions = []
-        # setNodes(nodes1) ---> self.actions.append(nodes1)
-        # setNodes(nodes2) ---> self.actions.append(nodes2)
-        # self.actions = [[nodes1], [nodes2]]
-        # setNodes(nodes3, reset)
-        # self.actions = [[nodes3]]
-        # self.removeAction()
-        # should I keep track of these?
-        # self.lift_nodes = []
-        # self.contact_nodes = []
-        # self.unilat_nodes = []
-        # self.zero_force_nodes = []
-        # self.contact_nodes = list(range(1, self.prb.getNNodes()))# all the nodes
-        # self.unilat_nodes = list(range(self.prb.getNNodes() - 1))
-        # todo reset all the other "contact" constraints on these nodes
-        # self._reset_contact_constraints(self.action.frame, nodes_in_horizon_x)
         self._vertical_takeoff_nodes = []
 
     def setNodes(self, nodes):
@@ -80,17 +68,14 @@ class ContactTask:
         self._unil_constr.setNodes(nodes_on_u, erasing=erasing)
         # self._friction_constr[self.frame].setNodes(nodes_on_u, erasing=erasing)  # input
 
+        if nodes_off_x:
+            nodes_ver = [nodes_off_x[0], nodes_off_x[-1]]
+            self._vertical_takeoff_nodes.extend(nodes_ver)
+            self._vertical_takeoff_consrt.setNodes(self._vertical_takeoff_nodes, erasing=erasing)
+
         f = self.force
         fzero = np.zeros(f.getDim())
         f.setBounds(fzero, fzero, nodes_off_u)
-
-        print(f'contact {self.name} nodes:')
-        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
-        print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
-        print(f'force: ')
-        print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
-        print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
-        print('===================================')
 
     def _zero_velocity(self, nodes=None):
         """
@@ -99,13 +84,10 @@ class ContactTask:
         active_nodes = [] if nodes is None else nodes
 
         # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
-        cartesian_constr = CartesianTask('zero_velocity', self.prb, self.kin_dyn, self.frame, nodes=self.initial_nodes, dim=[0, 1, 2] , cartesian_type='velocity')
+        cartesian_constr = CartesianTask('zero_velocity', self.prb, self.kin_dyn, self.frame, nodes=self.initial_nodes,
+                                         indices=[0, 1, 2, 4, 5], cartesian_type='velocity')
         constr = cartesian_constr.getConstraint()
-        # dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
-        # todo how do I find that there is a variable called 'v' which represent velocity?
-        # ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
-        #
-        # constr = self.prb.createConstraint(f"{self.frame}_vel", ee_v, nodes=[])
+
         return constr
 
     def _unilaterality(self, nodes=None):
@@ -151,6 +133,16 @@ class ContactTask:
 
         self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
                              ub=np.full(self.force.getDim(), np.inf))
+
+    def _vertical_takeoff(self):
+
+        dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
+        ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+        ee_v_ang = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_angular']
+        lat_vel = cs.vertcat(ee_v[0:2], ee_v_ang)
+        vert = self.prb.createConstraint(f"{self.frame}_vert", lat_vel, nodes=[])
+
+        return vert
 
     def getNodes(self):
         return self.nodes

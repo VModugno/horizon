@@ -10,7 +10,9 @@ from horizon.problem import Problem
 from horizon.utils import utils, kin_dyn, plotter
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
-from horizon.rhc import receding_tasks_spot as rcdt
+from horizon.rhc.tasks.contactTaskMirror import ContactTask
+# from horizon.rhc.receding_tasks_mirror import Contact
+from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.ros import replay_trajectory
 from horizon import misc_function as misc
 import rospy
@@ -187,9 +189,12 @@ class ActionManager:
         self.foot_tgt_constr = dict()
 
         for frame in self.contacts:
-            self.contact_constr[frame] = rcdt.Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
-            self.z_constr[frame] = rcdt.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
-            self.foot_tgt_constr[frame] = rcdt.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0, 1])
+            # self.contact_constr[frame] = Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
+            # self.z_constr[frame] = rcdt.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
+            # self.z_constr[frame] = rcdt.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0,1])
+            self.contact_constr[frame] = ContactTask(f'{frame}_contact', self.prb, self.kd, frame, self.forces[frame])
+            self.z_constr[frame] = CartesianTask(f'{frame}_z_constr', self.prb, self.kd, frame, indices=[2], weight=1, fun_type='constraint', cartesian_type='position')
+            self.foot_tgt_constr[frame] = CartesianTask(f'{frame}_foot_tgt_constr', self.prb, self.kd, frame, indices=[0, 1], weight=1, fun_type='constraint', cartesian_type='position')
 
     def setContact(self, frame, nodes):
         """
@@ -568,7 +573,7 @@ if __name__ == '__main__':
 
     am._walk([10, 200], [0, 2, 1, 3])
     # am._trot([50, 100])
-    # am._jump([55, 65])
+    # am._jump([55, 60])
 
     # =========================================
 

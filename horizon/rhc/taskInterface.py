@@ -3,7 +3,7 @@ from horizon.utils import utils, kin_dyn
 from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
-from horizon.rhc.tasks.contactTask import ContactTask
+from horizon.rhc.tasks.contactTaskSpot import ContactTask
 from typing import List, Dict
 import numpy as np
 

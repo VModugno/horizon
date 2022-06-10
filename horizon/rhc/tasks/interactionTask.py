@@ -4,8 +4,8 @@ import numpy as np
 
 class InteractionTask(Task):
     # todo this should be general, not action-dependent
-    def __init__(self, name, prb: Problem, kin_dyn, frame, nodes=None, dim=None, weight=None):
-        super().__init__(name, prb, kin_dyn, frame, nodes, dim, weight)
+    def __init__(self, name, prb: Problem, kin_dyn, frame, nodes=None, indices=None, weight=None):
+        super().__init__(name, prb, kin_dyn, frame, nodes, indices, weight)
         self._initialize()
 
     def _initialize(self):
@@ -13,7 +13,7 @@ class InteractionTask(Task):
         self.nodes = []
         self.actions = []
 
-        self.f = self.prb.getVariables('f_' + self.frame)[self.dim]
+        self.f = self.prb.getVariables('f_' + self.frame)[self.indices]
         fzero = np.zeros(self.f.getDim())
         self.f.setBounds(fzero, fzero, self.initial_nodes)
 

@@ -5,8 +5,8 @@ import numpy as np
 
 # todo name is useless
 class CartesianTask(Task):
-    def __init__(self, name, prb: Problem, kin_dyn, frame, nodes=None, dim=None, weight=None, kd_frame=None, fun_type=None, cartesian_type=None):
-        super().__init__(name, prb, kin_dyn, frame, nodes, dim, weight, kd_frame)
+    def __init__(self, name, prb: Problem, kin_dyn, frame, nodes=None, indices=None, weight=None, kd_frame=None, fun_type=None, cartesian_type=None):
+        super().__init__(name, prb, kin_dyn, frame, nodes, indices, weight, kd_frame)
 
         self.instantiator = self.prb.createConstraint if fun_type is None else fun_type
         self.cartesian_type = 'position' if cartesian_type is None else cartesian_type
@@ -20,28 +20,35 @@ class CartesianTask(Task):
 
     def _initialize(self):
         q = self.prb.getVariables('q')
+        v = self.prb.getVariables('v')
 
         # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
         if self.cartesian_type == 'position':
             fk = cs.Function.deserialize(self.kin_dyn.fk(self.frame))
-            ee_p = fk(q=q)['ee_pos']
+            ee_p_t = fk(q=q)['ee_pos']
+            # ee_p_r = fk(q=q)['ee_rot']
+            # ee_p = cs.vertcat(ee_p_t, ee_p_r)
+
             frame_name = f'{self.name}_{self.frame}_pos'
-            self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.dim.size)
-            fun = ee_p[self.dim] - self.pos_tgt
+            self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+            fun = ee_p_t[self.indices] - self.pos_tgt
         elif self.cartesian_type == 'velocity':
-            v = self.prb.getVariables('v')
             dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
-            ee_v = dfk(q=q, qdot=v)['ee_vel_linear']
+            ee_v_t = dfk(q=q, qdot=v)['ee_vel_linear']
+            ee_v_r = dfk(q=q, qdot=v)['ee_vel_angular']
+            ee_v = cs.vertcat(ee_v_t, ee_v_r)
+
             frame_name = f'{self.name}_{self.frame}_vel'
-            self.vel_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.dim.size)
-            fun = ee_v[self.dim] - self.vel_tgt
+            self.vel_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+            fun = ee_v[self.indices] - self.vel_tgt
         elif self.cartesian_type == 'acceleration':
-            v = self.prb.getVariables('v')
             ddfk = cs.Function.deserialize(self.kin_dyn.frameAcceleration(self.frame, self.kd_frame))
-            ee_a = ddfk(q=q, qdot=v)['ee_acc_linear']
+            ee_a_t = ddfk(q=q, qdot=v)['ee_acc_linear']
+            ee_a_r = ddfk(q=q, qdot=v)['ee_acc_angular']
+            ee_a = cs.vertcat(ee_a_t, ee_a_r)
             frame_name = f'{self.name}_{self.frame}_acc'
-            self.acc_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.dim.size)
-            fun = ee_a[self.dim] - self.acc_tgt
+            self.acc_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+            fun = ee_a[self.indices] - self.acc_tgt
 
         self.constr = self.instantiator(f'{frame_name}_task', self.weight * fun, nodes=self.initial_nodes)
         # todo should I keep track of the nodes here?
