@@ -26,7 +26,7 @@ class CartesianTask(Task):
         if self.cartesian_type == 'position':
             fk = cs.Function.deserialize(self.kin_dyn.fk(self.frame))
             ee_p_t = fk(q=q)['ee_pos']
-            # ee_p_r = fk(q=q)['ee_rot']
+            ee_p_r = fk(q=q)['ee_rot']
             # ee_p = cs.vertcat(ee_p_t, ee_p_r)
 
             frame_name = f'{self.name}_{self.frame}_pos'

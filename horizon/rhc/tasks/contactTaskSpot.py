@@ -83,13 +83,13 @@ class ContactTask:
         fzero = np.zeros(f.getDim())
         f.setBounds(fzero, fzero, nodes_off_u)
 
-        print(f'contact {self.name} nodes:')
-        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
-        print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
-        print(f'force: ')
-        print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
-        print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
-        print('===================================')
+        # print(f'contact {self.name} nodes:')
+        # print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
+        # print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
+        # print(f'force: ')
+        # print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
+        # print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
+        # print('===================================')
 
     def _zero_velocity(self, nodes=None):
         """
