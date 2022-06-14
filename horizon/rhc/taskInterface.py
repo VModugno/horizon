@@ -4,7 +4,7 @@ from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.rhc.tasks.posturalTask import PosturalTask
-from horizon.rhc.tasks.contactTaskMirror import ContactTask
+from horizon.rhc.plugins.contactTaskMirror import ContactTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
 from typing import List, Dict
 import numpy as np

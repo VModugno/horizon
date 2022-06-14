@@ -472,10 +472,6 @@ class HorizonWpg:
 
         return msgs
 
-    # barrier function
-    def _barrier(x):
-        return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
-
     # z trajectory
     def _z_trj(tau):
         return 64. * tau ** 3 * (1 - tau) ** 3
@@ -483,12 +479,12 @@ class HorizonWpg:
     def _set_step_ctrl(self):
 
         for t in self.base_goal_tasks:
-            t.setNodes([], erasing=True)
+            t.setNodes([])
 
     def _set_base_ctrl(self):
 
         for t in self.base_goal_tasks:
-            t.setNodes([self.N], erasing=True)
+            t.setNodes([self.N])
 
     def _set_gait_pattern(self, k0: int):
         """
