@@ -3,9 +3,7 @@ import numpy as np
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.functions import RecedingConstraint, RecedingCost
 from casadi_kin_dyn import pycasadi_kin_dyn
-
-def _barrier(x):
-    return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
+from horizon.utils.utils import barrier as barrier_fun
 
 
 # todo this is a composition of atomic tasks: how to do?
@@ -106,7 +104,7 @@ class ContactTask:
         """
         active_nodes = [] if nodes is None else nodes
 
-        fcost = _barrier(self.force[2] - self.fmin)
+        fcost = barrier_fun(self.force[2] - self.fmin)
 
         # todo or createIntermediateCost?
         barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e-3 * fcost, nodes=active_nodes)
@@ -120,7 +118,7 @@ class ContactTask:
 
         f = self.force
         mu = 0.5
-        fcost = _barrier(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
+        fcost = barrier_fun(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
         barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=active_nodes)
         return barrier
 

@@ -69,38 +69,35 @@ class HorizonWpg:
         # final goal (a.k.a. integral velocity control)
         self.ptgt_final = [0, 0, 0]
         self.vmax = [0.05, 0.05, 0.05]
-        self.ptgt = self.ti.prb.createParameter('ptgt', 3)
+        # self.ptgt = self.ti.prb.createParameter('ptgt', 3)
 
-        goalx = self.ti.prb.createFinalConstraint("final_x", self.ti.model.q[0] - self.ptgt[0])
-        # goalx = {'type': 'cartesian',
-        #          'frame': 'base_link',
-        #          'name': 'final_base_x',
-        #          'dim': [0],
-        #          'nodes': [self.N]}
+        # goalx = self.ti.prb.createFinalConstraint("final_x", self.ti.model.q[0] - self.ptgt[0])
+        goalx = {'type': 'Postural',
+                 'name': 'final_base_x',
+                 'indices': [0],
+                 'nodes': [self.N]}
 
-        goaly = self.ti.prb.createFinalResidual("final_y", 1e3 * (self.ti.model.q[1] - self.ptgt[1]))
-        # goaly = {'type': 'cartesian',
-        #          'frame': 'base_link',
-        #          'name': 'final_base_y',
-        #          'dim': [1],
-        #          'nodes': [self.N],
-        #          'fun_type': 'cost',
-        #          'weight': 1e3}
+        # goaly = self.ti.prb.createFinalResidual("final_y", 1e3 * (self.ti.model.q[1] - self.ptgt[1]))
+        goaly = {'type': 'Postural',
+                 'name': 'final_base_y',
+                 'indices': [1],
+                 'nodes': [self.N],
+                 'fun_type': 'cost',
+                 'weight': 1e3}
 
-        goalrz = self.ti.prb.createFinalResidual("final_rz", 1e3 * (self.ti.model.q[5] - self.ptgt[2]))
-        # goalrz = {'type': 'cartesian',
-        #                'frame': 'base_link',
-        #                'name': 'final_base_y',
-        #                'dim': [5],
-        #                'nodes': [self.N],
-        #                'fun_type': 'cost',
-        #                'weight': 1e3}
+        # goalrz = self.ti.prb.createFinalResidual("final_rz", 1e3 * (self.ti.model.q[5] - self.ptgt[2]))
+        goalrz = {'type': 'Postural',
+                  'name': 'final_base_rz',
+                  'indices': [5],
+                  'nodes': [self.N],
+                  'fun_type': 'cost',
+                  'weight': 1e3}
 
-        # self.ti.setTask(goalx)
-        # self.ti.setTask(goaly)
-        # self.ti.setTask(goalrz)
+        self.ti.setTask(goalx)
+        self.ti.setTask(goaly)
+        self.ti.setTask(goalrz)
 
-        self.base_goal_tasks = [goalx, goaly, goalrz]
+        self.base_goal_tasks = [self.ti.getTask('final_base_x'), self.ti.getTask('final_base_y'), self.ti.getTask('final_base_rz')]
 
         q0 = self.ti.q0
         v0 = self.ti.v0
@@ -112,23 +109,58 @@ class HorizonWpg:
         # regularization costs
 
         # base rotation
-        self.ti.prb.createResidual("min_rot", 1e-4 * (self.ti.model.q[3:5] - q0[3:5]))
+        # self.ti.prb.createResidual("min_rot", 1e-4 * (self.ti.model.q[3:5] - q0[3:5]))
+        minrot = {'type': 'Postural',
+                  'name': 'min_rot',
+                  'indices': [3, 4],
+                  'nodes': list(range(self.N+1)),
+                  'fun_type': 'cost',
+                  'weight': 1e-4}
+
+        self.ti.setTask(minrot)
+
 
         # joint posture
-        self.ti.prb.createResidual("min_q", 1e-1 * (self.ti.model.q[7:] - q0[7:]))
+        # self.ti.prb.createResidual("min_q", 1e-1 * (self.ti.model.q[7:] - q0[7:]))
+        minq = {'type': 'Postural',
+                  'name': 'min_q',
+                  'indices': list(range(7, self.ti.model.q.getDim())),
+                  'nodes': list(range(self.N+1)),
+                  'fun_type': 'cost',
+                  'weight': 1e-1}
+
+        self.ti.setTask(minq)
 
         # joint velocity
         self.ti.prb.createResidual("min_v", 1e-2 * self.ti.model.v)
 
         # final posture
-        self.ti.prb.createFinalResidual("min_qf", 1e1 * (self.ti.model.q[7:] - q0[7:]))
+        # self.ti.prb.createFinalResidual("min_qf", 1e1 * (self.ti.model.q[7:] - q0[7:]))
+        minqf = {'type': 'Postural',
+                  'name': 'min_qf',
+                  'indices': list(range(7, self.ti.model.q.getDim())),
+                  'nodes': [50],
+                  'fun_type': 'cost',
+                  'weight': 1e1}
+
+        self.ti.setTask(minqf)
 
         # joint limits
-        jlim_cost = HorizonWpg._barrier(self.ti.model.q[8:10] - (-2.55)) + \
-                    HorizonWpg._barrier(self.ti.model.q[14:16] - (-2.55)) + \
-                    HorizonWpg._barrier(self.ti.model.q[20:22] - (-2.55))
 
-        self.ti.model.prb.createCost(f'jlim', 10 * jlim_cost)
+        # jlim_cost = HorizonWpg._barrier(self.ti.model.q[8:10] - (-2.55)) + \
+        #             HorizonWpg._barrier(self.ti.model.q[14:16] - (-2.55)) + \
+        #             HorizonWpg._barrier(self.ti.model.q[20:22] - (-2.55))
+        #
+        # self.ti.model.prb.createCost(f'jlim', 10 * jlim_cost)
+        jlimMin = {'type': 'JointLimits',
+                  'name': 'jlim_min',
+                  'indices': [8, 9, 14, 15, 20, 21],
+                  'nodes': list(range(self.N+1)),
+                  'fun_type': 'cost',
+                  'weight': 10,
+                  'bound_scaling': 0.95}
+
+        self.ti.setTask(jlimMin)
 
         # regularize input acceleration
         self.ti.prb.createIntermediateResidual("min_q_ddot", 1e-1 * self.ti.model.a)
@@ -163,7 +195,7 @@ class HorizonWpg:
             self.ti.prb.createIntermediateCost(f'{frame}_rot', 1e1 * rot_err)
 
             # add contact task (by dict)
-            contact = {'type': 'contact',
+            contact = {'type': 'Contact',
                        'frame': frame,
                        'name': 'contact_' + frame}
 
@@ -171,7 +203,7 @@ class HorizonWpg:
 
             # self.contact_task[frame] = contact
 
-            z_task_dict = {'type': 'cartesian',
+            z_task_dict = {'type': 'Cartesian',
                            'name': f'{frame}_z_task',
                            'frame': frame,
                            'indices': [2],
@@ -255,9 +287,10 @@ class HorizonWpg:
         kf_rotz = int(abs((math.sin(rotz / 2.0) - self.solution['q'][5, 0]) / self.vmax[2] / self.dt) + 0.5)
         kf = k + max((kf_x, kf_y, kf_rotz))
         print(f'[k = {k}] target {self.ptgt_final} to be reached at kf = {kf}')
-        # self.ti.getTask('final_base_x').setRef(self.ptgt_final[0])
-        # self.ti.getTask('final_base_y').setRef(self.ptgt_final[1])
-        self.ptgt.assign(self.ptgt_final, nodes=self.N)
+        self.ti.getTask('final_base_x').setRef(self.ptgt_final[0])
+        self.ti.getTask('final_base_y').setRef(self.ptgt_final[1])
+        self.ti.getTask('final_base_rz').setRef(self.ptgt_final[2])
+        # self.ptgt.assign(self.ptgt_final, nodes=self.N)
 
     def set_mode(self, mode: str):
         if mode == 'base_ctrl':

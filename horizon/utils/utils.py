@@ -148,3 +148,6 @@ def double_integrator(q, qdot, qddot):
     xdot = cs.vertcat(qdot, qddot)
     return x, xdot
 
+def barrier(x):
+    return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
+
