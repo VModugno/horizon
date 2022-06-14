@@ -3,8 +3,9 @@ from horizon.utils import utils, kin_dyn
 from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
-from horizon.rhc.tasks.contactTaskSpot import ContactTask
+from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.contactTaskMirror import ContactTask
+from horizon.rhc.tasks.limitsTask import JointLimitsTask
 from typing import List, Dict
 import numpy as np
 
@@ -135,24 +136,27 @@ class TaskInterface:
 
         task_type = task_description['type']
         task_name = task_description['name']
-        task_frame = task_description['frame']
+        task_frame = None if 'frame' not in task_description else task_description['frame']
         task_indices = [0, 1, 2] if 'indices' not in task_description else task_description['indices'] # todo this is wrong
         task_nodes = [] if 'nodes' not in task_description else task_description['nodes']
         task_fun_type = None if 'fun_type' not in task_description else task_description['fun_type']
         task_weight = 1.0 if 'weight' not in task_description else task_description['weight']
 
-        if task_type == 'cartesian':
-            if 'options' in task_description and task_description['options']['cartesian_type']:
-                cartesian_type = task_description['options']['cartesian_type']
-            else:
-                cartesian_type = 'position'
+        cartesian_type = 'position' if 'cartesian_type' not in task_description else task_description['cartesian_type']
+        bound_scaling = 1. if 'bound_scaling' not in task_description else task_description['bound_scaling']
+
+        if task_type == 'Cartesian':
             task = CartesianTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, task_weight, cartesian_type=cartesian_type, fun_type=task_fun_type)
-        elif task_type == 'force':
+        elif task_type == 'Force':
             # todo this generates another variable (f_c) for the frame of the contact: when to initialize the model?
             self.model.setContactFrame(task_frame)
             task = InteractionTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, weight=task_weight)
-        elif task_type == 'contact':
-            task = ContactTask(task_name, self.prb, self.kd, task_frame, self.prb.getVariables('f_' +task_frame), task_nodes)
+        elif task_type == 'Contact':
+            task = ContactTask(task_name, self.prb, self.kd, task_frame, self.prb.getVariables('f_' + task_frame), task_nodes)
+        elif task_type == 'Postural':
+            task = PosturalTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, task_weight, fun_type=task_fun_type, postural_ref=self.q0[task_indices])
+        elif task_type == 'JointLimits':
+            task = JointLimitsTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, task_weight, fun_type=task_fun_type, bound_scaling=bound_scaling)
         else:
             raise Exception('Unknown task type {}'.format(task_type))
 
