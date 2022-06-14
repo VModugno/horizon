@@ -112,7 +112,7 @@ lock = Lock()
 def on_step_recv(msg: PointStamped):
     lock.acquire()
 
-    l = int(input('I am sorry to bother you, which frame should I move ?'))
+    l = str(input('I am sorry to bother you, which frame should I move ?'))
     cl = float(input('I am sorry to bother you, which clearance should I set ?'))
 
     # create a gait pattern

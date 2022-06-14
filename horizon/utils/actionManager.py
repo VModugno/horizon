@@ -1,23 +1,19 @@
 import copy
 
-import matplotlib.pyplot
 import numpy as np
 from casadi_kin_dyn import pycasadi_kin_dyn
 import casadi as cs
-from typing import List
 
 from horizon.problem import Problem
-from horizon.utils import utils, kin_dyn, plotter
+from horizon.utils import utils, kin_dyn
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
-from horizon.rhc.tasks.contactTaskMirror import ContactTask
-# from horizon.rhc.receding_tasks_mirror import Contact
 from horizon.rhc.tasks.cartesianTask import CartesianTask
+from horizon.rhc.plugins
+# from horizon.rhc.receding_tasks_mirror import Contact
 from horizon.ros import replay_trajectory
-from horizon import misc_function as misc
 import rospy
 import os
-from horizon.functions import Constraint, Cost, RecedingCost, RecedingConstraint
 import subprocess
 
 # barrier function
