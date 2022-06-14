@@ -4,6 +4,7 @@ from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.rhc.tasks.contactTaskSpot import ContactTask
+from horizon.rhc.tasks.contactTaskMirror import ContactTask
 from typing import List, Dict
 import numpy as np
 
@@ -135,7 +136,7 @@ class TaskInterface:
         task_type = task_description['type']
         task_name = task_description['name']
         task_frame = task_description['frame']
-        task_dim = [1, 2, 3] if 'dim' not in task_description else task_description['dim'] # todo this is wrong
+        task_indices = [0, 1, 2] if 'indices' not in task_description else task_description['indices'] # todo this is wrong
         task_nodes = [] if 'nodes' not in task_description else task_description['nodes']
         task_fun_type = None if 'fun_type' not in task_description else task_description['fun_type']
         task_weight = 1.0 if 'weight' not in task_description else task_description['weight']
@@ -145,16 +146,19 @@ class TaskInterface:
                 cartesian_type = task_description['options']['cartesian_type']
             else:
                 cartesian_type = 'position'
-            task = CartesianTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_dim, task_weight, cartesian_type=cartesian_type, fun_type=task_fun_type)
+            task = CartesianTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, task_weight, cartesian_type=cartesian_type, fun_type=task_fun_type)
         elif task_type == 'force':
             # todo this generates another variable (f_c) for the frame of the contact: when to initialize the model?
             self.model.setContactFrame(task_frame)
-            task = InteractionTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_dim, task_fun_type, weight=task_weight)
+            task = InteractionTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, weight=task_weight)
         elif task_type == 'contact':
             task = ContactTask(task_name, self.prb, self.kd, task_frame, self.prb.getVariables('f_' +task_frame), task_nodes)
         else:
             raise Exception('Unknown task type {}'.format(task_type))
 
+        self.task_list.append(task)
+
+    def addTask(self, task):
         self.task_list.append(task)
 
     def getTask(self, task_name):

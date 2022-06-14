@@ -77,6 +77,14 @@ class ContactTask:
         fzero = np.zeros(f.getDim())
         f.setBounds(fzero, fzero, nodes_off_u)
 
+        print(f'contact {self.name} nodes:')
+        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
+        print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
+        print(f'force: ')
+        print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
+        print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
+        print('===================================')
+
     def _zero_velocity(self, nodes=None):
         """
         equality constraint
@@ -85,11 +93,13 @@ class ContactTask:
 
         # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
         cartesian_constr = CartesianTask('zero_velocity', self.prb, self.kin_dyn, self.frame, nodes=self.initial_nodes,
-                                         indices=[0, 1, 2, 4, 5], cartesian_type='velocity')
+                                         indices=[0, 1, 2, 3, 4, 5], cartesian_type='velocity')
         constr = cartesian_constr.getConstraint()
 
         return constr
 
+    # *00 alpha=0.000e+00  reg=1.000e+00  merit=9.911e+05  dm=-9.911e+05  mu_f=7.616e+03  mu_c=7.355e+03  cost=9.474e-03  delta_u=4.669e-01  constr=1.348e+02  gap=6.897e-12
+    # *00 alpha=0.000e+00  reg=1.000e+00  merit=9.983e+05  dm=-9.983e+05  mu_f=7.616e+03  mu_c=7.408e+03  cost=9.474e-03  delta_u=4.669e-01  constr=1.348e+02  gap=6.897e-12
     def _unilaterality(self, nodes=None):
         """
         barrier cost
@@ -99,7 +109,7 @@ class ContactTask:
         fcost = _barrier(self.force[2] - self.fmin)
 
         # todo or createIntermediateCost?
-        barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e2 * fcost, nodes=active_nodes)
+        barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e-3 * fcost, nodes=active_nodes)
         return barrier
 
     def _friction(self, nodes=None):
@@ -114,6 +124,15 @@ class ContactTask:
         barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=active_nodes)
         return barrier
 
+    def _vertical_takeoff(self):
+
+        dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
+        ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+        ee_v_ang = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_angular']
+        lat_vel = cs.vertcat(ee_v[0:2], ee_v_ang)
+        vert = self.prb.createConstraint(f"{self.frame}_vert", lat_vel, nodes=[])
+
+        return vert
     def _reset(self, nodes):
 
         # todo reset task
@@ -133,16 +152,6 @@ class ContactTask:
 
         self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
                              ub=np.full(self.force.getDim(), np.inf))
-
-    def _vertical_takeoff(self):
-
-        dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
-        ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
-        ee_v_ang = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_angular']
-        lat_vel = cs.vertcat(ee_v[0:2], ee_v_ang)
-        vert = self.prb.createConstraint(f"{self.frame}_vert", lat_vel, nodes=[])
-
-        return vert
 
     def getNodes(self):
         return self.nodes

@@ -27,7 +27,7 @@ q_init = {}
 
 for i in range(3):
     q_init[f'arm_{i + 1}_joint_2'] = -1.9
-    q_init[f'arm_{i + 1}_joint_3'] = 2.30
+    q_init[f'arm_{i + 1}_joint_3'] = -2.30
     q_init[f'arm_{i + 1}_joint_5'] = -0.4
 
 base_init = np.array([0, 0, 0.72, 0, 0, 0, 1])
