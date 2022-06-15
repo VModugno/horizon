@@ -5,24 +5,18 @@ from casadi_kin_dyn import pycasadi_kin_dyn
 
 # todo name is useless
 class Task:
-    def __init__(self, name, prb: Problem, kin_dyn, frame, nodes=None, indices=None, weight=None, kd_frame=None):
+    def __init__(self, prb: Problem, kin_dyn, task_node):
 
-        # todo name can be part of action
-        self.name = name
+        task_fun_type = None if 'fun_type' not in task_node else task_node['fun_type']
+
         self.prb = prb
         self.kin_dyn = kin_dyn
-        self.frame = frame
-        self.nodes = None
-
-        if indices is None:
-            self.indices = np.array([0, 1, 2]).astype(int)
-        else:
-            self.indices = np.array(indices)
-
-        self.weight = 1. if weight is None else weight
-        self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED if kd_frame is None else kd_frame
-
-        self.initial_nodes = [] if nodes is None else nodes
+        self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED if 'kd_frame' not in task_node else task_node['kd_frame']
+        self.name = task_node['name']
+        self.frame = None if 'frame' not in task_node else task_node['frame']
+        self.nodes = [] if 'nodes' not in task_node else task_node['nodes']
+        self.indices = np.array([0, 1, 2]).astype(int) if 'indices' not in task_node else np.array(task_node['indices'])
+        self.weight = 1.0 if 'weight' not in task_node else task_node['weight']
 
     def setNodes(self, nodes):
 

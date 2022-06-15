@@ -5,18 +5,18 @@ import numpy as np
 
 # todo name is useless
 class PosturalTask(Task):
-    def __init__(self, name, prb: Problem, kin_dyn, frame, nodes=None, indices=None, weight=None, kd_frame=None, fun_type=None, postural_ref=None):
-        super().__init__(name, prb, kin_dyn, frame, nodes, indices, weight, kd_frame)
+    def __init__(self, prb: Problem, kin_dyn, task_node):
+        super().__init__(prb, kin_dyn, task_node)
 
-        if postural_ref is None:
-            raise ValueError('Postural reference is not set')
+        # if 'postural_ref' not in task_node:
+        #     raise ValueError('Postural reference is not set')
 
-        self.q0_ref = postural_ref
-        self.instantiator = self.prb.createConstraint if fun_type is None else fun_type
+        self.q0_ref = task_node['postural_ref'][self.indices]
+        self.fun_type = 'constraint' if 'fun_type' not in task_node else task_node['fun_type']
 
-        if fun_type == 'constraint':
+        if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint
-        elif fun_type == 'cost':
+        elif self.fun_type == 'cost':
             self.instantiator = self.prb.createResidual
 
         self._initialize()
@@ -25,7 +25,7 @@ class PosturalTask(Task):
         self.q = self.prb.getVariables('q')
         name_fun = f'postural_{self.name}'# '_'.join(map(str, self.indices))
         self.q0 = self.prb.createParameter(f'{name_fun}_tgt', self.indices.size)
-        self.fun = self.instantiator(f'{name_fun}_task', self.weight * (self.q[self.indices] - self.q0), nodes=self.initial_nodes)
+        self.fun = self.instantiator(f'{name_fun}_task', self.weight * (self.q[self.indices] - self.q0), nodes=self.nodes)
         self.q0.assign(self.q0_ref)
 
     def getConstraint(self):

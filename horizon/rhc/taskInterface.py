@@ -4,11 +4,10 @@ from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.rhc.tasks.posturalTask import PosturalTask
-from horizon.rhc.plugins.contactTaskMirror import ContactTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
 from typing import List, Dict
 import numpy as np
-
+from horizon.rhc import task_factory, plugin_handler
 
 class ModelDescription:
     def __init__(self, problem, model):
@@ -77,6 +76,16 @@ class TaskInterface:
                  contacts: List[str] = None): # todo this is wrong, it should not be listed in the initialization
 
         # get the model
+
+        # here I register the the default tasks
+        # todo: should I do it here?
+        task_factory.register('Cartesian', CartesianTask)
+        task_factory.register('Force', InteractionTask)
+        task_factory.register('Postural', PosturalTask)
+        task_factory.register('JointLimits', JointLimitsTask)
+
+        plugin_handler.load_plugins(['horizon.rhc.plugins.contactTaskMirror'])
+
         self.urdf = urdf.replace('continuous', 'revolute')
         self.fixed_joints = [] if fixed_joints is None else fixed_joints.copy()
         self.fixed_joints_pos = [q_init[k] for k in self.fixed_joints]
@@ -130,39 +139,36 @@ class TaskInterface:
         self.model.setDynamics()
 
     # a possible method could read from yaml and create the task list
+
+    # def setTaskfromYaml(self, task_yaml):
+    #     tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
+
     # here I do it manually
+    def setTaskfromDict(self, task_description):
 
-    def setTask(self, task_description):
+        # todo how to automatically provide more info // or do more actions
+        # automatically provided info:
+        task_description['postural_ref'] = self.q0
+        task = task_factory.create(self.prb, self.kd, task_description)
 
-        task_type = task_description['type']
-        task_name = task_description['name']
-        task_frame = None if 'frame' not in task_description else task_description['frame']
-        task_indices = [0, 1, 2] if 'indices' not in task_description else task_description['indices'] # todo this is wrong
-        task_nodes = [] if 'nodes' not in task_description else task_description['nodes']
-        task_fun_type = None if 'fun_type' not in task_description else task_description['fun_type']
-        task_weight = 1.0 if 'weight' not in task_description else task_description['weight']
-
-        cartesian_type = 'position' if 'cartesian_type' not in task_description else task_description['cartesian_type']
-        bound_scaling = 1. if 'bound_scaling' not in task_description else task_description['bound_scaling']
-
-        if task_type == 'Cartesian':
-            task = CartesianTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, task_weight, cartesian_type=cartesian_type, fun_type=task_fun_type)
-        elif task_type == 'Force':
-            # todo this generates another variable (f_c) for the frame of the contact: when to initialize the model?
-            self.model.setContactFrame(task_frame)
-            task = InteractionTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, weight=task_weight)
-        elif task_type == 'Contact':
-            task = ContactTask(task_name, self.prb, self.kd, task_frame, self.prb.getVariables('f_' + task_frame), task_nodes)
-        elif task_type == 'Postural':
-            task = PosturalTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, task_weight, fun_type=task_fun_type, postural_ref=self.q0[task_indices])
-        elif task_type == 'JointLimits':
-            task = JointLimitsTask(task_name, self.prb, self.kd, task_frame, task_nodes, task_indices, task_weight, fun_type=task_fun_type, bound_scaling=bound_scaling)
-        else:
-            raise Exception('Unknown task type {}'.format(task_type))
+        # if task_type == 'Cartesian':
+        #     task = CartesianTask(self.prb, self.kd, task_description)
+        # elif task_type == 'Force':
+        #     # todo this generates another variable (f_c) for the frame of the contact: when to initialize the model?
+        #     self.model.setContactFrame(task_frame)
+        #     task = InteractionTask(self.prb, self.kd, task_description)
+        # elif task_type == 'Contact':
+        #     task = ContactTask(self.prb, self.kd, task_description)
+        # elif task_type == 'Postural':
+        #     task = PosturalTask(self.prb, self.kd, task_description)
+        # elif task_type == 'JointLimits':
+        #     task = JointLimitsTask(self.prb, self.kd, task_description)
+        # else:
+        #     raise Exception('Unknown task type {}'.format(task_type))
 
         self.task_list.append(task)
 
-    def addTask(self, task):
+    def setTask(self, task):
         self.task_list.append(task)
 
     def getTask(self, task_name):

@@ -3,40 +3,34 @@ import numpy as np
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.functions import RecedingConstraint, RecedingCost
 from horizon.utils.utils import barrier as barrier_fun
+from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
-class ContactTask:
-    def __init__(self, name, prb, kin_dyn, frame, force, nodes=None):
+class ContactTask(Task):
+    def __init__(self, prb, kin_dyn, task_node):
+        super().__init__(prb, kin_dyn, task_node)
         """
         establish/break contact
         """
-        # todo name can be part of action
-        self.prb = prb
-        self.name = name
-        self.frame = frame
-        self.initial_nodes = [] if nodes is None else nodes
         # todo add in opts
         self.fmin = 10.
 
-        # todo: force should be retrieved from frame!!!!!!!!!!
-        self.force = force
-        self.kin_dyn = kin_dyn
+        # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force
+        self.force = self.prb.getVariables('f_' + self.frame)
 
         # ======== initialize constraints ==========
         # todo are these part of the contact class? Should they belong somewhere else?
         # todo auto-generate constraints here given the method (inheriting the name of the method
         self.constraints = list()
-        self._zero_vel_constr = self._zero_velocity(self.initial_nodes) # this is easily a cartesianTask
-        self._unil_constr = self._unilaterality(self.initial_nodes)
-        self._friction_constr = self._friction(self.initial_nodes)
+        self._zero_vel_constr = self._zero_velocity(self.nodes) # this is easily a cartesianTask
+        self._unil_constr = self._unilaterality(self.nodes)
+        self._friction_constr = self._friction(self.nodes)
 
         self.constraints.append(self._zero_vel_constr)
         self.constraints.append(self._unil_constr)
         self.constraints.append(self._friction_constr)
         # ===========================================
 
-        self.nodes = []
-        # initialize contact nodes
         # todo default action?
         # todo probably better to keep track of nodes, divided by action
         self.actions = []
@@ -59,8 +53,9 @@ class ContactTask:
     def setNodes(self, nodes):
 
         self.nodes = nodes
+        self._reset()
+
         all_nodes = list(range(self.prb.getNNodes()))
-        self._reset(all_nodes)
 
         # if it's on:
         nodes_on_x = [k for k in self.nodes if k <= self.prb.getNNodes() - 1]
@@ -96,7 +91,8 @@ class ContactTask:
         active_nodes = [] if nodes is None else nodes
 
         # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
-        cartesian_constr = CartesianTask('zero_velocity', self.prb, self.kin_dyn, self.frame, nodes=self.initial_nodes, indices=[0, 1, 2], cartesian_type='velocity')
+        task_node = {'name': 'zero_velocity', 'frame': self.frame, 'nodes': self.nodes, 'indices': [0, 1, 2], 'cartesian_type': 'velocity'}
+        cartesian_constr = CartesianTask(self.prb, self.kin_dyn, task_node)
         constr = cartesian_constr.getConstraint()
         # dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
         # todo how do I find that there is a variable called 'v' which represent velocity?
@@ -129,8 +125,8 @@ class ContactTask:
         barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=active_nodes)
         return barrier
 
-    def _reset(self, nodes):
-
+    def _reset(self):
+        nodes = list(range(self.prb.getNNodes()))
         # todo reset task
         # task.reset()
         for fun in self.constraints:
@@ -149,11 +145,10 @@ class ContactTask:
         self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
                              ub=np.full(self.force.getDim(), np.inf))
 
-    def getNodes(self):
-        return self.nodes
 
-    def getName(self):
-        return self.name
+# required for the plugin to be registered
+def register_task_plugin(factory) -> None:
+    factory.register("Contact", ContactTask)
 
     # def _friction(self, frame):
     #     """

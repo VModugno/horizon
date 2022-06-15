@@ -4,35 +4,28 @@ from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.functions import RecedingConstraint, RecedingCost
 from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.utils.utils import barrier as barrier_fun
-
+from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
-class ContactTask:
-    def __init__(self, name, prb, kin_dyn, frame, force, nodes=None, kd_frame=None):
+class ContactTask(Task):
+    def __init__(self, prb, kin_dyn, task_node):
+        super().__init__(prb, kin_dyn, task_node)
         """
         establish/break contact
         """
-        # todo name can be part of action
-        self.prb = prb
-        self.name = name
-        self.frame = frame
-        self.initial_nodes = [] if nodes is None else nodes
-        self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED if kd_frame is None else kd_frame
-
         # todo add in opts
         self.fmin = 10.
 
-        # todo: force should be retrieved from frame!!!!!!!!!!
-        self.force = force
-        self.kin_dyn = kin_dyn
+        # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force
+        self.force = self.prb.getVariables('f_' + self.frame)
 
         # ======== initialize constraints ==========
         # todo are these part of the contact class? Should they belong somewhere else?
         # todo auto-generate constraints here given the method (inheriting the name of the method
         self.constraints = list()
-        self._zero_vel_constr = self._zero_velocity(self.initial_nodes)  # this is easily a cartesianTask
-        self._unil_constr = self._unilaterality(self.initial_nodes)
-        self._friction_constr = self._friction(self.initial_nodes)
+        self._zero_vel_constr = self._zero_velocity(self.nodes)  # this is easily a cartesianTask
+        self._unil_constr = self._unilaterality(self.nodes)
+        self._friction_constr = self._friction(self.nodes)
         self._vertical_takeoff_consrt = self._vertical_takeoff()
 
         self.constraints.append(self._zero_vel_constr)
@@ -41,15 +34,15 @@ class ContactTask:
         self.constraints.append(self._vertical_takeoff_consrt)
         # ===========================================
 
-        self.nodes = []
         self.actions = []
         self._vertical_takeoff_nodes = []
 
     def setNodes(self, nodes):
 
         self.nodes = nodes
+        self._reset()
+
         all_nodes = list(range(self.prb.getNNodes()))
-        self._reset(all_nodes)
 
         # if it's on:
         nodes_on_x = [k for k in self.nodes if k <= self.prb.getNNodes() - 1]
@@ -90,14 +83,12 @@ class ContactTask:
         active_nodes = [] if nodes is None else nodes
 
         # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
-        cartesian_constr = CartesianTask('zero_velocity', self.prb, self.kin_dyn, self.frame, nodes=self.initial_nodes,
-                                         indices=[0, 1, 2, 3, 4, 5], cartesian_type='velocity')
+        task_node = {'name': 'zero_velocity', 'frame': self.frame, 'nodes': self.nodes, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type':'velocity'}
+        cartesian_constr = CartesianTask(self.prb, self.kin_dyn, task_node)
         constr = cartesian_constr.getConstraint()
 
         return constr
 
-    # *00 alpha=0.000e+00  reg=1.000e+00  merit=9.911e+05  dm=-9.911e+05  mu_f=7.616e+03  mu_c=7.355e+03  cost=9.474e-03  delta_u=4.669e-01  constr=1.348e+02  gap=6.897e-12
-    # *00 alpha=0.000e+00  reg=1.000e+00  merit=9.983e+05  dm=-9.983e+05  mu_f=7.616e+03  mu_c=7.408e+03  cost=9.474e-03  delta_u=4.669e-01  constr=1.348e+02  gap=6.897e-12
     def _unilaterality(self, nodes=None):
         """
         barrier cost
@@ -131,8 +122,9 @@ class ContactTask:
         vert = self.prb.createConstraint(f"{self.frame}_vert", lat_vel, nodes=[])
 
         return vert
-    def _reset(self, nodes):
 
+    def _reset(self):
+        nodes = list(range(self.prb.getNNodes()))
         # todo reset task
         # task.reset()
         for fun in self.constraints:
@@ -151,11 +143,8 @@ class ContactTask:
         self.force.setBounds(lb=np.full(self.force.getDim(), -np.inf),
                              ub=np.full(self.force.getDim(), np.inf))
 
-    def getNodes(self):
-        return self.nodes
-
-    def getName(self):
-        return self.name
+def register_task_plugin(factory) ->None:
+    factory.register("Contact", ContactTask)
 
     # def _friction(self, frame):
     #     """

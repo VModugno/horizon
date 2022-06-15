@@ -5,15 +5,15 @@ import numpy as np
 
 # todo name is useless
 class CartesianTask(Task):
-    def __init__(self, name, prb: Problem, kin_dyn, frame, nodes=None, indices=None, weight=None, kd_frame=None, fun_type=None, cartesian_type=None):
-        super().__init__(name, prb, kin_dyn, frame, nodes, indices, weight, kd_frame)
+    def __init__(self, prb: Problem, kin_dyn, task_node):
+        super().__init__(prb, kin_dyn, task_node)
 
-        self.instantiator = self.prb.createConstraint if fun_type is None else fun_type
-        self.cartesian_type = 'position' if cartesian_type is None else cartesian_type
+        self.fun_type = 'constraint' if 'fun_type' not in task_node else task_node['fun_type']
+        self.cartesian_type = 'position' if 'cartesian_type' not in task_node else task_node['cartesian_type']
 
-        if fun_type == 'constraint':
+        if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint
-        elif fun_type == 'cost':
+        elif self.fun_type == 'cost':
             self.instantiator = self.prb.createResidual
 
         self._initialize()
@@ -50,7 +50,7 @@ class CartesianTask(Task):
             self.acc_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
             fun = ee_a[self.indices] - self.acc_tgt
 
-        self.constr = self.instantiator(f'{frame_name}_task', self.weight * fun, nodes=self.initial_nodes)
+        self.constr = self.instantiator(f'{frame_name}_task', self.weight * fun, nodes=self.nodes)
         # todo should I keep track of the nodes here?
         #  in other words: should be setNodes resetting?
 
