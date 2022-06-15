@@ -93,9 +93,9 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e3}
 
-        self.ti.setTask(goalx)
-        self.ti.setTask(goaly)
-        self.ti.setTask(goalrz)
+        self.ti.setTaskfromDict(goalx)
+        self.ti.setTaskfromDict(goaly)
+        self.ti.setTaskfromDict(goalrz)
 
         self.base_goal_tasks = [self.ti.getTask('final_base_x'), self.ti.getTask('final_base_y'), self.ti.getTask('final_base_rz')]
 
@@ -117,7 +117,7 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e-4}
 
-        self.ti.setTask(minrot)
+        self.ti.setTaskfromDict(minrot)
 
 
         # joint posture
@@ -129,7 +129,7 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e-1}
 
-        self.ti.setTask(minq)
+        self.ti.setTaskfromDict(minq)
 
         # joint velocity
         self.ti.prb.createResidual("min_v", 1e-2 * self.ti.model.v)
@@ -143,7 +143,7 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e1}
 
-        self.ti.setTask(minqf)
+        self.ti.setTaskfromDict(minqf)
 
         # joint limits
 
@@ -160,7 +160,7 @@ class HorizonWpg:
                   'weight': 10,
                   'bound_scaling': 0.95}
 
-        self.ti.setTask(jlimMin)
+        self.ti.setTaskfromDict(jlimMin)
 
         # regularize input acceleration
         self.ti.prb.createIntermediateResidual("min_q_ddot", 1e-1 * self.ti.model.a)
@@ -199,7 +199,7 @@ class HorizonWpg:
                        'frame': frame,
                        'name': 'contact_' + frame}
 
-            self.ti.setTask(contact)
+            self.ti.setTaskfromDict(contact)
 
             # self.contact_task[frame] = contact
 
@@ -211,13 +211,12 @@ class HorizonWpg:
                            'fun_type': 'constraint',
                            'cartesian_type': 'position'}
 
-            self.ti.setTask(z_task_dict)
+            self.ti.setTaskfromDict(z_task_dict)
 
-            foot_task = CartesianTask(f'{frame}_foot_tgt_constr', self.ti.prb, self.ti.kd, frame,
-                                      indices=[0, 1], weight=1., fun_type='constraint',
-                                      cartesian_type='position')
+            task_node = {'name': f'{frame}_foot_tgt_constr', 'fun_type': 'constraint', 'frame': frame, 'indices': [0, 1], 'weight': 1., 'cartesian_type': 'position'}
+            foot_task = CartesianTask(self.ti.prb, self.ti.kd, task_node)
 
-            self.ti.addTask(foot_task)
+            self.ti.setTask(foot_task)
 
         ## transcription method
         solver_type = opt.get('solver_type', 'ilqr')

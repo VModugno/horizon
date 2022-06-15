@@ -20,7 +20,7 @@ def unregister(task_type: str) -> None:
     """
     task_creation_funcs.pop(task_type, None)
 
-def create(args: Dict[str, Any]) -> Task:
+def create(prb, kd, args: Dict[str, Any]) -> Task:
     """
     Create a new task of a specific type.
     """
@@ -28,6 +28,6 @@ def create(args: Dict[str, Any]) -> Task:
     task_type = args_copy.pop('type')
     try:
         creation_func = task_creation_funcs[task_type]
-        return creation_func(**args)
+        return creation_func(prb, kd, args)  # todo: **args
     except KeyError:
         raise ValueError(f'Unknown task type: {task_type}') from None
