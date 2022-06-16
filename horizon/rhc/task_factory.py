@@ -1,4 +1,4 @@
-from horizon.rhc.tasks.task import Task
+from horizon.rhc.tasks.task import Task, TaskDescription
 
 from typing import Callable, Dict, Any, List
 
