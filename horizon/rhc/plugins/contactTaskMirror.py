@@ -7,7 +7,7 @@ from horizon.utils.utils import barrier as barrier_fun
 from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
-class ContactTask(Task):
+class ContactTaskMirror(Task):
     def __init__(self, prb, kin_dyn, task_node):
         super().__init__(prb, kin_dyn, task_node)
         """
@@ -144,7 +144,7 @@ class ContactTask(Task):
                              ub=np.full(self.force.getDim(), np.inf))
 
 def register_task_plugin(factory) ->None:
-    factory.register("Contact", ContactTask)
+    factory.register("Contact", ContactTaskMirror)
 
     # def _friction(self, frame):
     #     """
