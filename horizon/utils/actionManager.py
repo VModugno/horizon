@@ -9,7 +9,7 @@ from horizon.utils import utils, kin_dyn
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
 from horizon.rhc.tasks.cartesianTask import CartesianTask
-from horizon.rhc.plugins
+from horizon.rhc.plugins.contactTaskSpot import ContactTaskSpot
 # from horizon.rhc.receding_tasks_mirror import Contact
 from horizon.ros import replay_trajectory
 import rospy
@@ -185,13 +185,16 @@ class ActionManager:
         self.foot_tgt_constr = dict()
 
         for frame in self.contacts:
-            # self.contact_constr[frame] = Contact(f'{frame}_contact', self.kd, self.kd_frame, self.prb, self.forces[frame], frame)
-            # self.z_constr[frame] = rcdt.CartesianTask(f'{frame}_z_constr', self.kd, self.prb, frame, 2)
-            # self.z_constr[frame] = rcdt.CartesianTask(f'{frame}_foot_tgt_constr', self.kd, self.prb, frame, [0,1])
+
             # taskInteface.getTask(ContactTask)
-            self.contact_constr[frame] = ContactTask(f'{frame}_contact', self.prb, self.kd, frame, self.forces[frame])
-            self.z_constr[frame] = CartesianTask(f'{frame}_z_constr', self.prb, self.kd, frame, indices=[2], weight=1, fun_type='constraint', cartesian_type='position')
-            self.foot_tgt_constr[frame] = CartesianTask(f'{frame}_foot_tgt_constr', self.prb, self.kd, frame, indices=[0, 1], weight=1, fun_type='constraint', cartesian_type='position')
+            # todo: can also specify with dictionaries
+            contact_task_node = {'name': f'{frame}_contact', 'frame': frame}
+            z_task_node = {'name': f'{frame}_z_constr', 'frame': frame, 'indices': [2], 'fun_type': 'constraint', 'cartesian_type': 'position'}
+            foot_tgt_task_node = {'name': f'{frame}_foot_tgt_constr', 'frame': frame, 'indices': [0,1], 'fun_type': 'constraint', 'cartesian_type': 'position'}
+
+            self.contact_constr[frame] = ContactTaskSpot(self.prb, self.kd, contact_task_node)
+            self.z_constr[frame] = CartesianTask(self.prb, self.kd, z_task_node)
+            self.foot_tgt_constr[frame] = CartesianTask(self.prb, self.kd, foot_tgt_task_node)
 
     def setContact(self, frame, nodes):
         """

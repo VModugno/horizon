@@ -39,8 +39,6 @@ class ModelDescription:
         self.contacts = []
         self.fmap = dict()
 
-        # dynamics
-
     def setContactFrame(self, contact):
         self.contacts.append(contact)
         f_c = self.prb.createInputVariable('f_' + contact, self.nf)
@@ -116,6 +114,7 @@ class TaskInterface:
         self.model = ModelDescription(self.prb, self.kd)
         self.model.generateModel(model_description)
 
+        # todo forcing to initialize the model
         self.contacts = contacts
         for c in self.contacts:
             self.model.setContactFrame(c)
