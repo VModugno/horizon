@@ -57,6 +57,8 @@ class HorizonWpg:
         model_description = 'whole_body'
 
         self.ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=self.contacts)
+        # register my plugin 'Contact'
+        self.ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 
         self.forces = [self.ti.prb.getVariables('f_' + c) for c in contacts]
         ## gait params
@@ -93,9 +95,9 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e3}
 
-        self.ti.setTaskfromDict(goalx)
-        self.ti.setTaskfromDict(goaly)
-        self.ti.setTaskfromDict(goalrz)
+        self.ti.setTaskFromDict(goalx)
+        self.ti.setTaskFromDict(goaly)
+        self.ti.setTaskFromDict(goalrz)
 
         self.base_goal_tasks = [self.ti.getTask('final_base_x'), self.ti.getTask('final_base_y'), self.ti.getTask('final_base_rz')]
 
@@ -117,7 +119,7 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e-4}
 
-        self.ti.setTaskfromDict(minrot)
+        self.ti.setTaskFromDict(minrot)
 
 
         # joint posture
@@ -129,7 +131,7 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e-1}
 
-        self.ti.setTaskfromDict(minq)
+        self.ti.setTaskFromDict(minq)
 
         # joint velocity
         self.ti.prb.createResidual("min_v", 1e-2 * self.ti.model.v)
@@ -143,7 +145,7 @@ class HorizonWpg:
                   'fun_type': 'cost',
                   'weight': 1e1}
 
-        self.ti.setTaskfromDict(minqf)
+        self.ti.setTaskFromDict(minqf)
 
         # joint limits
 
@@ -160,7 +162,7 @@ class HorizonWpg:
                   'weight': 10,
                   'bound_scaling': 0.95}
 
-        self.ti.setTaskfromDict(jlimMin)
+        self.ti.setTaskFromDict(jlimMin)
 
         # regularize input acceleration
         self.ti.prb.createIntermediateResidual("min_q_ddot", 1e-1 * self.ti.model.a)
@@ -199,7 +201,7 @@ class HorizonWpg:
                        'frame': frame,
                        'name': 'contact_' + frame}
 
-            self.ti.setTaskfromDict(contact)
+            self.ti.setTaskFromDict(contact)
 
             # self.contact_task[frame] = contact
 
@@ -211,7 +213,7 @@ class HorizonWpg:
                            'fun_type': 'constraint',
                            'cartesian_type': 'position'}
 
-            self.ti.setTaskfromDict(z_task_dict)
+            self.ti.setTaskFromDict(z_task_dict)
 
             task_node = {'name': f'{frame}_foot_tgt_constr', 'fun_type': 'constraint', 'frame': frame, 'indices': [0, 1], 'weight': 1., 'cartesian_type': 'position'}
             foot_task = CartesianTask(self.ti.prb, self.ti.kd, task_node)

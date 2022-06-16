@@ -11,6 +11,10 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, PointStamped
 from xbot_msgs.msg import JointState as XBotJointState
 
+"""
+An application of mirror walking using the WPG: inside it uses the TaskInterface.
+"""
+
 rospy.init_node('mirror_wpg_node')
 
 urdf_path = rospkg.RosPack().get_path('mirror_urdf') + '/urdf/mirror.urdf'

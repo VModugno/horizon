@@ -10,11 +10,13 @@ from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.plugins.contactTaskSpot import ContactTaskSpot
-# from horizon.rhc.receding_tasks_mirror import Contact
+from horizon.rhc.plugins.contactTaskMirror import ContactTaskMirror
 from horizon.ros import replay_trajectory
+from horizon.rhc.taskInterface import TaskInterface
 import rospy
 import os
 import subprocess
+
 
 # barrier function
 def _barrier(x):
@@ -23,7 +25,6 @@ def _barrier(x):
 
 def _trj(tau):
     return 64. * tau ** 3 * (1 - tau) ** 3
-
 
 
 class Action:
@@ -57,39 +58,37 @@ class ActionManager:
     set of actions which involves combinations of constraints and bounds
     """
 
-    def __init__(self, prb: Problem, urdf, kindyn, contacts_map, default_foot_z, opts=None):
+    def __init__(self, task_interface: TaskInterface, opts=None):
+        # prb: Problem, urdf, kindyn, contacts_map, default_foot_z
 
-        self.prb = prb
+        self.ti = task_interface
         self.opts = opts
+
+        self.prb = self.ti.prb
+        self.contact_map = self.ti.model.fmap
+
         self.N = self.prb.getNNodes() - 1
         # todo list of contact is fixed?
 
         self.constraints = list()
         self.current_cycle = 0  # what to do here?
 
-        self.contacts = contacts_map.keys()
+        self.contacts = self.contact_map.keys()
         self.nc = len(self.contacts)
 
-        self.forces = contacts_map
+        self.kd = self.ti.kd
 
-        self.kd = kindyn
-        # todo useless here
-        self.urdf = urdf
-        self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-
-        self.joint_pos = self.prb.getVariables('q')
-        self.joint_vel = self.prb.getVariables('v')
-
+        # todo: how to set these options?
         # f0 = opts.get('f0', np.array([0, 0, 250]))
-        f0 = np.array([0, 0, 55])
         # self.fmin = opts.get('fmin', 0)
         self.fmin = 10.
 
-
-        self.default_foot_z = default_foot_z
+        # todo set default foot automatically, not using opts
+        self.default_foot_z = opts['default_foot_z']
 
         self.k0 = 0
 
+        self.task_type = self._get_required_tasks(['Cartesian', 'Contact'])
         self.init_constraints()
         self._set_default_action()
 
@@ -113,7 +112,7 @@ class ActionManager:
             trj = _trj(tau) * clearance
             trj += (1 - tau) * start + tau * goal
             traj_array[index] = trj
-            index = index+1
+            index = index + 1
 
         return np.array(traj_array)
 
@@ -146,6 +145,20 @@ class ActionManager:
         # contact nodes
         for frame, c_constr in self.contact_constr.items():
             c_constr.setNodes(self.contact_constr_nodes[frame])
+
+    def _get_required_tasks(self, required_tasks):
+        # actionManager requires some tasks for working. It asks the TaskInterface for tasks.
+        task_type = dict()
+        for task in required_tasks:
+            found_task = self.ti.getTasksType(task)
+            if found_task is None:
+                raise Exception(
+                    'Task {} not found. ActionManager requires this task, please provide your implementation.'.format(
+                        task))
+            else:
+                task_type[task] = found_task
+
+        return task_type
 
     def init_constraints(self):
 
@@ -185,16 +198,18 @@ class ActionManager:
         self.foot_tgt_constr = dict()
 
         for frame in self.contacts:
-
             # taskInteface.getTask(ContactTask)
             # todo: can also specify with dictionaries
             contact_task_node = {'name': f'{frame}_contact', 'frame': frame}
-            z_task_node = {'name': f'{frame}_z_constr', 'frame': frame, 'indices': [2], 'fun_type': 'constraint', 'cartesian_type': 'position'}
-            foot_tgt_task_node = {'name': f'{frame}_foot_tgt_constr', 'frame': frame, 'indices': [0,1], 'fun_type': 'constraint', 'cartesian_type': 'position'}
+            z_task_node = {'name': f'{frame}_z_constr', 'frame': frame, 'indices': [2], 'fun_type': 'constraint',
+                           'cartesian_type': 'position'}
+            foot_tgt_task_node = {'name': f'{frame}_foot_tgt_constr', 'frame': frame, 'indices': [0, 1],
+                                  'fun_type': 'constraint', 'cartesian_type': 'position'}
 
-            self.contact_constr[frame] = ContactTaskSpot(self.prb, self.kd, contact_task_node)
-            self.z_constr[frame] = CartesianTask(self.prb, self.kd, z_task_node)
-            self.foot_tgt_constr[frame] = CartesianTask(self.prb, self.kd, foot_tgt_task_node)
+            # todo: setting with the plugin here!
+            self.contact_constr[frame] = self.task_type['Contact'](self.prb, self.kd, contact_task_node)
+            self.z_constr[frame] = self.task_type['Cartesian'](self.prb, self.kd, z_task_node)
+            self.foot_tgt_constr[frame] = self.task_type['Cartesian'](self.prb, self.kd, foot_tgt_task_node)
 
     def setContact(self, frame, nodes):
         """
@@ -266,18 +281,20 @@ class ActionManager:
             # adding param:
             self._foot_tgt_params[frame][:, swing_nodes_in_horizon] = s.goal[:2]
 
-            self.foot_tgt_constr[frame].setRef(self._foot_tgt_params[frame][self.foot_tgt_constr_nodes[frame]]) # s.goal[:2]
-            self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame]) #[k_goal]
+            self.foot_tgt_constr[frame].setRef(
+                self._foot_tgt_params[frame][self.foot_tgt_constr_nodes[frame]])  # s.goal[:2]
+            self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame])  # [k_goal]
 
         # z goal
         start = np.array([0, 0, self.default_foot_z[frame]]) if s.start.size == 0 else s.start
         goal = np.array([0, 0, self.default_foot_z[frame]]) if s.goal.size == 0 else s.goal
 
-        z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes_in_horizon, n_swing, start, goal, s.clearance, dim=2)
+        z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes_in_horizon, n_swing, start, goal, s.clearance,
+                                                    dim=2)
         # adding param
         self._foot_z_param[frame][:, swing_nodes_in_horizon] = z_traj[:len(swing_nodes_in_horizon)]
-        self.z_constr[frame].setRef(self._foot_z_param[frame][:, self.z_constr_nodes[frame]]) #z_traj
-        self.z_constr[frame].setNodes(self.z_constr_nodes[frame]) #swing_nodes_in_horizon
+        self.z_constr[frame].setRef(self._foot_z_param[frame][:, self.z_constr_nodes[frame]])  # z_traj
+        self.z_constr[frame].setNodes(self.z_constr_nodes[frame])  # swing_nodes_in_horizon
 
     # todo unify the actions below, these are just different pattern of actions
     def _jump(self, nodes):
@@ -293,11 +310,11 @@ class ActionManager:
 
         # todo add parameters for step
         step_list = list()
-        k_step_n = 5 if step_nodes_duration is None else step_nodes_duration # default duration (in nodes) of swing step
-        k_start = nodes[0] # first node to begin walk
+        k_step_n = 5 if step_nodes_duration is None else step_nodes_duration  # default duration (in nodes) of swing step
+        k_start = nodes[0]  # first node to begin walk
         k_end = nodes[1]
 
-        n_step = (k_end - k_start) // k_step_n # integer divide
+        n_step = (k_end - k_start) // k_step_n  # integer divide
         # default step pattern of classic walking (crawling)
         pattern = step_pattern if step_pattern is not None else list(range(len(self.contacts)))
         # =========================================
@@ -316,7 +333,7 @@ class ActionManager:
 
         # todo add parameters for step
         k_start = nodes[0]
-        k_step_n = 5 # default swing duration
+        k_step_n = 5  # default swing duration
         k_end = nodes[1]
 
         n_step = (k_end - k_start) // k_step_n  # integer divide
@@ -354,12 +371,12 @@ class ActionManager:
             action_nodes_in_horizon = [k for k in action_nodes if k >= 0]
             self._step(action)
 
-
         # for cnsrt_name, cnsrt in self.prb.getConstraints().items():
         #     print(cnsrt_name)
         #     print(cnsrt.getNodes().tolist())
         # remove expired actions
-        self.action_list = [action for action in self.action_list if len([k for k in list(range(action.k_start, action.k_goal)) if k >= 0]) != 0]
+        self.action_list = [action for action in self.action_list if
+                            len([k for k in list(range(action.k_start, action.k_goal)) if k >= 0]) != 0]
         # todo right now the non-active nodes of the parameter gets dirty,
         #  because .assing() only assign a value to the current nodes, the other are left with the old value
         #  better to reset?
@@ -388,64 +405,65 @@ class ActionManager:
 
         self.prb.setInitialState(x0=xig[:, 0])
 
+
 if __name__ == '__main__':
 
+    # set up problem
     ns = 50
-    tf = 2.0 # 10s
+    tf = 2.0  # 10s
     dt = tf / ns
 
-    prb = Problem(ns, receding=True)
-    path_to_examples = os.path.dirname('../examples/')
+    # set up solver
     solver_type = 'ilqr'
 
+    # set up model
+    path_to_examples = os.path.dirname('../examples/')
     urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
     urdf = open(urdffile, 'r').read()
+
     contacts = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
 
-    fixed_joint_map = None
-    kd = pycasadi_kin_dyn.CasadiKinDyn(urdf)
-    kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+    base_init = np.array([0.0, 0.0, 0.505, 0.0, 0.0, 0.0, 1.0])
+    q_init = {'lf_haa_joint': 0.0,
+              'lf_hfe_joint': 0.9,
+              'lf_kfe_joint': -1.52,
 
-    q_init = np.array([0.0, 0.0, 0.505, 0.0, 0.0, 0.0, 1.0,
-                       0.0, 0.9, -1.52,
-                       0.0, 0.9, -1.52,
-                       0.0, 0.9, -1.52,
-                       0.0, 0.9, -1.52])
+              'lh_haa_joint': 0.0,
+              'lh_hfe_joint': 0.9,
+              'lh_kfe_joint': -1.52,
 
-    q0 = q_init
-    nq = kd.nq()
-    nv = kd.nv()
-    nc = len(contacts)
-    nf = 3
+              'rf_haa_joint': 0.0,
+              'rf_hfe_joint': 0.9,
+              'rf_kfe_joint': -1.52,
 
-    v0 = np.zeros(nv)
-    prb.setDt(dt)
+              'rh_haa_joint': 0.0,
+              'rh_hfe_joint': 0.9,
+              'rh_kfe_joint': -1.52}
 
-    # state and control vars
-    q = prb.createStateVariable('q', nq)
-    v = prb.createStateVariable('v', nv)
-    a = prb.createInputVariable('a', nv)
-    forces = [prb.createInputVariable('f_' + c, nf) for c in contacts]
-    fmap = {k: v for k, v in zip(contacts, forces)}
+    problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
+    model_description = 'whole_body'
 
+    ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
+
+    q0 = ti.q0
+    v0 = ti.v0
     f0 = np.array([0, 0, 55])
-    # dynamics ODE
-    _, xdot = utils.double_integrator_with_floating_base(q, v, a)
-    prb.setDynamics(xdot)
-
-    # underactuation constraint
-    id_fn = kin_dyn.InverseDynamics(kd, contacts, kd_frame)
-    tau = id_fn.call(q, v, a, fmap)
-    prb.createIntermediateConstraint('dynamics', tau[:6])
+    nc = 4  # todo: only required for  replay
 
     # final goal (a.k.a. integral velocity control)
     ptgt_final = [0., 0., 0.]
     vmax = [0.05, 0.05, 0.05]
-    ptgt = prb.createParameter('ptgt', 3)
+    ptgt = ti.prb.createParameter('ptgt', 3)
+
+    q = ti.prb.getVariables('q')
+    v = ti.prb.getVariables('v')
+    a = ti.prb.getVariables('a')
+    # todo: this is so wrong
+    forces = [ti.prb.getVariables('f_' + c) for c in contacts]
 
     # goalx = prb.createFinalResidual("final_x",  1e3*(q[0] - ptgt[0]))
-    goalx = prb.createFinalConstraint("final_x", q[0] - ptgt[0])
-    goaly = prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
+    goalx = ti.prb.createFinalConstraint("final_x", q[0] - ptgt[0])
+    goaly = ti.prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
     # goalrz = prb.createFinalResidual("final_rz", 1e3 * (q[5] - ptgt[2]))
     # base_goal_tasks = [goalx, goaly, goalrz]
 
@@ -454,28 +472,28 @@ if __name__ == '__main__':
     # regularization costs
 
     # base rotation
-    prb.createResidual("min_rot", 1e-3 * (q[3:5] - q0[3:5]))
+    ti.prb.createResidual("min_rot", 1e-3 * (q[3:5] - q0[3:5]))
 
     # joint posture
-    prb.createResidual("min_q", 1e0 * (q[7:] - q0[7:]))
+    ti.prb.createResidual("min_q", 1e0 * (q[7:] - q0[7:]))
 
     # joint velocity
-    prb.createResidual("min_v", 1e-2 * v)
+    ti.prb.createResidual("min_v", 1e-2 * v)
 
     # final posture
-    prb.createFinalResidual("min_qf", 1e0 * (q[7:] - q0[7:]))
+    ti.prb.createFinalResidual("min_qf", 1e0 * (q[7:] - q0[7:]))
 
     # regularize input
-    # prb.createIntermediateResidual("min_q_ddot", 1e-1 * a)
-    prb.createIntermediateResidual("min_q_ddot", 1e-2 * a)
+    # ti.prb.createIntermediateResidual("min_q_ddot", 1e-1 * a)
+    ti.prb.createIntermediateResidual("min_q_ddot", 1e-2 * a)
 
-    # prb.createFinalConstraint('q_fb', q[:6] - q0[:6])
+    # ti.prb.createFinalConstraint('q_fb', q[:6] - q0[:6])
 
     for f in forces:
-        prb.createIntermediateResidual(f"min_{f.getName()}", 1e-2 * (f - f0))
+        ti.prb.createIntermediateResidual(f"min_{f.getName()}", 1e-2 * (f - f0))
 
     # costs and constraints implementing a gait schedule
-    com_fn = cs.Function.deserialize(kd.centerOfMass())
+    com_fn = cs.Function.deserialize(ti.kd.centerOfMass())
 
     # save default foot height
     default_foot_z = dict()
@@ -483,8 +501,8 @@ if __name__ == '__main__':
     # contact velocity is zero, and normal force is positive
     for i, frame in enumerate(contacts):
         # fk functions and evaluated vars
-        fk = cs.Function.deserialize(kd.fk(frame))
-        dfk = cs.Function.deserialize(kd.frameVelocity(frame, kd_frame))
+        fk = cs.Function.deserialize(ti.kd.fk(frame))
+        dfk = cs.Function.deserialize(ti.kd.frameVelocity(frame, ti.kd_frame))
 
         ee_p = fk(q=q)['ee_pos']
         ee_rot = fk(q=q)['ee_rot']
@@ -495,7 +513,7 @@ if __name__ == '__main__':
 
         # vertical contact frame
         rot_err = cs.sumsqr(ee_rot[2, :2])
-        # prb.createIntermediateCost(f'{frame}_rot', 1e-1 * rot_err)
+        # ti.prb.createIntermediateCost(f'{frame}_rot', 1e-1 * rot_err)
 
         # todo action constraints
         # kinematic contact
@@ -504,7 +522,9 @@ if __name__ == '__main__':
         # clearance
         # xy goal
 
-    am = ActionManager(prb, urdf, kd, dict(zip(contacts, forces)), default_foot_z)
+    opts = dict()
+    opts['default_foot_z'] = default_foot_z
+    am = ActionManager(ti, opts)
 
     k_start = 15
     k_end = 25
@@ -516,12 +536,11 @@ if __name__ == '__main__':
 
     k_start = 25
     k_end = 35
-    f_k = cs.Function.deserialize(kd.fk('lh_foot'))
-    initial_lh_foot = f_k(q=q_init)['ee_pos']
+    f_k = cs.Function.deserialize(ti.kd.fk('lh_foot'))
+    initial_lh_foot = f_k(q=q0)['ee_pos']
     step_len = np.array([0.2, 0.1, 0])
     print(f'step target: {initial_lh_foot + step_len}')
     s_3 = Step('lh_foot', k_start, k_end, goal=initial_lh_foot + step_len)
-
 
     k_start = 45
     k_end = 55
@@ -531,8 +550,7 @@ if __name__ == '__main__':
     # k_end = 15
     # s_2 = Step('rf_foot', k_start, k_end)
     if solver_type != 'ilqr':
-        Transcriptor.make_method('multiple_shooting', prb)
-
+        Transcriptor.make_method('multiple_shooting', ti.prb)
 
     # set initial condition and initial guess
     q.setBounds(q0, q0, nodes=0)
@@ -564,7 +582,7 @@ if __name__ == '__main__':
     # am._jump(list(range(40, 51)))
     # am.setStep(s_3)
 
-    # all_nodes = prb.getNNodes()
+    # all_nodes = ti.prb.getNNodes()
     # swing_nodes = [k for k in list(range(all_nodes)) if k not in list(range(k_start, k_end))]
     # am.setContact('rf_foot', nodes=swing_nodes)
     # am.setContact('lf_foot', nodes=swing_nodes)
@@ -616,10 +634,8 @@ if __name__ == '__main__':
     opts_rti['ilqr.enable_line_search'] = False
     opts_rti['ilqr.max_iter'] = 4
 
-
-    solver_bs = Solver.make_solver(solver_type, prb, opts)
-    solver_rti = Solver.make_solver(solver_type, prb, opts_rti)
-
+    solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
+    solver_rti = Solver.make_solver(solver_type, ti.prb, opts_rti)
 
     ptgt.assign(ptgt_final, nodes=ns)
     solver_bs.solve()
@@ -629,7 +645,6 @@ if __name__ == '__main__':
     subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
     rospy.loginfo("'spot' visualization started.")
 
-
     # single replay
     # q_sol = solution['q']
     # frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
@@ -638,7 +653,8 @@ if __name__ == '__main__':
     # repl.replay(is_floating_base=True)
     # exit()
     # =========================================================================
-    repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+    repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], np.array([]), {k: None for k in contacts},
+                                               ti.kd_frame, ti.kd)
     iteration = 0
 
     solver_rti.solution_dict['x_opt'] = solver_bs.getSolutionState()
@@ -646,7 +662,6 @@ if __name__ == '__main__':
 
     flag_action = 1
     while True:
-
 
         if flag_action == 1 and iteration > 50:
             flag_action = 0
@@ -669,7 +684,7 @@ if __name__ == '__main__':
 
         # if iteration == 10:
         #     am.setStep(s_lol)
-        # for cnsrt_name, cnsrt in prb.getConstraints().items():
+        # for cnsrt_name, cnsrt in ti.prb.getConstraints().items():
         #     print(cnsrt_name)
         #     print(cnsrt.getNodes())
         # if iteration == 20:
@@ -677,7 +692,6 @@ if __name__ == '__main__':
         # solver_bs.solve()
         solver_rti.solve()
         solution = solver_rti.getSolutionDict()
-
 
         repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
         repl.publish_joints(solution['q'][:, 0])
@@ -714,7 +728,3 @@ if __name__ == '__main__':
         hplt.plotVariables([elem.getName() for elem in forces], show_bounds=True, gather=2, legend=False)
         hplt.plotVariables(['q'], show_bounds=True, gather=2, legend=False)
         matplotlib.pyplot.show()
-
-
-
-

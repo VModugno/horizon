@@ -2,19 +2,23 @@ import importlib
 from horizon.rhc import task_factory
 from typing import List
 
+
 class PluginInterface:
     """
     A plugin requires a given number of virtual functions to be defined.
     """
-    @staticmethod     # def register_task_plugin() -> None:
+
+    @staticmethod  # def register_task_plugin() -> None:
     def register_task_plugin(factory) -> None:
         """
         Initialize the plugin.
         """
         pass
 
+
 def import_module(name: str) -> PluginInterface:
     return importlib.import_module(name)  # type: ignore
+
 
 def load_plugins(plugins: List[str]) -> None:
     """
@@ -23,7 +27,6 @@ def load_plugins(plugins: List[str]) -> None:
     for name in plugins:
         plugin = import_module(name)
         plugin.register_task_plugin(task_factory)
-
 
 # PLUGIN_NAME = 'pluginTry'
 # def iter_namespace(ns_pkg):

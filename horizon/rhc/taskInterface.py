@@ -43,6 +43,8 @@ class ModelDescription:
         self.contacts.append(contact)
         f_c = self.prb.createInputVariable('f_' + contact, self.nf)
         self.fmap[contact] = f_c
+        return f_c
+
 
     def setDynamics(self):
         _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
@@ -82,8 +84,6 @@ class TaskInterface:
         task_factory.register('Postural', PosturalTask)
         task_factory.register('JointLimits', JointLimitsTask)
 
-        plugin_handler.load_plugins(['horizon.rhc.plugins.contactTaskMirror'])
-
         self.urdf = urdf.replace('continuous', 'revolute')
         self.fixed_joints = [] if fixed_joints is None else fixed_joints.copy()
         self.fixed_joints_pos = [q_init[k] for k in self.fixed_joints]
@@ -92,6 +92,8 @@ class TaskInterface:
         self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
 
         self.joint_names = self.kd.joint_names()[2:]
+
+        self.contacts = contacts
 
         # number of dof
         self.nq = self.kd.nq()
@@ -115,7 +117,6 @@ class TaskInterface:
         self.model.generateModel(model_description)
 
         # todo forcing to initialize the model
-        self.contacts = contacts
         for c in self.contacts:
             self.model.setContactFrame(c)
 
@@ -143,7 +144,7 @@ class TaskInterface:
     #     tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
 
     # here I do it manually
-    def setTaskfromDict(self, task_description):
+    def setTaskFromDict(self, task_description):
 
         # todo how to automatically provide more info // or do more actions
         # automatically provided info:
@@ -173,6 +174,12 @@ class TaskInterface:
     def getTask(self, task_name):
         list_1 = [t for t in self.task_list if t.getName() == task_name][0]
         return list_1
+
+    def loadPlugins(self, plugins):
+        plugin_handler.load_plugins(plugins)
+
+    def getTasksType(self, task_type=None):
+        return task_factory.get_registered_tasks(task_type)
 
     # todo
     def setTaskOptions(self):
