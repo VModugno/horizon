@@ -1,12 +1,19 @@
 from horizon.rhc.tasks.task import Task
-from horizon.rhc.tasks.cartesianTask import CartesianTask
-from horizon.rhc.tasks.interactionTask import InteractionTask
-from horizon.rhc.tasks.limitsTask import JointLimitsTask, VelocityLimitsTask
-from horizon.rhc.tasks.posturalTask import PosturalTask
 
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, List
 
 task_creation_funcs: Dict[str, Callable[..., Task]] = {}
+
+
+def get_registered_tasks(task_type=None) -> (List, Callable[..., Task]):
+    """
+    Get a list of all registered task types.
+    """
+    if task_type is None:
+        return list(task_creation_funcs.values())
+    else:
+        return None if task_type not in task_creation_funcs else task_creation_funcs[task_type]
+
 
 def register(task_type: str, func: Callable[..., Task]) -> None:
     """
@@ -14,11 +21,13 @@ def register(task_type: str, func: Callable[..., Task]) -> None:
     """
     task_creation_funcs[task_type] = func
 
+
 def unregister(task_type: str) -> None:
     """
     Unregister a task class.
     """
     task_creation_funcs.pop(task_type, None)
+
 
 def create(prb, kd, args: Dict[str, Any]) -> Task:
     """

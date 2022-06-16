@@ -37,3 +37,5 @@ goalrz = {'type': 'Postural',
 
 
 ti.setTask(goalrz)
+
+print(ti.getTasksType())

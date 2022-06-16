@@ -1,20 +1,21 @@
-from horizon.utils import plotter
-from horizon.transcriptions.transcriptor import Transcriptor
-from horizon.ros import replay_trajectory
-from horizon.solvers.solver import Solver
-from horizon.rhc.taskInterface import TaskInterface
 import numpy as np
-import rospkg
 import casadi as cs
+from horizon.utils.actionManager import Step, ActionManager
+from horizon.transcriptions.transcriptor import Transcriptor
+from horizon.solvers.solver import Solver
+from horizon.ros import replay_trajectory
+import rospy, rospkg
+from horizon.rhc.taskInterface import TaskInterface
 
 """
-This application is basically what /playground/mirror/mirror_walk.py does, but using the tasks for everthing.
-There should be:
-- a config file with all the problem setting, constraints/costs
-- an execute file to set parameters, use the actionManager...
+An application of mirror walking using the ActionManager.
+It uses the TaskInterface, but just for the problem setting, everything else is manually inserted.
 """
+
 urdf_path = rospkg.RosPack().get_path('mirror_urdf') + '/urdf/mirror.urdf'
 urdf = open(urdf_path, 'r').read()
+
+solver_type = 'ilqr'
 
 ns = 50
 tf = 8.0  # 10s
@@ -37,42 +38,10 @@ base_init = np.array([0, 0, 0.72, 0, 0, 0, 1])
 
 contacts = [f'arm_{i+1}_TCP' for i in range(3)]
 ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
+# register my plugin 'Contact'
+ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 
-ptgt_final = [0., 0., 0.]
-task_base_x = {'type': 'cartesian',
-               'frame': 'base_link',
-               'name': 'final_base_x',
-               'dim': [0],
-               'nodes': [ns],
-               'weight': 1e3}
-
-task_base_y = {'type': 'cartesian',
-               'frame': 'base_link',
-               'name': 'final_base_y',
-               'dim': [1],
-               'nodes': [ns],
-               'fun_type': 'cost',
-               'weight': 1e3}
-
-# todo this should add the contacts tasks:
-# for c in contacts:
-#     task_contact = {'type': 'force',
-#                     'frame': c,
-#                     'name': 'force_' + c,
-#                     'dim': [0, 1, 2]}
-#     ti.setTask(task_contact)
-
-ti.setTask(task_base_x)
-ti.setTask(task_base_y)
-
-task_base_x = ti.getTask('final_base_x')
-task_base_x.setRef(ptgt_final)
-
-task_base_y = ti.getTask('final_base_y')
-task_base_y.setRef(ptgt_final)
-
-# todo: next section to wrap up like the lines above
-contacts = [f'arm_{i+1}_TCP' for i in range(3)]
+# todo I should NOT do this here
 q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')
 a = ti.prb.getVariables('a')
@@ -81,6 +50,17 @@ forces = [ti.prb.getVariables('f_' + c) for c in contacts]
 q0 = ti.q0
 v0 = ti.v0
 f0 = np.array([0, 0, 300])
+nc = 3
+
+ptgt_final = [0., 0., 0.]
+vmax = [0.05, 0.05, 0.05]
+ptgt = ti.prb.createParameter('ptgt', 3)
+
+# goalx = ti.prb.createFinalResidual("final_z",  1e3*(q[2] - ptgt[2]))
+goalx = ti.prb.createFinalConstraint("final_x", 1e3 * q[0] - ptgt[0])
+goaly = ti.prb.createFinalResidual("final_y", 1e3 * (q[1] - ptgt[1]))
+# goalrz = ti.prb.createFinalResidual("final_rz", 1e3 * (q[5] - ptgt[2]))
+# base_goal_tasks = [goalx, goaly, goalrz]
 
 # final velocity
 v.setBounds(v0, v0, nodes=ns)
@@ -105,7 +85,6 @@ ti.prb.createIntermediateResidual("min_q_ddot", 1e0 * a)
 for f in forces:
     ti.prb.createIntermediateResidual(f"min_{f.getName()}", 1e-3 * (f - f0))
 
-
 # costs and constraints implementing a gait schedule
 com_fn = cs.Function.deserialize(ti.kd.centerOfMass())
 
@@ -129,7 +108,16 @@ for i, frame in enumerate(contacts):
     rot_err = cs.sumsqr(ee_rot[2, :2])
     ti.prb.createIntermediateCost(f'{frame}_rot', 1e4 * rot_err)
 
-solver_type = 'ipopt'
+    # todo action constraints
+    # kinematic contact
+    # unilateral forces
+    # friction
+    # clearance
+    # xy goal
+
+opts = dict()
+opts['default_foot_z'] = default_foot_z
+am = ActionManager(ti, opts)
 
 if solver_type != 'ilqr':
     Transcriptor.make_method('multiple_shooting', ti.prb)
@@ -143,46 +131,15 @@ q.setInitialGuess(q0)
 for f in forces:
     f.setInitialGuess(f0)
 
-# ========================= set actions =====================================
-# am = ActionManager(prb, urdf, kd, dict(zip(contacts, forces)), default_foot_z)
+# s1 = Step('arm_1_TCP', 5, 20, clearance=0.2)
+# s2 = Step('arm_2_TCP', 35, 49, clearance=0.2)
 
-contact0 = {'type': 'contact',
-               'frame': contacts[0],
-               'name': 'contact_' + contacts[0]}
+# am.setStep(s1)
+# am.setStep(s2)
+am._walk([10, 200], step_pattern=[0, 2, 1], step_nodes_duration=10)
+# am._trot([50, 100])
+# am._jump([55, 65])
 
-contact1 = {'type': 'contact',
-               'frame': contacts[1],
-               'name': 'contact_' + contacts[1]}
-
-contact2 = {'type': 'contact',
-               'frame': contacts[2],
-               'name': 'contact_' + contacts[2]}
-
-ti.setTask(contact0)
-ti.setTask(contact1)
-ti.setTask(contact2)
-
-c_0 = ti.getTask('contact_arm_1_TCP')
-c_1 = ti.getTask('contact_arm_2_TCP')
-c_2 = ti.getTask('contact_arm_3_TCP')
-
-step = range(10, 30)
-contact_c_0 = [c_n for c_n in list(range(ns+1)) if c_n not in step]
-print(contact_c_0)
-c_0.setNodes(contact_c_0)
-c_1.setNodes(range(ns + 1))
-c_2.setNodes(range(ns + 1))
-
-
-
-# print('CONSTRAINTS:')
-# for cnsrt, obj in ti.prb.getConstraints().items():
-#     print(cnsrt,':', obj.getNodes(), type(obj))
-#
-# print('COSTS:')
-# for cnsrt, obj in ti.prb.getCosts().items():
-#     print(cnsrt,':', obj.getNodes(), type(obj))
-#
 # create solver and solve initial seed
 # print('===========executing ...========================')
 
@@ -208,10 +165,10 @@ opts_rti = opts.copy()
 opts_rti['ilqr.enable_line_search'] = False
 opts_rti['ilqr.max_iter'] = 4
 
-
 solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
 solver_rti = Solver.make_solver(solver_type, ti.prb, opts_rti)
 
+ptgt.assign(ptgt_final, nodes=ns)
 solver_bs.solve()
 solution = solver_bs.getSolutionDict()
 
@@ -221,16 +178,63 @@ solution = solver_bs.getSolutionDict()
 
 ## single replay
 q_sol = solution['q']
-frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(3)}
+frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(nc)}
 repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.kd_frame, ti.kd)
 repl.sleep(1.)
 repl.replay(is_floating_base=True)
 exit()
+# =========================================================================
+repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], np.array([]), {k: None for k in contacts},
+                                           ti.kd_frame, ti.kd)
+iteration = 0
 
-plot_flag = True
-if plot_flag:
+if solver_type == 'ilqr':
+    solver_rti.solution_dict['x_opt'] = solver_bs.getSolutionState()
+    solver_rti.solution_dict['u_opt'] = solver_bs.getSolutionInput()
+
+flag_action = 1
+while True:
+
+    # if flag_action == 1 and iteration > 50:
+    #     flag_action = 0
+    #     am._trot([40, 80])
+    #
+    # if iteration > 100:
+    #     ptgt.assign([1., 0., 0], nodes=ns)
+
+    # if iteration > 160:
+    #     ptgt.assign([0., 0., 0], nodes=ns)
+
+    # if iteration % 20 == 0:
+    #     am.setStep(s_1)
+    #     am.setContact(0, 'rh_foot', range(5, 15))
+    #
+    iteration = iteration + 1
+    print(iteration)
+    #
+    am.execute(solver_rti)
+
+    # if iteration == 10:
+    #     am.setStep(s_lol)
+    # for cnsrt_name, cnsrt in ti.prb.getConstraints().items():
+    #     print(cnsrt_name)
+    #     print(cnsrt.getNodes())
+    # if iteration == 20:
+    #     am._jump(list(range(25, 36)))
+    # solver_bs.solve()
+    solver_rti.solve()
+    solution = solver_rti.getSolutionDict()
+
+    repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
+    repl.publish_joints(solution['q'][:, 0])
+    repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+#
+
+# set ROS stuff and launchfile
+plot = True
+#
+if plot:
     import matplotlib.pyplot as plt
-    import matplotlib
 
     plt.figure()
     for contact in contacts:
@@ -252,7 +256,11 @@ if plot_flag:
         plt.scatter(np.array(pos[0, 0]), np.array(pos[2, 0]))
         plt.scatter(np.array(pos[0, -1]), np.array(pos[2, -1]), marker='x')
 
-    hplt = plotter.PlotterHorizon(ti.prb, solution)
+    hplt = plotter.PlotterHorizon(prb, solution)
     hplt.plotVariables([elem.getName() for elem in forces], show_bounds=True, gather=2, legend=False)
     hplt.plotVariables(['q'], show_bounds=True, gather=2, legend=False)
     matplotlib.pyplot.show()
+
+
+
+
