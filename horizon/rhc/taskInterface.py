@@ -140,7 +140,7 @@ class TaskInterface:
 
     # a possible method could read from yaml and create the task list
 
-    # def setTaskfromYaml(self, task_yaml):
+    # def setTaskFromYaml(self, task_yaml):
     #     tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
 
     # here I do it manually
