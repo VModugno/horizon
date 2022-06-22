@@ -1,4 +1,6 @@
 from horizon.rhc.taskInterface import TaskInterface
+from horizon.rhc.tasks.cartesianTask import CartesianTask, Task
+
 import rospkg, rospy
 import numpy as np
 
@@ -27,7 +29,9 @@ for i in range(3):
 
 base_init = np.array([0, 0, 0.72, 0, 0, 0, 1])
 
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
+ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description)
+
+# ti.setContact()
 #
 # goalrz = {'type': 'Postural',
 #           'name': 'final_base_rz',
@@ -43,16 +47,27 @@ ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, con
 #           'fun_type': 'cost',
 #           'weight': 1e3}
 
-cart = {'type': 'Cartesian',
-        'frame': 'arm_1_TCP',
-        'name': 'final_base_rz',
-        'indices': [2],
-        'nodes': [N],
-        'fun_type': 'cost',
-        'weight': 1e3}
+# cart = {'type': 'Cartesian',
+#         'frame': 'arm_1_TCP',
+#         'name': 'final_base_rz',
+#         'indices': [2],
+#         'nodes': [N],
+#         'fun_type': 'cost',
+#         'weight': 1e3}
 
+interactive = {'type': 'Force',
+               'frame': 'arm_1_TCP',
+               'name': 'faboulous',
+               'indices': [2],
+               'nodes': [N-1, N],
+               'fun_type': 'cost',
+               'weight': 1e3}
+
+# cart1 = CartesianTask('arm_1_TCP', prb=ti.prb, kin_dyn=ti.kd, name='daniele', nodes=[N])
 # ti.setTaskFromDict(goalrz)
 # ti.setTaskFromDict(limits)
-ti.setTaskFromDict(cart)
+# ti.setTaskFromDict(cart)
+ti.setTaskFromDict(interactive)
 
-print(ti.getTasksType())
+# ti.setTask(cart1)
+

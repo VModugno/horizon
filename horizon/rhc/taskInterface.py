@@ -84,6 +84,7 @@ class TaskInterface:
         task_factory.register('Postural', PosturalTask)
         task_factory.register('JointLimits', JointLimitsTask)
 
+
         self.urdf = urdf.replace('continuous', 'revolute')
         self.fixed_joints = [] if fixed_joints is None else fixed_joints.copy()
         self.fixed_joints_pos = [q_init[k] for k in self.fixed_joints]
@@ -117,8 +118,9 @@ class TaskInterface:
         self.model.generateModel(model_description)
 
         # todo forcing to initialize the model
-        for c in self.contacts:
-            self.model.setContactFrame(c)
+        if self.contacts is not None:
+            for c in self.contacts:
+                self.model.setContactFrame(c)
 
         # todo model is not initialized correctly!!!!!!!!!!
         # todo: add all the contacts
@@ -154,25 +156,11 @@ class TaskInterface:
             task_description['postural_ref'] = self.q0
 
         task = task_factory.create(task_description)
-
-        # if task_type == 'Cartesian':
-        #     task = CartesianTask(self.prb, self.kd, task_description)
-        # elif task_type == 'Force':
-        #     # todo this generates another variable (f_c) for the frame of the contact: when to initialize the model?
-        #     self.model.setContactFrame(task_frame)
-        #     task = InteractionTask(self.prb, self.kd, task_description)
-        # elif task_type == 'Contact':
-        #     task = ContactTask(self.prb, self.kd, task_description)
-        # elif task_type == 'Postural':
-        #     task = PosturalTask(self.prb, self.kd, task_description)
-        # elif task_type == 'JointLimits':
-        #     task = JointLimitsTask(self.prb, self.kd, task_description)
-        # else:
-        #     raise Exception('Unknown task type {}'.format(task_type))
-
         self.task_list.append(task)
 
     def setTask(self, task):
+        # check if task is of registered_type # todo what about plugins?
+        assert isinstance(task, tuple(task_factory.get_registered_tasks()))
         self.task_list.append(task)
 
     def getTask(self, task_name):
