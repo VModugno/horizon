@@ -3,7 +3,9 @@ import casadi as cs
 from horizon.problem import Problem
 import numpy as np
 
-# todo name is useless
+# todo: why the args and kwargs? because they are part of the super class, which may change. If I explicitly define every arguments,
+#   if the base class changes I have to change all the derived classes. This, instead, prevent to change sub-classes when changing parent classes
+
 class PosturalTask(Task):
     def __init__(self, postural_ref, *args, **kwargs):
 

@@ -214,7 +214,6 @@ class HorizonWpg:
                            'cartesian_type': 'position'}
 
             self.ti.setTaskFromDict(z_task_dict)
-
             task_node = {'name': f'{frame}_foot_tgt_constr', 'fun_type': 'constraint', 'frame': frame, 'indices': [0, 1], 'weight': 1., 'cartesian_type': 'position'}
             context = {'prb': self.ti.prb, 'kin_dyn': self.ti.kd}
             foot_task = CartesianTask(**context, **task_node)
