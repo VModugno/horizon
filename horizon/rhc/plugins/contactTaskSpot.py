@@ -7,17 +7,18 @@ from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
 class ContactTaskSpot(Task):
-    def __init__(self, prb, kin_dyn, task_node):
-        super().__init__(prb, kin_dyn, task_node)
+    def __init__(self, frame, *args, **kwargs):
         """
         establish/break contact
         """
-        # todo add in opts
-        self.fmin = 10.
+        self.frame = frame
+
+        super().__init__(*args, **kwargs)
 
         # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force
         self.force = self.prb.getVariables('f_' + self.frame)
-
+        # todo add in opts
+        self.fmin = 10.
         # ======== initialize constraints ==========
         # todo are these part of the contact class? Should they belong somewhere else?
         # todo auto-generate constraints here given the method (inheriting the name of the method
@@ -92,7 +93,8 @@ class ContactTaskSpot(Task):
 
         # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
         task_node = {'name': 'zero_velocity', 'frame': self.frame, 'nodes': self.nodes, 'indices': [0, 1, 2], 'cartesian_type': 'velocity'}
-        cartesian_constr = CartesianTask(self.prb, self.kin_dyn, task_node)
+        context = {'prb': self.prb, 'kin_dyn':self.kin_dyn}
+        cartesian_constr = CartesianTask(**context, **task_node)
         constr = cartesian_constr.getConstraint()
         # dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
         # todo how do I find that there is a variable called 'v' which represent velocity?

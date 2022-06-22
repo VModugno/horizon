@@ -207,9 +207,14 @@ class ActionManager:
                                   'fun_type': 'constraint', 'cartesian_type': 'position'}
 
             # todo: setting with the plugin here!
-            self.contact_constr[frame] = self.task_type['Contact'](self.prb, self.kd, contact_task_node)
-            self.z_constr[frame] = self.task_type['Cartesian'](self.prb, self.kd, z_task_node)
-            self.foot_tgt_constr[frame] = self.task_type['Cartesian'](self.prb, self.kd, foot_tgt_task_node)
+            context = {'prb': self.prb, 'kin_dyn':self.kd}
+            contact_task_node.update(context)
+            z_task_node.update(context)
+            foot_tgt_task_node.update(context)
+
+            self.contact_constr[frame] = self.task_type['Contact'](**contact_task_node)
+            self.z_constr[frame] = self.task_type['Cartesian'](**z_task_node)
+            self.foot_tgt_constr[frame] = self.task_type['Cartesian'](**foot_tgt_task_node)
 
     def setContact(self, frame, nodes):
         """
@@ -444,6 +449,7 @@ if __name__ == '__main__':
     model_description = 'whole_body'
 
     ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
+    ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
 
     q0 = ti.q0
     v0 = ti.v0

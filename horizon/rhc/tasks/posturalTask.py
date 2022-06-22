@@ -5,14 +5,13 @@ import numpy as np
 
 # todo name is useless
 class PosturalTask(Task):
-    def __init__(self, prb: Problem, kin_dyn, task_node):
-        super().__init__(prb, kin_dyn, task_node)
+    def __init__(self, postural_ref, *args, **kwargs):
 
+        super().__init__(*args, **kwargs)
+
+        self.q0_ref = postural_ref[self.indices]
         # if 'postural_ref' not in task_node:
         #     raise ValueError('Postural reference is not set')
-
-        self.q0_ref = task_node['postural_ref'][self.indices]
-        self.fun_type = 'constraint' if 'fun_type' not in task_node else task_node['fun_type']
 
         if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint

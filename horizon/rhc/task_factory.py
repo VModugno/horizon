@@ -1,4 +1,4 @@
-from horizon.rhc.tasks.task import Task, TaskDescription
+from horizon.rhc.tasks.task import Task
 
 from typing import Callable, Dict, Any, List
 
@@ -29,14 +29,14 @@ def unregister(task_type: str) -> None:
     task_creation_funcs.pop(task_type, None)
 
 
-def create(prb, kd, args: Dict[str, Any]) -> Task:
+def create(args: Dict[str, Any]) -> Task:
     """
     Create a new task of a specific type.
     """
     args_copy = args.copy()
-    task_type = args_copy.pop('type')
+    task_type = args_copy.pop('type')  # todo: better to pop?
     try:
         creation_func = task_creation_funcs[task_type]
-        return creation_func(prb, kd, args)  # todo: **args
+        return creation_func(**args_copy)
     except KeyError:
         raise ValueError(f'Unknown task type: {task_type}') from None

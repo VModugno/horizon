@@ -7,11 +7,11 @@ from horizon.utils.utils import barrier as barrier_fun
 # todo set only minimum or maximum individually
 
 class JointLimitsTask(Task):
-    def __init__(self, prb: Problem, kin_dyn, task_node):
-        super().__init__(prb, kin_dyn, task_node)
+    def __init__(self, bound_scaling=None, *args, **kwargs):  # bound_scaling, fun_type, *args, **kwargs
 
-        self._bound_scaling = 1.0 if 'bound_scaling' not in task_node else task_node['bound_scaling']
-        self.fun_type = 'constraint' if 'fun_type' not in task_node else task_node['fun_type']
+        self._bound_scaling = 1.0 if bound_scaling is None else bound_scaling
+
+        super().__init__(*args, **kwargs)
 
         if self.fun_type == 'constraint':
             self._initialize_bounds()
