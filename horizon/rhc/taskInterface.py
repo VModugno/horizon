@@ -147,9 +147,13 @@ class TaskInterface:
     def setTaskFromDict(self, task_description):
 
         # todo how to automatically provide more info // or do more actions
+        task_description['prb'] = self.prb
+        task_description['kin_dyn'] = self.kd
         # automatically provided info:
-        task_description['postural_ref'] = self.q0
-        task = task_factory.create(self.prb, self.kd, task_description)
+        if task_description['type'] == 'Postural':
+            task_description['postural_ref'] = self.q0
+
+        task = task_factory.create(task_description)
 
         # if task_type == 'Cartesian':
         #     task = CartesianTask(self.prb, self.kd, task_description)

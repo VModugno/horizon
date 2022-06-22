@@ -5,11 +5,13 @@ import numpy as np
 
 # todo name is useless
 class CartesianTask(Task):
-    def __init__(self, prb: Problem, kin_dyn, task_node):
-        super().__init__(prb, kin_dyn, task_node)
+    def __init__(self, frame, cartesian_type=None, *args, **kwargs):
 
-        self.fun_type = 'constraint' if 'fun_type' not in task_node else task_node['fun_type']
-        self.cartesian_type = 'position' if 'cartesian_type' not in task_node else task_node['cartesian_type']
+        self.frame = frame
+        self.cartesian_type = 'position' if cartesian_type is None else cartesian_type
+
+        super().__init__(*args, **kwargs)
+
 
         if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint

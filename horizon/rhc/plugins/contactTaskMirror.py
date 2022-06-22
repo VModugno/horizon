@@ -8,11 +8,14 @@ from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
 class ContactTaskMirror(Task):
-    def __init__(self, prb, kin_dyn, task_node):
-        super().__init__(prb, kin_dyn, task_node)
+    def __init__(self, frame, *args, **kwargs):
         """
         establish/break contact
         """
+        self.frame = frame
+
+        super().__init__(*args, **kwargs)
+
         # todo add in opts
         self.fmin = 10.
 
@@ -84,7 +87,8 @@ class ContactTaskMirror(Task):
 
         # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
         task_node = {'name': 'zero_velocity', 'frame': self.frame, 'nodes': self.nodes, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type':'velocity'}
-        cartesian_constr = CartesianTask(self.prb, self.kin_dyn, task_node)
+        context = {'prb': self.prb, 'kin_dyn':self.kin_dyn}
+        cartesian_constr = CartesianTask(**context, **task_node)
         constr = cartesian_constr.getConstraint()
 
         return constr

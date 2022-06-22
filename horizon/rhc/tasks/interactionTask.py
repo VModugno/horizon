@@ -3,17 +3,20 @@ from horizon.problem import Problem
 import numpy as np
 
 class InteractionTask(Task):
-    # todo this should be general, not action-dependent
-    def __init__(self, prb: Problem, kin_dyn, task_node):
-        super().__init__(prb, kin_dyn, task_node)
+    def __init__(self, frame, *args, **kwargs):
+
+        self.frame = frame
+
+        super().__init__(*args, **kwargs)
 
         self._initialize()
 
     def _initialize(self):
         # ===========================================
         self.actions = []
-
+        # todo: this is not the way to retrieve the force
         self.f = self.prb.getVariables('f_' + self.frame)[self.indices]
+
         fzero = np.zeros(self.f.getDim())
         self.f.setBounds(fzero, fzero, self.nodes)
 
