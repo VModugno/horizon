@@ -131,8 +131,10 @@ public:
         Eigen::MatrixXd xtrj;
         Eigen::MatrixXd utrj;
         double hxx_reg;
+        double rho;
         double alpha;
         double cost;
+        double bound_violation;
         double merit;
         double mu_f;
         double mu_c;
@@ -193,7 +195,11 @@ private:
     void increase_regularization();
     void reduce_regularization();
     FeasibleConstraint handle_constraints(int i);
-    void add_bounds(int i);
+    void add_bound_penalty(int i,
+                    Eigen::MatrixXd* Hxx = nullptr,
+                    Eigen::MatrixXd* Huu = nullptr,
+                    Eigen::VectorXd* hx = nullptr,
+                    Eigen::VectorXd* hu = nullptr);
     void compute_constrained_input(Temporaries& tmp, BackwardPassResult& res);
     void compute_constrained_input_svd(Temporaries& tmp, BackwardPassResult& res);
     void compute_constrained_input_qr(Temporaries& tmp, BackwardPassResult& res);
@@ -201,6 +207,7 @@ private:
     double compute_merit_slope(double mu_f, double mu_c, double defect_norm, double constr_viol);
     std::pair<double, double> compute_merit_weights();
     double compute_cost(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
+    double compute_bound_penalty(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
     double compute_constr(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
     double compute_defect(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
     bool forward_pass(double alpha);
@@ -223,6 +230,9 @@ private:
     const int _N;
 
     double _step_length;
+    double _rho_base;
+    double _rho;
+    double _rho_growth_factor;
     double _hxx_reg;
     double _hxx_reg_base;
     double _hxx_reg_growth_factor;

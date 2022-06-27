@@ -24,6 +24,7 @@ bool IterativeLQR::forward_pass(double alpha)
     _fp_res->cost = compute_cost(_fp_res->xtrj, _fp_res->utrj);
     _fp_res->constraint_violation = compute_constr(_fp_res->xtrj, _fp_res->utrj);
     _fp_res->defect_norm = compute_defect(_fp_res->xtrj, _fp_res->utrj);
+    _fp_res->bound_violation = compute_bound_penalty(_fp_res->xtrj, _fp_res->utrj);
 
     return true;
 }
@@ -187,6 +188,24 @@ double IterativeLQR::compute_cost(const Eigen::MatrixXd& xtrj, const Eigen::Matr
     return cost / _N;
 }
 
+double IterativeLQR::compute_bound_penalty(const Eigen::MatrixXd &xtrj,
+                                           const Eigen::MatrixXd &utrj)
+{
+    TIC(compute_bound_penalty);
+
+    double res = 0.0;
+
+    auto xineq = _x_lb.array() < _x_ub.array();
+    auto uineq = _u_lb.array() < _u_ub.array();
+
+    res += xineq.select(_x_lb - xtrj, 0).cwiseMax(0).squaredNorm();
+    res += xineq.select(_x_ub - xtrj, 0).cwiseMin(0).squaredNorm();
+    res += uineq.select(_u_lb - utrj, 0).cwiseMax(0).squaredNorm();
+    res += uineq.select(_u_ub - utrj, 0).cwiseMin(0).squaredNorm();
+
+    return std::sqrt(res / _N);
+}
+
 double IterativeLQR::compute_constr(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj)
 {
     TIC(compute_constr);
@@ -207,11 +226,12 @@ double IterativeLQR::compute_constr(const Eigen::MatrixXd& xtrj, const Eigen::Ma
 
     }
 
-    // bound violation
-    constr += (_x_lb - xtrj).cwiseMax(0).lpNorm<1>();
-    constr += (_x_ub - xtrj).cwiseMin(0).lpNorm<1>();
-    constr += (_u_lb - utrj).cwiseMax(0).lpNorm<1>();
-    constr += (_u_ub - utrj).cwiseMin(0).lpNorm<1>();
+    // state and input equality constraint violation
+    auto xeq = _x_lb.array() == _x_ub.array();
+    constr += xeq.select(_x_lb - xtrj, 0).lpNorm<1>();
+
+    auto ueq = _u_lb.array() == _u_ub.array();
+    constr += ueq.select(_u_lb - utrj, 0).lpNorm<1>();
 
     // add final constraint violation
     if(_constraint[_N].is_valid())
@@ -267,7 +287,7 @@ void IterativeLQR::line_search(int iter)
 
     // compute merit function initial value
     double merit = compute_merit_value(mu_f, mu_c,
-            _fp_res->cost,
+            _fp_res->cost + 0.5 * _rho * std::pow(_fp_res->bound_violation, 2),
             _fp_res->defect_norm,
             _fp_res->constraint_violation);
 
@@ -300,7 +320,7 @@ void IterativeLQR::line_search(int iter)
 
         // compute merit
         _fp_res->merit = compute_merit_value(mu_f, mu_c,
-                                             _fp_res->cost,
+                                             _fp_res->cost + 0.5 * _rho * std::pow(_fp_res->bound_violation, 2),
                                              _fp_res->defect_norm,
                                              _fp_res->constraint_violation);
 
