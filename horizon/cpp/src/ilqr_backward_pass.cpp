@@ -16,9 +16,14 @@ void IterativeLQR::backward_pass()
     // regularize final cost
     _value.back().S.diagonal().array() += _hxx_reg;
 
-    // ..and constraint
+    // ..and initialize constraints and bounds
     _constraint_to_go->set(_constraint.back());
-    add_bounds(_N);
+
+    add_bound_penalty(_N,
+               &_value.back().S,
+               nullptr,
+               &_value.back().s,
+               nullptr);
 
     // backward pass
     int i = _N - 1;
@@ -97,6 +102,9 @@ void IterativeLQR::backward_pass_iter(int i)
     tmp.Huu.diagonal().array() += _huu_reg;
     TOC(form_value_fn_inner);
 
+    // add inequality constraints to cost using barriers
+    add_bound_penalty(i, &tmp.Hxx, &tmp.Huu, &tmp.hx, &tmp.hu);
+
     // todo: second-order terms from dynamics
 
     // form kkt matrix
@@ -168,11 +176,15 @@ void IterativeLQR::backward_pass_iter(int i)
 
 }
 
-void IterativeLQR::add_bounds(int k)
+void IterativeLQR::add_bound_penalty(int k,
+                              Eigen::MatrixXd* Hxx,
+                              Eigen::MatrixXd* Huu,
+                              Eigen::VectorXd* hx,
+                              Eigen::VectorXd* hu)
 {
 
     Eigen::RowVectorXd x_ei, u_ei;
-    
+
     // state bounds
     u_ei.setZero(_nu);
     for(int i = 0; i < _nx; i++)
@@ -182,15 +194,43 @@ void IterativeLQR::add_bounds(int k)
             break;
         }
 
+        // equality
         if(_x_lb(i, k) == _x_ub(i, k))
         {
             x_ei = x_ei.Unit(_nx, i);
-            
+
             Eigen::Matrix<double, 1, 1> hd;
             hd(0) = _xtrj(i, k) - _x_lb(i, k);
 
             _constraint_to_go->add(x_ei, u_ei, hd);
 
+            // skip rest of the loop, otherwise
+            // we'd also add a barrier to the cost
+            continue;
+
+        }
+
+        // if bound_violations comes out positive, we have
+        // an actual violation
+        // ------|------*----|------
+        // ------|-----------|---*--
+        // --*---|-----------|------
+        //       lb          ub
+
+        // if negative, violation
+        double ub_violation = _x_ub(i, k) - _xtrj(i, k);
+
+        // if positive, violation
+        double lb_violation = _x_lb(i, k) - _xtrj(i, k);
+
+        double bound_violation = ub_violation < 0 ? ub_violation :
+            (lb_violation > 0 ? lb_violation : 0.0);
+
+        // we add a cost like 0.5*rho*|bound_violation|^2
+        if(bound_violation != 0.0 && Hxx && hx)
+        {
+            (*Hxx)(i, i) += _rho;
+            (*hx)(i) -= _rho*bound_violation;
         }
     }
 
@@ -203,15 +243,36 @@ void IterativeLQR::add_bounds(int k)
             break;
         }
 
+        // equality
         if(_u_lb(i, k) == _u_ub(i, k))
         {
             u_ei = u_ei.Unit(_nu, i);
-            
+
             Eigen::Matrix<double, 1, 1> hd;
             hd(0) = _utrj(i, k) - _u_lb(i, k);
 
             _constraint_to_go->add(x_ei, u_ei, hd);
 
+            // skip rest of the loop, otherwise
+            // we'd also add a barrier to the cost
+            continue;
+
+        }
+
+        // if negative, violation
+        double ub_violation = _u_ub(i, k) - _utrj(i, k);
+
+        // if positive, violation
+        double lb_violation = _u_lb(i, k) - _utrj(i, k);
+
+        double bound_violation = ub_violation < 0 ? ub_violation :
+            (lb_violation > 0 ? lb_violation : 0.0);
+
+        // we add a cost like 0.5*rho*|du - bound_violation|^2
+        if(bound_violation != 0.0 && Huu && hu)
+        {
+            (*Huu)(i, i) += _rho;
+            (*hu)(i) -= _rho*bound_violation;
         }
     }
 }
@@ -271,9 +332,9 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
 
     // add current step intermediate constraint
     _constraint_to_go->add(_constraint[i]);
-    
+
     // add bounds
-    add_bounds(i);
+    add_bound_penalty(i);
 
     // number of constraints
     int nc = _constraint_to_go->dim();

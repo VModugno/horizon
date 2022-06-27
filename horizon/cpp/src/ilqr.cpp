@@ -85,11 +85,16 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     // set options _hxx_reg_base
     _verbose = value_or(opt, "ilqr.verbose", 0);
     _step_length = value_or(opt, "ilqr.step_length", 1.0);
+
+    _rho_base = value_or(opt, "ilqr.rho_base", 0.0);
+    _rho = _rho_base;
+    _rho_growth_factor = value_or(opt, "ilqr.rho_growth_factor", 1.0);
+
     _hxx_reg = value_or(opt, "ilqr.hxx_reg", 0.0);
     _hxx_reg_base = value_or(opt, "ilqr.hxx_reg_base", 0.0);
+    _hxx_reg_growth_factor = value_or(opt, "ilqr.hxx_reg_growth_factor", 1e3);
     _huu_reg = value_or(opt, "ilqr.huu_reg", 0.0);
     _kkt_reg = value_or(opt, "ilqr.kkt_reg", 0.0);
-    _hxx_reg_growth_factor = value_or(opt, "ilqr.hxx_reg_growth_factor", 1e3);
     _line_search_accept_ratio = value_or(opt, "ilqr.line_search_accept_ratio", 1e-4);
     _alpha_min = value_or(opt, "ilqr.alpha_min", 1e-3);
     _svd_threshold = value_or(opt, "ilqr.svd_threshold", 1e-6);
@@ -170,8 +175,11 @@ void IterativeLQR::setStateBounds(const Eigen::MatrixXd& lb, const Eigen::Matrix
         throw std::invalid_argument("state bound size mismatch");
     }
 
+    TIC(setStateBounds);
+
     _x_lb = lb;
     _x_ub = ub;
+
 }
 
 void IterativeLQR::setInputBounds(const Eigen::MatrixXd& lb, const Eigen::MatrixXd& ub)
@@ -493,6 +501,7 @@ bool IterativeLQR::solve(int max_iter)
     _fp_res->cost = compute_cost(_xtrj, _utrj);
     _fp_res->constraint_violation = compute_constr(_xtrj, _utrj);
     _fp_res->defect_norm = compute_defect(_xtrj, _utrj);
+    _fp_res->bound_violation = compute_bound_penalty(_xtrj, _utrj);
 
     // clear filter
     _it_filt.clear();
@@ -988,8 +997,8 @@ IterativeLQR::ForwardPassResult::ForwardPassResult(int nx, int nu, int N):
 
 void IterativeLQR::ForwardPassResult::print() const
 {
-    printf("%2.2d alpha=%.3e  reg=%.3e  merit=%.3e  dm=%.3e  mu_f=%.3e  mu_c=%.3e  cost=%.3e  delta_u=%.3e  constr=%.3e  gap=%.3e \n",
-           iter, alpha, hxx_reg, merit, merit_der, mu_f, mu_c, cost, step_length, constraint_violation, defect_norm);
+    printf("%2.2d al=%.3e  reg=%.3e  m=%.3e  dm=%.3e  mu_f=%.3e  mu_c=%.3e  cost=%.3e  du=%.3e  con=%.3e  bound=%.3e  gap=%.3e \n",
+           iter, alpha, hxx_reg, merit, merit_der, mu_f, mu_c, cost, step_length, constraint_violation, bound_violation, defect_norm);
 }
 
 IterativeLQR::ConstraintToGo::ConstraintToGo(int nx, int nu):
