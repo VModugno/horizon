@@ -283,6 +283,7 @@ void IterativeLQR::line_search(int iter)
         IterateFilter::Pair test_pair;
         test_pair.f = std::numeric_limits<double>::lowest();
         test_pair.h = _fp_res->defect_norm + _fp_res->constraint_violation;
+        test_pair.h = std::max(10.0*test_pair.h, 1e3);
         _fp_res->accepted = _it_filt.add(test_pair);
 
         _fp_res->alpha = 0;
