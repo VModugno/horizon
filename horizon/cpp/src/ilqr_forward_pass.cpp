@@ -97,13 +97,14 @@ double IterativeLQR::compute_merit_slope(double mu_f, double mu_c,
 
     double der = 0.;
 
+    Eigen::VectorXd dx, du;
+    dx.setZero(_nx);  // dx[0] = 0
+
     for(int i = 0; i < _N; i++)
     {
-        auto& hu = _tmp[i].hu;
-        auto& du = _bp_res[i].lu;
-        auto dx = _dyn[i].B()*du + _dyn[i].d;
-
+        du = _bp_res[i].lu + _bp_res[i].Lu*dx;
         der += _cost[i].r().dot(du) + _cost[i].q().dot(dx);
+        dx = _dyn[i].A()*dx + _dyn[i].B()*du + _dyn[i].d;
     }
 
     return der - mu_f*defect_norm - mu_c*constr_viol;
