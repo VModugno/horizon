@@ -1213,6 +1213,22 @@ class VariableView(AbstractVariableView):
         indices = np.array(range(self._parent._dim))[self._indices]
         self._parent._setVals(val_type, val, nodes, indices)
 
+    def _getVals(self, val_type, nodes):
+        """
+        wrapper function to get the desired argument from the variable.
+
+        Args:
+            val_type: type of the argument to retrieve
+            node: desired node at which the argument is retrieved. If not specified, this returns the desired argument at all nodes
+
+        Returns:
+            value/s of the desired argument
+        """
+        indices = np.array(range(self._parent._dim))[self._indices]
+        vals = self._parent._getVals(val_type, nodes)[indices]
+
+        return vals
+
     def getImpl(self, nodes=None):
         """
         Getter for the implemented variable.
@@ -1226,8 +1242,44 @@ class VariableView(AbstractVariableView):
         var_impl = self._parent.getImpl(nodes)[self._indices, :]
         return var_impl
 
-    def getBounds(self, nodes=None):
-        raise NotImplementedError('yet to implement!')
+    def getBounds(self, node=None):
+        """
+        Getter for the bounds of the variable.
+
+        Args:
+            node: desired node at which the bounds are retrieved. If not specified, this returns the bounds at all nodes
+
+        Returns:
+            value/s of the bounds
+
+        """
+        return self.getLowerBounds(node), self.getUpperBounds(node)
+
+    def getLowerBounds(self, node=None):
+        """
+        Getter for the lower bounds of the variable.
+
+        Args:
+            node: desired node at which the lower bounds are retrieved. If not specified, this returns the lower bounds at all nodes
+
+        Returns:
+            value/s of the lower bounds
+
+        """
+        return self._getVals('lb', node)
+
+    def getUpperBounds(self, node=None):
+        """
+        Getter for the lower bounds of the variable.
+
+        Args:
+            node: desired node at which the lower bounds are retrieved. If not specified, this returns the lower bounds at all nodes
+
+        Returns:
+            value/s of the lower bounds
+
+        """
+        return self._getVals('ub', node)
 
     def setLowerBounds(self, bounds, nodes=None):
         """
@@ -1270,6 +1322,7 @@ class VariableView(AbstractVariableView):
             nodes: which nodes the bounds are applied on. If not specified, the variable is bounded along ALL the nodes
         """
         self._setVals('w0', val, nodes)
+
 
 class RecedingVariable(Variable):
     def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
