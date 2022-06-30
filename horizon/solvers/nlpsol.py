@@ -75,6 +75,7 @@ class NlpsolSolver(Solver):
                 fun_list.append(fun_to_append)
         g = cs.veccat(*fun_list)
 
+        # todo: residual, recedingResidual should be the same class
         # treat differently cost and residual (residual must be quadratized)
         fun_list = list()
         for fun in self.fun_container.getCost().values():

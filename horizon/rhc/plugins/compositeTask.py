@@ -8,11 +8,12 @@ from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
 
-class ContactTaskSpot(Task):
-    def __init__(self, *args, **kwargs):
+class Composite(Task):
+    def __init__(self, frame, *args, **kwargs):
         """
         establish/break contact
         """
+        self.frame = frame
 
         # todo what if I want a default value for these subtasks?
         # if 'Force' not in kwargs:
@@ -25,7 +26,6 @@ class ContactTaskSpot(Task):
         super().__init__(*args, **kwargs)
 
         self.force = self.interaction_task.f
-        self.frame = self.cartesian_task.frame
 
         # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force
         # self.force = self.prb.getVariables('f_' + self.frame)
@@ -172,23 +172,4 @@ class ContactTaskSpot(Task):
 
 # required for the plugin to be registered
 def register_task_plugin(factory) -> None:
-    factory.register("Contact", ContactTaskSpot)
-
-    # def _friction(self, frame):
-    #     """
-    #     inequality constraint
-    #     """
-    #     mu = 0.5
-    #     frame_rot = np.identity(3, dtype=float)  # environment rotation wrt inertial frame
-    #     fc, fc_lb, fc_ub = self.kd.linearized_friction_cone(f, mu, frame_rot)
-    #     self.prb.createIntermediateConstraint(f"f{frame}_friction_cone", fc, bounds=dict(lb=fc_lb, ub=fc_ub))
-
-    # def _unilaterality(self, f):
-    #     """
-    #     inequality constraint
-    #     """
-    #     # todo or createIntermediateConstraint?
-    #     f = self.forces[frame]
-    #     constr = self.prb.createConstraint(f'{f.getName()}_unil', f_z[2] - self.fmin, nodes=[])
-    #     constr.setUpperBounds(np.inf)
-    #     return constr
+    factory.register("Composite", Composite)

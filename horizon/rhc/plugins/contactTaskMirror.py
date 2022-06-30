@@ -1,32 +1,35 @@
 import casadi as cs
 import numpy as np
 from horizon.rhc.tasks.cartesianTask import CartesianTask
+from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.functions import RecedingConstraint, RecedingCost
-from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.utils.utils import barrier as barrier_fun
 from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
 class ContactTaskMirror(Task):
-    def __init__(self, frame, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         establish/break contact
         """
-        self.frame = frame
-
+        self._zero_vel_constr = CartesianTask(**kwargs.pop('Cartesian'))
+        self._force = InteractionTask(**kwargs.pop('Force'))
         super().__init__(*args, **kwargs)
+
+        # getForce() getFrame()
+        self.frame = self._zero_vel_constr.frame
+        self.force = self._force.f
+
 
         # todo add in opts
         self.fmin = 10.
 
-        # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force
-        self.force = self.prb.getVariables('f_' + self.frame)
 
         # ======== initialize constraints ==========
         # todo are these part of the contact class? Should they belong somewhere else?
         # todo auto-generate constraints here given the method (inheriting the name of the method
         self.constraints = list()
-        self._zero_vel_constr = self._zero_velocity(self.nodes)  # this is easily a cartesianTask
+        # self._zero_vel_constr = self._zero_velocity(self.nodes)  # this is easily a cartesianTask
         self._unil_constr = self._unilaterality(self.nodes)
         self._friction_constr = self._friction(self.nodes)
         self._vertical_takeoff_consrt = self._vertical_takeoff()
@@ -58,7 +61,8 @@ class ContactTaskMirror(Task):
 
         # setting the nodes
         erasing = True
-        self._zero_vel_constr.setNodes(nodes_on_x, erasing=erasing)  # state + starting from node 1
+        self._force.setNodes(nodes_off_u)  # this is from taskInterface
+        self._zero_vel_constr.setNodes(nodes_on_x)  # state + starting from node 1
         self._unil_constr.setNodes(nodes_on_u, erasing=erasing)
         # self._friction_constr[self.frame].setNodes(nodes_on_u, erasing=erasing)  # input
 
@@ -67,31 +71,28 @@ class ContactTaskMirror(Task):
             self._vertical_takeoff_nodes.extend(nodes_ver)
             self._vertical_takeoff_consrt.setNodes(self._vertical_takeoff_nodes, erasing=erasing)
 
-        f = self.force
-        fzero = np.zeros(f.getDim())
-        f.setBounds(fzero, fzero, nodes_off_u)
 
         print(f'contact {self.name} nodes:')
-        print(f'zero_velocity: {self._zero_vel_constr.getNodes().tolist()}')
+        print(f'zero_velocity: {self._zero_vel_constr.getNodes()}')
         print(f'unilaterality: {self._unil_constr.getNodes().tolist()}')
         print(f'force: ')
         print(f'{np.where(self.force.getLowerBounds()[0, :] == 0.)[0].tolist()}')
         print(f'{np.where(self.force.getUpperBounds()[0, :] == 0.)[0].tolist()}')
         print('===================================')
 
-    def _zero_velocity(self, nodes=None):
-        """
-        equality constraint
-        """
-        active_nodes = [] if nodes is None else nodes
-
-        # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
-        task_node = {'name': 'zero_velocity', 'frame': self.frame, 'nodes': self.nodes, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type':'velocity'}
-        context = {'prb': self.prb, 'kin_dyn':self.kin_dyn}
-        cartesian_constr = CartesianTask(**context, **task_node)
-        constr = cartesian_constr.getConstraint()
-
-        return constr
+    # def _zero_velocity(self, nodes=None):
+    #     """
+    #     equality constraint
+    #     """
+    #     active_nodes = [] if nodes is None else nodes
+    #
+    #     # todo what if I don't want to set a reference? Does the parameter that I create by default weigthts on the problem?
+    #     task_node = {'name': 'zero_velocity', 'frame': self.frame, 'nodes': self.nodes, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type':'velocity'}
+    #     context = {'prb': self.prb, 'kin_dyn':self.kin_dyn}
+    #     cartesian_constr = CartesianTask(**context, **task_node)
+    #     constr = cartesian_constr.getConstraint()
+    #
+    #     return constr
 
     def _unilaterality(self, nodes=None):
         """

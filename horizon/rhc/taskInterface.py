@@ -5,9 +5,12 @@ from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
+from horizon.rhc.tasks.regularizationTask import RegularizationTask
 from typing import List, Dict
 import numpy as np
 from horizon.rhc import task_factory, plugin_handler
+from horizon.rhc.yaml_handler import YamlParser
+
 
 class ModelDescription:
     def __init__(self, problem, model):
@@ -40,11 +43,14 @@ class ModelDescription:
         self.fmap = dict()
 
     def setContactFrame(self, contact):
+
+        # todo add more guards
+        if contact in self.contacts:
+            raise Exception(f'{contact} frame is already a contact.')
         self.contacts.append(contact)
         f_c = self.prb.createInputVariable('f_' + contact, self.nf)
         self.fmap[contact] = f_c
         return f_c
-
 
     def setDynamics(self):
         _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
@@ -58,7 +64,8 @@ class ModelDescription:
         # else:
         #     id_fn = kin_dyn.InverseDynamics(self.kd)
 
-
+    def getContacts(self):
+        return self.contacts
     # def getInput(self):
     #     return self.a
     #
@@ -83,6 +90,7 @@ class TaskInterface:
         task_factory.register('Force', InteractionTask)
         task_factory.register('Postural', PosturalTask)
         task_factory.register('JointLimits', JointLimitsTask)
+        task_factory.register('Regularization', RegularizationTask)
 
 
         self.urdf = urdf.replace('continuous', 'revolute')
@@ -94,7 +102,7 @@ class TaskInterface:
 
         self.joint_names = self.kd.joint_names()[2:]
 
-        self.contacts = contacts
+        self.init_contacts = contacts
 
         # number of dof
         self.nq = self.kd.nq()
@@ -117,18 +125,16 @@ class TaskInterface:
         self.model = ModelDescription(self.prb, self.kd)
         self.model.generateModel(model_description)
 
-        # todo forcing to initialize the model
-        if self.contacts is not None:
-            for c in self.contacts:
+        if self.init_contacts is not None:
+            for c in self.init_contacts:
                 self.model.setContactFrame(c)
 
-        # todo model is not initialized correctly!!!!!!!!!!
-        # todo: add all the contacts
         self._initializeModel()
 
     def _createProblem(self, problem_opts):
 
         # definition of the problem
+        # todo: what if I want a variable dt?
         self.N = problem_opts.get('N', 50)
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
@@ -141,22 +147,93 @@ class TaskInterface:
         self.model.setDynamics()
 
     # a possible method could read from yaml and create the task list
+    def setTaskFromYaml(self, task_config):
 
-    # def setTaskFromYaml(self, task_yaml):
-    #     tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
+        # todo this should probably go in each single task definition --> i don't have the info from the ti then
+        shortcuts = {
+            'nodes': {'final': self.N, 'all': range(self.N + 1)},
+            # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
+            # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
+        }
+
+        task_list = YamlParser.load(task_config)
+
+        # todo: this should be updated everytime a task is added
+        for task_descr in task_list:
+            task_descr_resolved = YamlParser.resolve(task_descr, shortcuts)
+
+
+            if 'weight' in task_descr and isinstance(task_descr['weight'], dict):
+                weight_dict = task_descr['weight']
+                if 'position' in weight_dict:
+                    weight_dict['q'] = weight_dict.pop('position')
+                if 'velocity' in weight_dict:
+                    weight_dict['v'] = weight_dict.pop('velocity')
+                if 'acceleration' in weight_dict:
+                    weight_dict['a'] = weight_dict.pop('acceleration')
+
+                # todo this is wrong: if new forces are added, this is not adding them into the Task
+                if 'force' in weight_dict:
+                    weight_force = weight_dict.pop('force')
+                    for f in self.model.fmap.values():
+                        weight_dict[f.getName()] = weight_force
+
+            self.setTaskFromDict(task_descr_resolved)
+
+        # tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
 
     # here I do it manually
     def setTaskFromDict(self, task_description):
 
-        # todo how to automatically provide more info // or do more actions
-        task_description['prb'] = self.prb
-        task_description['kin_dyn'] = self.kd
-        # automatically provided info:
-        if task_description['type'] == 'Postural':
-            task_description['postural_ref'] = self.q0
-
-        task = task_factory.create(task_description)
+        task_specific = self.generateTaskContext(task_description)
+        task = task_factory.create(task_specific)
         self.task_list.append(task)
+
+        return task
+
+    def generateTaskContext(self, task_description):
+        '''
+        add specific context to task depending on its type
+        '''
+
+        task_description_mod = task_description.copy()
+
+        # add generic context
+        task_description_mod['prb'] = self.prb
+        task_description_mod['kin_dyn'] = self.kd
+
+        # check for subtasks:
+        subtask_list = task_description_mod.pop('subtask') if 'subtask' in task_description else []
+
+        # search the subtask:
+        subtask_dict = dict()
+        for subtask_description in subtask_list:
+
+            # child inherit from parent the values, if not present
+            # parent define the context for the child: child can override it
+            for key, value in task_description_mod.items():
+                if key not in subtask_description:
+                    subtask_description[key] = value
+
+            subtask_description = self.generateTaskContext(subtask_description)
+            # override factory and pass directly to parent all the arguments for the child
+            subtask_type = subtask_description.pop('type')
+            subtask_dict[subtask_type] = subtask_description
+
+        task_description_mod.update(subtask_dict)
+
+        # automatically provided info:
+        if task_description_mod['type'] == 'Postural':
+            task_description_mod['postural_ref'] = self.q0
+
+        if task_description_mod['type'] == 'Force':
+            contact_frame = task_description_mod['frame']
+            if contact_frame not in self.model.contacts:
+                self.model.setContactFrame(contact_frame)
+
+            task_description_mod['force'] = self.prb.getVariables('f_' + task_description_mod['frame'])
+
+        return task_description_mod
 
     def setTask(self, task):
         # check if task is of registered_type # todo what about plugins?

@@ -197,8 +197,16 @@ class HorizonWpg:
             self.ti.prb.createIntermediateCost(f'{frame}_rot', 1e1 * rot_err)
 
             # add contact task (by dict)
+
+            # todo: useless repetition of force and frame both present in subtask and task
+            force_frame = self.ti.prb.getVariables(f'f_{frame}')
+            subtask_force = {'type': 'Force', 'name': f'interaction_{frame}', 'frame': frame, 'force': force_frame, 'indices': [0, 1, 2]}
+            subtask_cartesian = {'type': 'Cartesian', 'name': 'zero_velocity', 'frame': frame, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type': 'velocity'}
+
             contact = {'type': 'Contact',
+                       'subtask': [subtask_force, subtask_cartesian],
                        'frame': frame,
+                       'force': force_frame,
                        'name': 'contact_' + frame}
 
             self.ti.setTaskFromDict(contact)
@@ -277,7 +285,7 @@ class HorizonWpg:
 
         self.repl = replay_trajectory.replay_trajectory(0.01,
                                                         self.ti.joint_names, np.array([]),
-                                                        {k: None for k in self.ti.contacts}, self.ti.kd_frame,
+                                                        {k: None for k in self.ti.model.contacts}, self.ti.kd_frame,
                                                         self.ti.kd)
         self.fixed_joint_pub = rospy.Publisher('joint_states', JointState, queue_size=10)
 
@@ -367,7 +375,7 @@ class HorizonWpg:
 
     def resample(self, dt_res):
 
-        contact_map = {self.ti.contacts[i]: self.solution[self.forces[i].getName()] for i in range(3)}
+        contact_map = {self.ti.model.contacts[i]: self.solution[self.forces[i].getName()] for i in range(3)}
 
         dae = {'x': self.ti.prb.getState().getVars(), 'p': self.ti.model.a, 'ode': self.ti.model.xdot, 'quad': 0.0}
 

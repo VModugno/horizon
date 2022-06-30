@@ -34,11 +34,12 @@ def create(args: Dict[str, Any]) -> Task:
     Create a new task of a specific type.
     """
     args_copy = args.copy()
-    task_type = args_copy.pop('type')  # todo: better to pop?
+    task_type = args_copy.pop('type') # todo: why pop?
 
     try:
         creation_func = task_creation_funcs[task_type]
     except KeyError:
         raise ValueError(f'Unknown task type: {task_type}') from None
 
-    return creation_func(**args_copy)
+    return creation_func.from_dict(args_copy)
+
