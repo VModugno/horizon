@@ -18,6 +18,8 @@ class PosturalTask(Task):
         if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint
         elif self.fun_type == 'cost':
+            self.instantiator = self.prb.createCost
+        elif self.fun_type == 'residual':
             self.instantiator = self.prb.createResidual
 
         self._initialize()

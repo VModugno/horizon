@@ -41,28 +41,3 @@ def load_plugins(plugins: List[str]) -> None:
 #     for finder, name, ispkg
 #     in iter_namespace(horizon.rhc.plugins)
 # }
-
-
-# for i, k in discovered_plugins.items():
-#     print(f'{i}: {k}')
-
-# myplug = discovered_plugins[f'horizon.rhc.plugins.{PLUGIN_NAME}'].Penis('dio')
-
-# myplug.diocanepari()
-
-
-# yaml file parser
-# def main() -> None:
-#     with open('./level.json') as file:
-#         data = json.load(file)
-#
-#         tasks: list[Task] = []
-#         for item in data['tasks']:
-#             item_copy = item.copy()
-#             task_type = item_copy.pop("type")
-#             if task_type == 'Cartesian':
-#                 tasks.append(CartesianTask(**item_copy))
-#             elif task_type == 'Postural':
-#                 tasks.append(PosturalTask(**item_copy))
-#             elif
-#                 ...

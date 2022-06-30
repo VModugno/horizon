@@ -6,6 +6,7 @@ from horizon.rhc.taskInterface import TaskInterface
 import numpy as np
 import rospkg
 import casadi as cs
+
 """
 This application is basically what /playground/mirror/mirror_walk_am.py does, but using the tasks dicts, and without using the ActionManager.
 There should be:
@@ -34,11 +35,10 @@ base_init = np.array([0, 0, 0.72, 0, 0, 0, 1])
 # todo: this should not be in initialization
 #  I should add contacts after the initialization, as forceTasks, no?
 
-contacts = [f'arm_{i+1}_TCP' for i in range(3)]
+contacts = [f'arm_{i + 1}_TCP' for i in range(3)]
 ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
 # register my plugin 'Contact'
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
-
 
 ptgt_final = [0., 0., 0.]
 
@@ -52,7 +52,7 @@ task_base_y = {'type': 'Postural',
                'name': 'final_base_y',
                'indices': [1],
                'nodes': [ns],
-               'fun_type': 'cost',
+               'fun_type': 'residual',
                'weight': 1e3}
 
 # todo this should add the contacts tasks:
@@ -73,7 +73,7 @@ task_base_y = ti.getTask('final_base_y')
 task_base_y.setRef(ptgt_final[1])
 
 # todo: next section to wrap up like the lines above
-contacts = [f'arm_{i+1}_TCP' for i in range(3)]
+contacts = [f'arm_{i + 1}_TCP' for i in range(3)]
 q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')
 a = ti.prb.getVariables('a')
@@ -105,7 +105,6 @@ ti.prb.createIntermediateResidual("min_q_ddot", 1e0 * a)
 # regularize forces
 for f in forces:
     ti.prb.createIntermediateResidual(f"min_{f.getName()}", 1e-3 * (f - f0))
-
 
 # costs and constraints implementing a gait schedule
 com_fn = cs.Function.deserialize(ti.kd.centerOfMass())
@@ -147,34 +146,31 @@ for f in forces:
 # ========================= set actions =====================================
 # am = ActionManager(prb, urdf, kd, dict(zip(contacts, forces)), default_foot_z)
 
-contact0 = {'type': 'Contact',
-               'frame': contacts[0],
-               'name': 'contact_' + contacts[0]}
 
-contact1 = {'type': 'Contact',
-               'frame': contacts[1],
-               'name': 'contact_' + contacts[1]}
+for contact in contacts:
+    subtask_contact = {'type': 'Cartesian',
+                       'name': 'zero_velocity',
+                       'frame': contact,
+                       'indices': [0, 1, 2, 3, 4, 5],
+                       'cartesian_type': 'velocity'}
 
-contact2 = {'type': 'Contact',
-               'frame': contacts[2],
-               'name': 'contact_' + contacts[2]}
+    contact_task = {'type': 'Contact',
+                    'frame': contact,
+                    'subtask': [subtask_contact],
+                    'name': 'contact_' + contact}
 
-ti.setTaskFromDict(contact0)
-ti.setTaskFromDict(contact1)
-ti.setTaskFromDict(contact2)
+    ti.setTaskFromDict(contact_task)
 
 c_0 = ti.getTask('contact_arm_1_TCP')
 c_1 = ti.getTask('contact_arm_2_TCP')
 c_2 = ti.getTask('contact_arm_3_TCP')
 
 step = range(10, 30)
-contact_c_0 = [c_n for c_n in list(range(ns+1)) if c_n not in step]
+contact_c_0 = [c_n for c_n in list(range(ns + 1)) if c_n not in step]
 print(contact_c_0)
 c_0.setNodes(contact_c_0)
 c_1.setNodes(range(ns + 1))
 c_2.setNodes(range(ns + 1))
-
-
 
 # print('CONSTRAINTS:')
 # for cnsrt, obj in ti.prb.getConstraints().items():
@@ -208,7 +204,6 @@ opts = {'ipopt.tol': 0.001,
 opts_rti = opts.copy()
 opts_rti['ilqr.enable_line_search'] = False
 opts_rti['ilqr.max_iter'] = 4
-
 
 solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
 solver_rti = Solver.make_solver(solver_type, ti.prb, opts_rti)

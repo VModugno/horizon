@@ -12,37 +12,25 @@ def generate_id() -> str:
     return ''.join(
         random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(id_len))
 
-
-# @dataclass() # frozen=True
-# class TaskDescription:
-#     # only add common elements
-#     type: str
-#     name: str
-#     frame: str
-#     fun_type: str = None
-#     weight: float = 1.0
-#     nodes: Iterable = field(default_factory=list)
-#     indices: Union[List, np.ndarray] = np.array([0, 1, 2]).astype(int)
-#     id: str = field(init=False, default_factory=generate_id)
-#     kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-#
-#     def setIndices(self, indices):
-#         self.indices = indices
-#
-#     # def ...
-
 @dataclass
 class Task:
     # todo this is context: transform to context
     prb: Problem
     kin_dyn: pycasadi_kin_dyn.CasadiKinDyn
+    kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+
+    # todo: there should be also a type
     name: str
     fun_type: str = 'constraint'
-    weight: float = 1.0
+    weight: Union[List, float] = 1.0
     nodes: Sequence = field(default_factory=list)
     indices: Union[List, np.ndarray] = np.array([0, 1, 2]).astype(int)
     id: str = field(init=False, default_factory=generate_id)
-    kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+
+    @classmethod
+    def from_dict(cls, task_dict):
+        return cls(**task_dict)
+
 
     def __post_init__(self):
         # todo: this is for simplicity

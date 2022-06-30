@@ -1,0 +1,62 @@
+task_base_x:
+  type: 'Postural'
+  indices: [0]
+  nodes: 'final'
+  weight: 1000
+#
+final_base_y:
+  type: 'Postural'
+  indices: [1]
+  nodes: 'final'
+  fun_type: 'residual'
+  weight: 1000
+#
+min_rot:
+  type: 'Postural'
+  indices: [3,4]
+  nodes: 'all'
+  fun_type: 'residual'
+  weight: 0.001
+#
+joint_posture:
+  type: 'Postural'
+  indices: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] # shitty
+  nodes: 'all'
+  fun_type: 'residual'
+  weight: 1.
+
+contact1:
+   type: 'Force'
+   frame: 'lf_foot'
+
+contact2:
+   type: 'Force'
+   frame: 'rf_foot'
+
+contact3:
+   type: 'Force'
+   frame: 'lh_foot'
+
+contact4:
+   type: 'Force'
+   frame: 'rh_foot'
+
+# todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they won't get considered.
+joint_regularization:
+  type: 'Regularization'
+  nodes: 'all'
+  fun_type: 'residual'
+  weight:
+#    velocity: 0.01
+    acceleration: 0.01
+    force: 0.01 # todo <----- how to do?
+
+final_x:
+  type: "Postural"
+  indices: [0]
+
+final_y:
+  type: "Postural"
+  indices: [1]
+  weight: 1000
+

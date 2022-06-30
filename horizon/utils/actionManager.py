@@ -62,6 +62,7 @@ class ActionManager:
         # prb: Problem, urdf, kindyn, contacts_map, default_foot_z
 
         self.ti = task_interface
+
         self.opts = opts
 
         self.prb = self.ti.prb
@@ -84,7 +85,15 @@ class ActionManager:
         self.fmin = 10.
 
         # todo set default foot automatically, not using opts
-        self.default_foot_z = opts['default_foot_z']
+        # contact velocity is zero, and normal force is positive
+        self.default_foot_z = dict()
+        for i, frame in enumerate(self.contacts):
+            # fk functions and evaluated vars
+            fk = cs.Function.deserialize(self.ti.kd.fk(frame))
+            dfk = cs.Function.deserialize(self.ti.kd.frameVelocity(frame, self.ti.kd_frame))
+
+            # save foot height
+            self.default_foot_z[frame] = (fk(q=self.ti.q0)['ee_pos'][2]).toarray()
 
         self.k0 = 0
 
@@ -198,23 +207,21 @@ class ActionManager:
         self.foot_tgt_constr = dict()
 
         for frame in self.contacts:
-            # taskInteface.getTask(ContactTask)
-            # todo: can also specify with dictionaries
-            contact_task_node = {'name': f'{frame}_contact', 'frame': frame}
-            z_task_node = {'name': f'{frame}_z_constr', 'frame': frame, 'indices': [2], 'fun_type': 'constraint',
+            # todo: duplication of frame in subtask (Cartesian) and task (Contact)
+            subtask_force = {'type': 'Force', 'name': f'interaction_{frame}', 'frame': frame, 'indices': [0, 1, 2]}
+            # todo LET THE USER SPECIFY ALL OF THIS
+            subtask_cartesian = {'type': 'Cartesian', 'name': 'zero_velocity', 'frame': frame, 'indices': [0, 1, 2], 'cartesian_type': 'velocity'}
+            # subtask_cartesian = {'type': 'Cartesian', 'name': 'zero_velocity', 'frame': frame, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type': 'velocity'}
+            contact_task_node = {'type': 'Contact', 'name': f'{frame}_contact', 'subtask': [subtask_force, subtask_cartesian]}
+
+            z_task_node = {'type': 'Cartesian', 'name': f'{frame}_z_constr', 'frame': frame, 'indices': [2], 'fun_type': 'constraint',
                            'cartesian_type': 'position'}
-            foot_tgt_task_node = {'name': f'{frame}_foot_tgt_constr', 'frame': frame, 'indices': [0, 1],
+            foot_tgt_task_node = {'type': 'Cartesian', 'name': f'{frame}_foot_tgt_constr', 'frame': frame, 'indices': [0, 1],
                                   'fun_type': 'constraint', 'cartesian_type': 'position'}
 
-            # todo: setting with the plugin here!
-            context = {'prb': self.prb, 'kin_dyn':self.kd}
-            contact_task_node.update(context)
-            z_task_node.update(context)
-            foot_tgt_task_node.update(context)
-
-            self.contact_constr[frame] = self.task_type['Contact'](**contact_task_node)
-            self.z_constr[frame] = self.task_type['Cartesian'](**z_task_node)
-            self.foot_tgt_constr[frame] = self.task_type['Cartesian'](**foot_tgt_task_node)
+            self.contact_constr[frame] = self.ti.setTaskFromDict(contact_task_node) # this is a plugin!
+            self.z_constr[frame] = self.ti.setTaskFromDict(z_task_node)
+            self.foot_tgt_constr[frame] = self.ti.setTaskFromDict(foot_tgt_task_node)
 
     def setContact(self, frame, nodes):
         """
@@ -448,13 +455,28 @@ if __name__ == '__main__':
     problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
     model_description = 'whole_body'
 
-    ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
+    # todo for now, there are three ways to add contacts:
+        # contacts=contacts
+        # setContactFrame(contact)
+        # interactionTask
+    ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description) #contacts=contacts
     ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
+
+    # [ti.model.setContactFrame(contact) for contact in contacts]
+
+    for contact in contacts:
+        contact_task = {
+            'type': 'Force',
+            'name': f'{contact}_interaction_task',
+            'frame': contact,
+        }
+        ti.setTaskFromDict(contact_task)
 
     q0 = ti.q0
     v0 = ti.v0
+
     f0 = np.array([0, 0, 55])
-    nc = 4  # todo: only required for  replay
+    nc = 4  # todo: only required for replay
 
     # final goal (a.k.a. integral velocity control)
     ptgt_final = [0., 0., 0.]
@@ -464,7 +486,7 @@ if __name__ == '__main__':
     q = ti.prb.getVariables('q')
     v = ti.prb.getVariables('v')
     a = ti.prb.getVariables('a')
-    # todo: this is so wrong
+
     forces = [ti.prb.getVariables('f_' + c) for c in contacts]
 
     # goalx = prb.createFinalResidual("final_x",  1e3*(q[0] - ptgt[0]))
@@ -498,59 +520,32 @@ if __name__ == '__main__':
     for f in forces:
         ti.prb.createIntermediateResidual(f"min_{f.getName()}", 1e-2 * (f - f0))
 
-    # costs and constraints implementing a gait schedule
-    com_fn = cs.Function.deserialize(ti.kd.centerOfMass())
-
-    # save default foot height
-    default_foot_z = dict()
-
-    # contact velocity is zero, and normal force is positive
-    for i, frame in enumerate(contacts):
-        # fk functions and evaluated vars
-        fk = cs.Function.deserialize(ti.kd.fk(frame))
-        dfk = cs.Function.deserialize(ti.kd.frameVelocity(frame, ti.kd_frame))
-
-        ee_p = fk(q=q)['ee_pos']
-        ee_rot = fk(q=q)['ee_rot']
-        ee_v = dfk(q=q, qdot=v)['ee_vel_linear']
-
-        # save foot height
-        default_foot_z[frame] = (fk(q=q0)['ee_pos'][2]).toarray()
-
-        # vertical contact frame
-        rot_err = cs.sumsqr(ee_rot[2, :2])
-        # ti.prb.createIntermediateCost(f'{frame}_rot', 1e-1 * rot_err)
-
-        # todo action constraints
-        # kinematic contact
-        # unilateral forces
-        # friction
-        # clearance
-        # xy goal
-
     opts = dict()
-    opts['default_foot_z'] = default_foot_z
     am = ActionManager(ti, opts)
 
-    k_start = 15
-    k_end = 25
-    s_1 = Step('lf_foot', k_start, k_end)
+    print(ti.prb.getConstraints())
+    print(ti.prb.getCosts())
+    exit()
 
-    k_start = 10
-    k_end = 20
-    s_2 = Step('rf_foot', k_start, k_end)
-
-    k_start = 25
-    k_end = 35
-    f_k = cs.Function.deserialize(ti.kd.fk('lh_foot'))
-    initial_lh_foot = f_k(q=q0)['ee_pos']
-    step_len = np.array([0.2, 0.1, 0])
-    print(f'step target: {initial_lh_foot + step_len}')
-    s_3 = Step('lh_foot', k_start, k_end, goal=initial_lh_foot + step_len)
-
-    k_start = 45
-    k_end = 55
-    s_4 = Step('rh_foot', k_start, k_end)
+    # k_start = 15
+    # k_end = 25
+    # s_1 = Step('lf_foot', k_start, k_end)
+    #
+    # k_start = 10
+    # k_end = 20
+    # s_2 = Step('rf_foot', k_start, k_end)
+    #
+    # k_start = 25
+    # k_end = 35
+    # f_k = cs.Function.deserialize(ti.kd.fk('lh_foot'))
+    # initial_lh_foot = f_k(q=q0)['ee_pos']
+    # step_len = np.array([0.2, 0.1, 0])
+    # print(f'step target: {initial_lh_foot + step_len}')
+    # s_3 = Step('lh_foot', k_start, k_end, goal=initial_lh_foot + step_len)
+    #
+    # k_start = 45
+    # k_end = 55
+    # s_4 = Step('rh_foot', k_start, k_end)
 
     # k_start = 8
     # k_end = 15
@@ -643,7 +638,7 @@ if __name__ == '__main__':
     solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
     solver_rti = Solver.make_solver(solver_type, ti.prb, opts_rti)
 
-    ptgt.assign(ptgt_final, nodes=ns)
+    # ptgt.assign(ptgt_final, nodes=ns)
     solver_bs.solve()
     solution = solver_bs.getSolutionDict()
 

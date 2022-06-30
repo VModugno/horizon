@@ -12,7 +12,6 @@ class CartesianTask(Task):
 
         super().__init__(*args, **kwargs)
 
-
         if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint
         elif self.fun_type == 'cost':
@@ -56,6 +55,9 @@ class CartesianTask(Task):
         # todo should I keep track of the nodes here?
         #  in other words: should be setNodes resetting?
 
+        # todo initialize well ref
+        self.ref = None
+
     def getConstraint(self):
         return self.constr
 
@@ -73,7 +75,7 @@ class CartesianTask(Task):
 
         # if ref_matrix.shape[0] != cnsrt.getDim():
         #     raise ValueError(f'Wrong goal dimension inserted: ({ref_matrix.shape[0]} != {cnsrt.getDim()})')
-
+        # todo: add this in the initialization
         self.ref = ref_matrix
 
     def setNodes(self, nodes):
@@ -85,8 +87,9 @@ class CartesianTask(Task):
             return 0
 
         # todo when to activate manual mode?
-        if self.ref.shape[1] != self.n_active:
-            raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {self.n_active})')
+
+        if self.ref is not None and self.ref.shape[1] != len(self.nodes):
+            raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
 
         if self.cartesian_type == 'position':
             tgt = self.pos_tgt
@@ -98,7 +101,8 @@ class CartesianTask(Task):
             raise Exception('Wrong cartesian type')
 
         # core
-        tgt.assign(self.ref, nodes=self.nodes) # <==== SET TARGET
+        if self.ref is not None:
+            tgt.assign(self.ref, nodes=self.nodes) # <==== SET TARGET
         self.constr.setNodes(self.nodes, erasing=True)  # <==== SET NODES
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')

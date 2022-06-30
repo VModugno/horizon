@@ -4,7 +4,29 @@ from horizon.rhc.tasks.cartesianTask import CartesianTask, Task
 import rospkg, rospy
 import numpy as np
 
+# class A:
+#     def __init__(self, daniele, age):
+#         self.daniele = daniele
+#         self.age = age
 #
+# class B:
+#     def __init__(self, penis, culo):
+#         self.penis = penis
+#         self.culo = culo
+#
+# class C(A, B):
+#     def __init__(self, diocane, *args, **kwargs):
+#         self.diocane = diocane
+#         A.__init__(self, *args, **kwargs)
+#         B.__init__(self, *args, **kwargs)
+#
+# if __name__ == '__main__':
+#
+#     dict_mine = {'diocane': -10, 'daniele': 1, 'age': 2, 'penis': 3, 'culo': 4}
+#     c = C(**dict_mine)
+#
+#     exit()
+
 urdf_path = rospkg.RosPack().get_path('mirror_urdf') + '/urdf/mirror.urdf'
 urdf = open(urdf_path, 'r').read()
 
@@ -31,6 +53,7 @@ base_init = np.array([0, 0, 0.72, 0, 0, 0, 1])
 
 ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description)
 
+ti.model.setContactFrame('arm_1_TCP')
 # ti.setContact()
 #
 # goalrz = {'type': 'Postural',
@@ -59,7 +82,7 @@ interactive = {'type': 'Force',
                'frame': 'arm_1_TCP',
                'name': 'faboulous',
                'indices': [2],
-               'nodes': [N-1, N],
+               'nodes': [N-1],
                'fun_type': 'cost',
                'weight': 1e3}
 
@@ -68,6 +91,8 @@ interactive = {'type': 'Force',
 # ti.setTaskFromDict(limits)
 # ti.setTaskFromDict(cart)
 ti.setTaskFromDict(interactive)
+
+print(ti.model.getContacts())
 
 # ti.setTask(cart1)
 

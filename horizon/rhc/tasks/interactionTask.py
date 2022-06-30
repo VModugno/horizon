@@ -3,22 +3,22 @@ from horizon.problem import Problem
 import numpy as np
 
 class InteractionTask(Task):
-    def __init__(self, frame, *args, **kwargs):
+    def __init__(self, frame, force, *args, **kwargs):
 
         self.frame = frame
-
         super().__init__(*args, **kwargs)
 
+        self.f = force[self.indices]
         self._initialize()
 
     def _initialize(self):
         # ===========================================
         self.actions = []
         # todo: this is not the way to retrieve the force
-        self.f = self.prb.getVariables('f_' + self.frame)[self.indices]
+        # self.f = self.prb.getVariables('f_' + self.frame)[self.indices]
 
-        fzero = np.zeros(self.f.getDim())
-        self.f.setBounds(fzero, fzero, self.nodes)
+        # fzero = np.zeros(self.f.getDim())
+        # self.f.setBounds(fzero, fzero, self.nodes)
 
     def setNodes(self, nodes):
         super().setNodes(nodes)
