@@ -5,7 +5,7 @@ from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
-from horizon.rhc.tasks.regularizationTask import RegularizationTask
+from horizon.rhc.tasks.regularizationTaskTry import RegularizationTask
 from typing import List, Dict
 import numpy as np
 from horizon.rhc import task_factory, plugin_handler
@@ -147,7 +147,7 @@ class TaskInterface:
         self.model.setDynamics()
 
     # a possible method could read from yaml and create the task list
-    def setTaskFromYaml(self, task_config):
+    def setTaskFromYaml(self, yaml_config):
 
         # todo this should probably go in each single task definition --> i don't have the info from the ti then
         shortcuts = {
@@ -156,12 +156,11 @@ class TaskInterface:
             # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
         }
 
-        task_list = YamlParser.load(task_config)
+        task_list = YamlParser.load(yaml_config)
 
         # todo: this should be updated everytime a task is added
         for task_descr in task_list:
             task_descr_resolved = YamlParser.resolve(task_descr, shortcuts)
-
 
             if 'weight' in task_descr and isinstance(task_descr['weight'], dict):
                 weight_dict = task_descr['weight']
@@ -182,12 +181,20 @@ class TaskInterface:
 
         # tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
 
-    # here I do it manually
-    def setTaskFromDict(self, task_description):
 
-        task_specific = self.generateTaskContext(task_description)
+    def setTaskFromDict(self, task_description):
+        # todo if task is dict... ducktyping
+
+        task = self.generateTaskFromDict(task_description)
+        self.setTask(task)
+        return task
+
+    def generateTaskFromDict(self, task_description):
+
+        task_description_with_subtasks = self._handle_subtask(task_description)
+        task_specific = self.generateTaskContext(task_description_with_subtasks)
+
         task = task_factory.create(task_specific)
-        self.task_list.append(task)
 
         return task
 
@@ -202,26 +209,6 @@ class TaskInterface:
         task_description_mod['prb'] = self.prb
         task_description_mod['kin_dyn'] = self.kd
 
-        # check for subtasks:
-        subtask_list = task_description_mod.pop('subtask') if 'subtask' in task_description else []
-
-        # search the subtask:
-        subtask_dict = dict()
-        for subtask_description in subtask_list:
-
-            # child inherit from parent the values, if not present
-            # parent define the context for the child: child can override it
-            for key, value in task_description_mod.items():
-                if key not in subtask_description:
-                    subtask_description[key] = value
-
-            subtask_description = self.generateTaskContext(subtask_description)
-            # override factory and pass directly to parent all the arguments for the child
-            subtask_type = subtask_description.pop('type')
-            subtask_dict[subtask_type] = subtask_description
-
-        task_description_mod.update(subtask_dict)
-
         # automatically provided info:
         if task_description_mod['type'] == 'Postural':
             task_description_mod['postural_ref'] = self.q0
@@ -234,6 +221,29 @@ class TaskInterface:
             task_description_mod['force'] = self.prb.getVariables('f_' + task_description_mod['frame'])
 
         return task_description_mod
+
+    def _handle_subtask(self, task_description):
+
+        # transform description of subtask (dict) into an instance of the task and pass it to the parent task
+        task_description_copy = task_description.copy()
+        # check for subtasks:
+        subtasks = dict()
+        if 'subtask' in task_description_copy:
+            subtask_description_list = task_description_copy.pop(
+                'subtask') if 'subtask' in task_description_copy else []
+            # inherit from parent:
+            for subtask_description in subtask_description_list:
+                # child inherit from parent the values, if not present
+                # parent define the context for the child: child can override it
+                for key, value in task_description_copy.items():
+                    if key not in subtask_description and key != 'subtask':
+                        subtask_description[key] = value
+
+                s_t = self.generateTaskFromDict(subtask_description)
+                subtasks[s_t.getType()] = s_t
+                task_description_copy.update({'subtask': subtasks})
+
+        return task_description_copy
 
     def setTask(self, task):
         # check if task is of registered_type # todo what about plugins?

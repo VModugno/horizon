@@ -9,19 +9,16 @@ from horizon.rhc.tasks.task import Task
 # todo this is a composition of atomic tasks: how to do?
 
 class ContactTaskSpot(Task):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, subtask, *args, **kwargs):
         """
         establish/break contact
         """
 
         # todo what if I want a default value for these subtasks?
-        # if 'Force' not in kwargs:
-        #   kwargs['Force'] = {'type': 'Force', 'name': f'interaction_{frame}', 'frame': frame, 'force': force_frame, 'indices': [0, 1, 2]}
-        # if 'Cartesian' not in kwargs:
-        #   kwargs['Cartesian'] = {'type': 'Cartesian', 'name': 'zero_velocity', 'frame': frame, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type': 'velocity'}
+        # if 'Force' not in subtasks:
 
-        self.interaction_task = InteractionTask(**kwargs.pop('Force'))
-        self.cartesian_task = CartesianTask(**kwargs.pop('Cartesian'))
+        self.interaction_task = subtask['Force']
+        self.cartesian_task = subtask['Cartesian']
         super().__init__(*args, **kwargs)
 
         self.force = self.interaction_task.f

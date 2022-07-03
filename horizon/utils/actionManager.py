@@ -523,10 +523,6 @@ if __name__ == '__main__':
     opts = dict()
     am = ActionManager(ti, opts)
 
-    print(ti.prb.getConstraints())
-    print(ti.prb.getCosts())
-    exit()
-
     # k_start = 15
     # k_end = 25
     # s_1 = Step('lf_foot', k_start, k_end)
