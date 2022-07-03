@@ -43,7 +43,7 @@ cart = {'type': 'Cartesian',
         'weight': 1e3}
 
 interactive = {'type': 'Force',
-               'name': 'faboulous',
+               'name': 'force_xyz',
                'indices': [0, 1, 2],
                'nodes': [N-1],
                'fun_type': 'cost',

@@ -34,7 +34,7 @@ def create(args: Dict[str, Any]) -> Task:
     Create a new task of a specific type.
     """
     args_copy = args.copy()
-    task_type = args_copy.pop('type') # todo: why pop?
+    task_type = args_copy['type'] # todo: why pop?
 
     try:
         creation_func = task_creation_funcs[task_type]

@@ -11,10 +11,25 @@ class YamlParser:
             except yaml.YAMLError as exc:
                 print(exc)
 
+        required_fields = ['constraints', 'costs']
+
+        field_names = {'constraints': 'constraint', 'costs': 'residual'}
+
+        required_fields_dict = dict()
+        for field in required_fields:
+            if field in parsed_yaml:
+                required_fields_dict[field] = parsed_yaml.pop(field)
+            else:
+                raise ValueError(f"'{field}' field is required.")
+
         task_list = list()
         for task_name, task_desc in parsed_yaml.items():
             task_desc['name'] = task_name
-            task_list.append(task_desc)
+
+            for field in required_fields:
+                if task_name in required_fields_dict[field]:
+                    task_desc['fun_type'] = field_names[field]
+                    task_list.append(task_desc)
 
         return task_list
 

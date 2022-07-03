@@ -1,3 +1,11 @@
+#regularization:
+#    velocity: 0.01
+#    acceleration: 0.01
+#    force: 0.01
+
+constraints: ['task_base_x', 'contact1', 'contact2', 'contact3', 'contact4', 'final_x']
+costs: ['final_base_y', 'min_rot', 'joint_posture', 'joint_regularization', 'final_y']
+
 task_base_x:
   type: 'Postural'
   indices: [0]
@@ -8,21 +16,18 @@ final_base_y:
   type: 'Postural'
   indices: [1]
   nodes: 'final'
-  fun_type: 'residual'
   weight: 1000
 #
 min_rot:
   type: 'Postural'
   indices: [3,4]
   nodes: 'all'
-  fun_type: 'residual'
   weight: 0.001
 #
 joint_posture:
   type: 'Postural'
   indices: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] # shitty
   nodes: 'all'
-  fun_type: 'residual'
   weight: 1.
 
 contact1:
@@ -45,7 +50,6 @@ contact4:
 joint_regularization:
   type: 'Regularization'
   nodes: 'all'
-  fun_type: 'residual'
   weight:
 #    velocity: 0.01
     acceleration: 0.01
@@ -54,9 +58,11 @@ joint_regularization:
 final_x:
   type: "Postural"
   indices: [0]
+  nodes: 'final'
 
 final_y:
   type: "Postural"
   indices: [1]
   weight: 1000
+  nodes: 'final'
 

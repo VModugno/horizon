@@ -8,12 +8,13 @@ from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
 class ContactTaskMirror(Task):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, subtask, *args, **kwargs):
         """
         establish/break contact
         """
-        self._zero_vel_constr = CartesianTask(**kwargs.pop('Cartesian'))
-        self._force = InteractionTask(**kwargs.pop('Force'))
+        # todo: add default values if subtask is not inserted
+        self._zero_vel_constr = subtask['Cartesian']
+        self._force = subtask['Force']
         super().__init__(*args, **kwargs)
 
         # getForce() getFrame()

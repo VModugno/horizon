@@ -20,6 +20,7 @@ class Task:
     kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
 
     # todo: there should be also a type
+    type: str
     name: str
     fun_type: str = 'constraint'
     weight: Union[List, float] = 1.0
@@ -30,7 +31,6 @@ class Task:
     @classmethod
     def from_dict(cls, task_dict):
         return cls(**task_dict)
-
 
     def __post_init__(self):
         # todo: this is for simplicity
@@ -51,3 +51,6 @@ class Task:
 
     def getName(self):
         return self.name
+
+    def getType(self):
+        return self.type
