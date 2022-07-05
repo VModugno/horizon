@@ -5,10 +5,10 @@ from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
-from horizon.rhc.tasks.regularizationTaskTry import RegularizationTask
+from horizon.rhc.tasks.regularizationTask import RegularizationTask
 from typing import List, Dict
 import numpy as np
-from horizon.rhc import task_factory, plugin_handler
+from horizon.rhc import task_factory, plugin_handler, solver_interface
 from horizon.rhc.yaml_handler import YamlParser
 
 
@@ -156,7 +156,7 @@ class TaskInterface:
             # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
         }
 
-        task_list = YamlParser.load(yaml_config)
+        task_list = YamlParser.load(yaml_config) # solver_options
 
         # todo: this should be updated everytime a task is added
         for task_descr in task_list:
@@ -263,3 +263,7 @@ class TaskInterface:
     # todo
     def setTaskOptions(self):
         pass
+
+    def setSolverOptions(self, solver_options):
+        si = solver_interface.SolverInterface(**solver_options)
+

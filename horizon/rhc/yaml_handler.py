@@ -3,25 +3,20 @@ import yaml
 
 class YamlParser:
 
-    @staticmethod
-    def load(yaml_file):
+    @classmethod
+    def load(cls, yaml_file):
         with open(yaml_file, 'r') as stream:
             try:
                 parsed_yaml = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
 
-        required_fields = ['constraints', 'costs']
+        # parse required fields
+        required_fields = ['constraints', 'costs'] # 'solver'
+        required_fields_dict = cls._parse_required_fields(parsed_yaml, required_fields)
 
+        # parse tasks
         field_names = {'constraints': 'constraint', 'costs': 'residual'}
-
-        required_fields_dict = dict()
-        for field in required_fields:
-            if field in parsed_yaml:
-                required_fields_dict[field] = parsed_yaml.pop(field)
-            else:
-                raise ValueError(f"'{field}' field is required.")
-
         task_list = list()
         for task_name, task_desc in parsed_yaml.items():
             task_desc['name'] = task_name
@@ -31,7 +26,20 @@ class YamlParser:
                     task_desc['fun_type'] = field_names[field]
                     task_list.append(task_desc)
 
-        return task_list
+        return task_list #, required_fields_dict['solver']
+
+    @staticmethod
+    def _parse_required_fields(parsed_yaml, required_fields):
+
+        required_fields_dict = dict()
+        for field in required_fields:
+            if field in parsed_yaml:
+                required_fields_dict[field] = parsed_yaml.pop(field)
+            else:
+                raise ValueError(f"'{field}' field is required.")
+
+        return required_fields_dict
+
 
     @staticmethod
     def resolve(task_desc, shortcuts):
