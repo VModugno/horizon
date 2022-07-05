@@ -19,11 +19,17 @@ void IterativeLQR::backward_pass()
     // ..and initialize constraints and bounds
     _constraint_to_go->set(_constraint.back());
 
+    if(_log) std::cout << "n_constr[" << _N << "] = " <<
+                  _constraint_to_go->dim() << " (before bounds)\n";
+
     add_bound_penalty(_N,
                &_value.back().S,
                nullptr,
                &_value.back().s,
                nullptr);
+
+    if(_log) std::cout << "n_constr[" << _N << "] = " <<
+                  _constraint_to_go->dim() << "\n";
 
     // backward pass
     int i = _N - 1;
@@ -102,6 +108,16 @@ void IterativeLQR::backward_pass_iter(int i)
     tmp.Huu.diagonal().array() += _huu_reg;
     TOC(form_value_fn_inner);
 
+    // print
+    if(_log)
+    {
+        std::cout << "eig(Hxx[ " << i+1 << "]) " <<
+                     Snext.eigenvalues().real().transpose().format(2) << "\n";
+
+        std::cout << "eig(Huu[ " << i << "]) " <<
+                     tmp.Huu.eigenvalues().real().transpose().format(2) << "\n";
+    }
+
     // add inequality constraints to cost using barriers
     add_bound_penalty(i, &tmp.Hxx, &tmp.Huu, &tmp.hx, &tmp.hu);
 
@@ -148,9 +164,20 @@ void IterativeLQR::backward_pass_iter(int i)
 
     }
 
+    if(_log)
+    {
+        std::cout << "kkt_err[" << i << "] = " <<
+                     (K*u_lam - kx0).lpNorm<Eigen::Infinity>() << "\n";
+
+        std::cout << "feas_constr[" << i << "] = " <<
+                      nc << "\n";
+
+        std::cout << "infeas_constr[" << i << "] = " <<
+                     _constraint_to_go->dim() << "\n";
+    }
+
     THROW_NAN(u_lam);
     TOC(solve_kkt_inner);
-
 
     // save solution
     auto& res = _bp_res[i];
@@ -339,6 +366,12 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     // number of constraints
     int nc = _constraint_to_go->dim();
     res.nc = nc;
+
+    if(_log)
+    {
+        std::cout << "n_constr[" << i << "] = " <<
+                      nc << "\n";
+    }
 
     // no constraint to handle, do nothing
     if(nc == 0)
