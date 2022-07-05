@@ -1,3 +1,18 @@
+# todo add solver_option
+solver:
+  type: 'ilqr'
+  max_iter: 200
+  alpha_min: 0.01
+  use_filter: 'False'
+  hxx_reg: 0.0
+  integrator: 'RK4'
+  merit_der_threshold: 1e-6
+  step_length_threshold: 1e-9
+  line_search_accept_ratio: 1e-4
+  kkt_decomp_type: 'qr'
+  constr_decomp_type: 'qr'
+  verbose: 'True'
+
 #regularization:
 #    velocity: 0.01
 #    acceleration: 0.01
