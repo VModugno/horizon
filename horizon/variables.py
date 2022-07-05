@@ -133,8 +133,9 @@ class OffsetTemplate(AbstractVariable):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
 
+        nodes_array = np.array(nodes)
         # offset the node of self.offset
-        offset_nodes = nodes + self._offset
+        offset_nodes = nodes_array + self._offset
         offset_nodes = misc.checkNodes(offset_nodes, self._nodes_array)
 
         var_impl = self._impl['var'][:, offset_nodes]
@@ -884,7 +885,7 @@ class Variable(AbstractVariable):
         super(Variable, self).__init__(tag, dim)
 
         self._casadi_type = casadi_type
-        self._nodes_array = nodes_array
+        self._nodes_array = np.array(nodes_array)
 
         self.var_offset = dict()
         self._impl = dict()
@@ -1323,6 +1324,8 @@ class VariableView(AbstractVariableView):
         """
         self._setVals('w0', val, nodes)
 
+    def getVarOffset(self, node):
+        return self._parent.getVarOffset(node)[self._indices, :]
 
 class RecedingVariable(Variable):
     def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
@@ -2161,13 +2164,17 @@ if __name__ == '__main__':
     # print(x[0:2]+2)
     # print(f'type: {type(x[-1])}')
     # x.setUpperBounds([2,2,2,2,2,2])
-    x = Variable('x', 3, [1, 1, 0, 1, 1, 1])
+    x = Variable('x', 4, [1, 1, 0, 1, 1, 1], casadi_type=cs.SX)
     x_prev = x.getVarOffset(-1)
-    print(x)
-    print(x.getImpl(4))
-    print(x_prev)
+    # print(x)
 
-    print(x_prev.getImpl([4, 6]))
+    # print(x.getImpl(4))
+    # print(x_prev)
+
+    # print(x_prev.getImpl([2, 5]))
+
+    slice_x = x[[0, 1]]
+    print(slice_x.getVarOffset(-1))
 
     exit()
     x.setBounds([-1,-1,-1], [1,1,1], nodes=3)
