@@ -224,6 +224,7 @@ private:
     static DecompositionType str_to_decomp_type(const std::string& dt_str);
 
     bool _verbose;
+    bool _log;
 
     const int _nx;
     const int _nu;

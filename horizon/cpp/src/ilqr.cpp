@@ -84,6 +84,7 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
 {
     // set options _hxx_reg_base
     _verbose = value_or(opt, "ilqr.verbose", 0);
+    _log = value_or(opt, "ilqr.log", 0);
     _step_length = value_or(opt, "ilqr.step_length", 1.0);
 
     _rho_base = value_or(opt, "ilqr.rho_base", 0.0);
@@ -362,6 +363,16 @@ void IterativeLQR::setFinalConstraint(const casadi::Function &final_constraint)
 
 void IterativeLQR::setIndices(const std::string& f_name, const std::vector<int>& indices)
 {
+    if(_log)
+    {
+        std::cout << "setting new indices to " << f_name << ": \n";
+        for(auto i : indices)
+        {
+            std::cout << i << " ";
+        }
+        std::cout << "\n";
+    }
+
     auto cost_it = _cost_map.find(f_name);
 
     if(cost_it != _cost_map.end())
@@ -1216,8 +1227,6 @@ void IterativeLQR::Constraint::linearize(VecConstRef x, VecConstRef u, int k)
 {
     TIC(linearize_constraint_inner);
 
-    evaluate(x, u, k);
-
     int i = 0;
     for(auto& it : items)
     {
@@ -1240,6 +1249,9 @@ void IterativeLQR::Constraint::evaluate(VecConstRef x, VecConstRef u, int k)
         it->evaluate(x, u, k);
         _h.segment(i, nc) = it->h();
         i += nc;
+
+//        std::cout << "constr[" << k << "]: " << it->f.function().name() <<
+//                     "[" << nc << "] \n";
     }
 }
 
