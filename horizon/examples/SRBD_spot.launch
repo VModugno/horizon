@@ -3,6 +3,7 @@
 
     <param name="robot_description" textfile="$(find spot_urdf)/urdf/spot.urdf"/>
     <param name="robot_description_semantic" textfile="$(find spot_srdf)/srdf/spot.srdf"/>
+    <param name="world_frame_link" value="world"/>
 
 <!--     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen"> -->
 <!--         <param name="publish_frequency" type="double" value="50.0"/> -->
@@ -24,11 +25,13 @@
          0.0, 0.9, -1.52]
     </rosparam> <!-- 'leg_right_4_joint', 'leg_right_5_joint' -->
 
+    <!-- XBox JOY node -->
 <!--     <node pkg="joy" type="joy_node" name="joy_node"> -->
 <!--         <param name="dev" type="string" value="/dev/input/js0" /> -->
 <!--         <param name="deadzone" type="double" value="0.2" /> -->
 <!--     </node> -->
 
+    <!-- PS4 JOY node -->
     <node name="ds4_joystick" pkg="joy" type="joy_node">
         <param name="dev" value="/dev/input/js0" />
         <param name="deadzone" type="double" value="0.2"/>

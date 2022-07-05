@@ -6,6 +6,8 @@
     <param name="contact_model" value="4"/>
     <param name="number_of_legs" value="2"/>
 
+    <param name="max_iteration" value= "5"/>
+
     <rosparam param="foot_frames">
         ["l_foot_contact_upper_left", "l_foot_contact_upper_right", "l_foot_contact_lower_left", "l_foot_contact_lower_right",
          "r_foot_contact_upper_left", "r_foot_contact_upper_right", "r_foot_contact_lower_left", "r_foot_contact_lower_right"]
@@ -20,7 +22,13 @@
          0.0, -0.523, 0.0, -1.57, 0.0, 0.0]             <!-- r_shoulder_fe, r_shoulder_aa, r_shoulder_ie, r_elbow_fe, r_wrist_ps, r_wrist_pitch -->
     </rosparam>
 
-    <!-- JOY node -->
+    <!-- XBox JOY node -->
+<!--     <node pkg="joy" type="joy_node" name="joy_node"> -->
+<!--         <param name="dev" type="string" value="/dev/input/js0" /> -->
+<!--         <param name="deadzone" type="double" value="0.2" /> -->
+<!--     </node> -->
+
+    <!-- PS4 JOY node -->
     <node pkg="joy" type="joy_node" name="joy_node">
         <param name="dev" type="string" value="/dev/input/js0" />
         <!-- param name="autorepeat_rate" type="double" value="10." / -->

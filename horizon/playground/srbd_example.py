@@ -257,11 +257,34 @@ def SRBDViewer(I, base_frame, t, number_of_contacts):
 
     pub2 = rospy.Publisher('contacts', MarkerArray, queue_size=10).publish(marker_array)
 
+def setWorld(frame, kindyn, q, base_link="base_link"):
+    FRAME = cs.Function.deserialize(kindyn.fk(frame))
+    w_p_f = FRAME(q=q)['ee_pos']
+    w_r_f = FRAME(q=q)['ee_rot']
+    w_T_f = np.identity(4)
+    w_T_f[0:3, 0:3] = w_r_f
+    w_T_f[0:3, 3] = cs.transpose(w_p_f)
+
+    BASE_LINK = cs.Function.deserialize(kindyn.fk(base_link))
+    w_p_bl = BASE_LINK(q=q)['ee_pos']
+    w_r_bl = BASE_LINK(q=q)['ee_rot']
+    w_T_bl = np.identity(4)
+    w_T_bl[0:3, 0:3] = w_r_bl
+    w_T_bl[0:3, 3] = cs.transpose(w_p_bl)
+
+    w_T_bl_new = np.dot(np.linalg.inv(w_T_f), w_T_bl)
+
+    rho = R.from_matrix(w_T_bl_new[0:3, 0:3]).as_quat()
+
+    q[0:3] = w_T_bl_new[0:3, 3]
+    q[3:7] = rho
 
 
 # horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo.launch")
 #horizon_ros_utils.roslaunch("horizon_examples", "SRBD_kangaroo_line_feet.launch")
-horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
+# horizon_ros_utils.roslaunch("horizon_examples", "SRBD_spot.launch")
+horizon_ros_utils.roslaunch("horizon_examples", "SRBD_draco3.launch")
+
 time.sleep(3.)
 
 rospy.init_node('srbd_mpc_test', anonymous=True)
@@ -383,6 +406,11 @@ if len(joint_init) == 0:
     print("joint_init parameter is mandatory, exiting...")
     exit()
 print(f"joint_init: {joint_init}")
+
+if rospy.has_param("world_frame_link"):
+    world_frame_link = rospy.get_param("world_frame_link")
+    setWorld(world_frame_link, kindyn, joint_init)
+    print(f"world_frame_link: {world_frame_link}")
 
 """
 foot_frames parameters are used to retrieve initial position of the contacts given the initial pose of the robot.
@@ -580,7 +608,7 @@ prb.createConstraint("SRBD", SRBD, bounds=dict(lb=np.zeros(6), ub=np.zeros(6)), 
 """
 Create solver
 """
-max_iteration = rospy.get_param("max_iteration", 20)
+max_iteration = rospy.get_param("max_iteration", 5)
 print(f"max_iteration: {max_iteration}")
 
 ipopt_opts = {
@@ -621,6 +649,9 @@ srdf = rospy.get_param("robot_description_semantic", "")
 if srdf == "":
     print("missing robot_description_semantic, exiting")
     exit()
+
+
+cartesian_tasks = ["l_foot_contact_upper_left", "r_foot_contact_upper_left"]
 ci = horizon_cartesian_utils.CartesianUtils(urdf, srdf, foot_frames, 1/hz)
 
 global joy_msg
@@ -684,7 +715,6 @@ while not rospy.is_shutdown():
         c[i].setBounds(solution['c' + str(i)][: ,1], solution['c' + str(i)][: ,1], 0)
         cdot[i].setBounds(solution['cdot' + str(i)][:, 1], solution['cdot' + str(i)][:, 1], 0)
 
-
     #JOYSTICK
     alphaX = alphaY = 0.1
     if joy_msg.buttons[4] or joy_msg.buttons[5]:
@@ -738,6 +768,7 @@ while not rospy.is_shutdown():
     c0_hist = dict()
     for i in range(0, nc):
         c0_hist['c' + str(i)] = solution['c' + str(i)][:, 0]
+        # if foot_frames[i] in cartesian_tasks:
         IK_refs[foot_frames[i]] = list(solution['c' + str(i)][:, 0])
 
     t = rospy.Time().now()
@@ -746,7 +777,7 @@ while not rospy.is_shutdown():
     IK_refs['base_link'] = solution['o'][:, 0]
 
     rpy = R.from_quat(joint_init[3:7])
-    IK_refs['Postural'] = list(joint_init[0:3]) + list(rpy.as_euler('xyz')) + list(joint_init[7:])
+
     for i in range(0, nc):
         publishContactForce(t, solution['f' + str(i)][:, 0], 'c' + str(i))
         publishPointTrj(solution["c" + str(i)], t, 'c' + str(i), "world", color=[0., 0., 1.])
@@ -755,7 +786,7 @@ while not rospy.is_shutdown():
 
     # solve IK
     ci.setPoseReferences(IK_refs)
-    ci.solve(t.to_sec())
+    q = ci.solve(t.to_sec())
     ci.publishTransforms()
 
     cc = dict()
