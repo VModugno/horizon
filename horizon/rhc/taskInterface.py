@@ -12,6 +12,7 @@ from horizon.rhc import task_factory, plugin_handler, solver_interface
 from horizon.rhc.yaml_handler import YamlParser
 from horizon.solvers.solver import Solver
 
+
 class ModelDescription:
     def __init__(self, problem, model):
         self.prb = problem
@@ -72,6 +73,7 @@ class ModelDescription:
     # def getState(self):
     #     return
 
+
 class TaskInterface:
     def __init__(self,
                  urdf,
@@ -80,7 +82,7 @@ class TaskInterface:
                  problem_opts: Dict[str, any],
                  model_description: str,
                  fixed_joints: List[str] = None,
-                 contacts: List[str] = None): # todo this is wrong, it should not be listed in the initialization
+                 contacts: List[str] = None):  # todo this is wrong, it should not be listed in the initialization
 
         # get the model
 
@@ -91,7 +93,6 @@ class TaskInterface:
         task_factory.register('Postural', PosturalTask)
         task_factory.register('JointLimits', JointLimitsTask)
         task_factory.register('Regularization', RegularizationTask)
-
 
         self.urdf = urdf.replace('continuous', 'revolute')
         self.fixed_joints = [] if fixed_joints is None else fixed_joints.copy()
@@ -142,7 +143,6 @@ class TaskInterface:
         self.prb = Problem(self.N, receding=True)
         self.prb.setDt(self.dt)
 
-
     def _initializeModel(self):
         self.model.setDynamics()
 
@@ -183,7 +183,6 @@ class TaskInterface:
 
         # tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
 
-
     def setTaskFromDict(self, task_description):
         # todo if task is dict... ducktyping
 
@@ -206,12 +205,13 @@ class TaskInterface:
         '''
 
         task_description_mod = task_description.copy()
+        # automatically provided info:
 
         # add generic context
         task_description_mod['prb'] = self.prb
         task_description_mod['kin_dyn'] = self.kd
 
-        # automatically provided info:
+        # add specific context
         if task_description_mod['type'] == 'Postural':
             task_description_mod['postural_ref'] = self.q0
 
@@ -283,4 +283,3 @@ class TaskInterface:
         solver_rti = Solver.make_solver(self.si.type, self.prb, scoped_opts_rti)
 
         return solver_bs, solver_rti
-

@@ -97,7 +97,12 @@ class ActionManager:
 
         self.k0 = 0
 
-        self.task_type = self._get_required_tasks(['Cartesian', 'Contact'])
+        self.required_tasks = dict()
+        self.required_tasks['foot_contact'] = {contact: self.ti.getTask(f"foot_contact_{contact}") for contact in self.contacts}
+        self.required_tasks['foot_z'] = {contact: self.ti.getTask(f"foot_z_{contact}") for contact in self.contacts}
+        self.required_tasks['foot_xy'] = {contact: self.ti.getTask(f"foot_xy_{contact}") for contact in self.contacts}
+
+        self.task_type = self._check_required_tasks_type(['Cartesian', 'Contact'])
         self.init_constraints()
         self._set_default_action()
 
@@ -155,7 +160,7 @@ class ActionManager:
         for frame, c_constr in self.contact_constr.items():
             c_constr.setNodes(self.contact_constr_nodes[frame])
 
-    def _get_required_tasks(self, required_tasks):
+    def _check_required_tasks_type(self, required_tasks):
         # actionManager requires some tasks for working. It asks the TaskInterface for tasks.
         task_type = dict()
         for task in required_tasks:
@@ -168,6 +173,10 @@ class ActionManager:
                 task_type[task] = found_task
 
         return task_type
+
+    def setRequiredTasks(self, task_dict):
+        # TODO: add some logic
+        self.required_tasks = task_dict
 
     def init_constraints(self):
 
@@ -207,21 +216,15 @@ class ActionManager:
         self.foot_tgt_constr = dict()
 
         for frame in self.contacts:
-            # todo: duplication of frame in subtask (Cartesian) and task (Contact)
-            subtask_force = {'type': 'Force', 'name': f'interaction_{frame}', 'frame': frame, 'indices': [0, 1, 2]}
-            # todo LET THE USER SPECIFY ALL OF THIS
-            subtask_cartesian = {'type': 'Cartesian', 'name': 'zero_velocity', 'frame': frame, 'indices': [0, 1, 2], 'cartesian_type': 'velocity'}
-            # subtask_cartesian = {'type': 'Cartesian', 'name': 'zero_velocity', 'frame': frame, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type': 'velocity'}
-            contact_task_node = {'type': 'Contact', 'name': f'{frame}_contact', 'subtask': [subtask_force, subtask_cartesian]}
 
-            z_task_node = {'type': 'Cartesian', 'name': f'{frame}_z_constr', 'frame': frame, 'indices': [2], 'fun_type': 'constraint',
-                           'cartesian_type': 'position'}
-            foot_tgt_task_node = {'type': 'Cartesian', 'name': f'{frame}_foot_tgt_constr', 'frame': frame, 'indices': [0, 1],
-                                  'fun_type': 'constraint', 'cartesian_type': 'position'}
+            # TODO should specify these from outside or inside?
+            #   if inside: hidden from the user, easier. But what if I want to change the costs?
+            #   if outside:
+            self.contact_constr[frame] = self.required_tasks['foot_contact'][frame] # this is a plugin!
+            self.z_constr[frame] = self.required_tasks['foot_z'][frame]
+            self.foot_tgt_constr[frame] = self.required_tasks['foot_xy'][frame]
 
-            self.contact_constr[frame] = self.ti.setTaskFromDict(contact_task_node) # this is a plugin!
-            self.z_constr[frame] = self.ti.setTaskFromDict(z_task_node)
-            self.foot_tgt_constr[frame] = self.ti.setTaskFromDict(foot_tgt_task_node)
+            print(self.z_constr[frame])
 
     def setContact(self, frame, nodes):
         """
@@ -520,9 +523,45 @@ if __name__ == '__main__':
     for f in forces:
         ti.prb.createIntermediateResidual(f"min_{f.getName()}", 1e-2 * (f - f0))
 
+    for frame in contacts:
+        subtask_force = {'type': 'Force',
+                         'name': f'interaction_{frame}',
+                         'frame': frame,
+                         'indices': [0, 1, 2]}
+
+        subtask_cartesian = {'type': 'Cartesian',
+                             'name': f'zero_velocity_{frame}',
+                             'frame': frame,
+                             'indices': [0, 1, 2],
+                             'cartesian_type': 'velocity'}
+
+        contact_task_node = {'type': 'Contact',
+                             'name': f'foot_contact_{frame}',
+                             'subtask': [subtask_force, subtask_cartesian]}
+
+        z_task_node = {'type': 'Cartesian',
+                       'name': f'foot_z_{frame}',
+                       'frame': frame,
+                       'indices': [2],
+                       'fun_type': 'constraint',
+                       'cartesian_type': 'position'}
+
+        foot_tgt_task_node = {'type': 'Cartesian',
+                              'name': f'foot_xy_{frame}',
+                              'frame': frame,
+                              'indices': [0, 1],
+                              'fun_type': 'constraint',
+                              'cartesian_type': 'position'}
+
+        ti.setTaskFromDict(contact_task_node)
+        ti.setTaskFromDict(z_task_node)
+        ti.setTaskFromDict(foot_tgt_task_node)
+
     opts = dict()
     am = ActionManager(ti, opts)
 
+
+    # set the required tasks from action manager
     # k_start = 15
     # k_end = 25
     # s_1 = Step('lf_foot', k_start, k_end)

@@ -115,6 +115,40 @@ for i, frame in enumerate(contacts):
     # clearance
     # xy goal
 
+for frame in contacts:
+    subtask_force = {'type': 'Force',
+                     'name': f'interaction_{frame}',
+                     'frame': frame,
+                     'indices': [0, 1, 2]}
+
+    subtask_cartesian = {'type': 'Cartesian',
+                         'name': f'zero_velocity_{frame}',
+                         'frame': frame,
+                         'indices': [0, 1, 2, 3, 4, 5],
+                         'cartesian_type': 'velocity'}
+
+    contact_task_node = {'type': 'Contact',
+                         'name': f'foot_contact_{frame}',
+                         'subtask': [subtask_force, subtask_cartesian]}
+
+    z_task_node = {'type': 'Cartesian',
+                   'name': f'foot_z_{frame}',
+                   'frame': frame,
+                   'indices': [2],
+                   'fun_type': 'constraint',
+                   'cartesian_type': 'position'}
+
+    foot_tgt_task_node = {'type': 'Cartesian',
+                          'name': f'foot_xy_{frame}',
+                          'frame': frame,
+                          'indices': [0, 1],
+                          'fun_type': 'constraint',
+                          'cartesian_type': 'position'}
+
+    ti.setTaskFromDict(contact_task_node)
+    ti.setTaskFromDict(z_task_node)
+    ti.setTaskFromDict(foot_tgt_task_node)
+
 opts = dict()
 opts['default_foot_z'] = default_foot_z
 am = ActionManager(ti, opts)

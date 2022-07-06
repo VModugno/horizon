@@ -148,15 +148,20 @@ for f in forces:
 
 
 for contact in contacts:
-    subtask_contact = {'type': 'Cartesian',
+    subtask_force = {'type': 'Force',
+                     'name': f'interaction_{contact}',
+                     'frame': contact,
+                     'indices': [0, 1, 2]}
+
+
+    subtask_cartesian = {'type': 'Cartesian',
                        'name': 'zero_velocity',
                        'frame': contact,
                        'indices': [0, 1, 2, 3, 4, 5],
                        'cartesian_type': 'velocity'}
 
     contact_task = {'type': 'Contact',
-                    'frame': contact,
-                    'subtask': [subtask_contact],
+                    'subtask': [subtask_cartesian, subtask_force],
                     'name': 'contact_' + contact}
 
     ti.setTaskFromDict(contact_task)
