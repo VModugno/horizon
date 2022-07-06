@@ -1,10 +1,23 @@
 import yaml
-
+import re
 
 class YamlParser:
 
     @classmethod
     def load(cls, yaml_file):
+
+        loader = yaml.SafeLoader
+        loader.add_implicit_resolver(
+            u'tag:yaml.org,2002:float',
+            re.compile(u'''^(?:
+             [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+            |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+            |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+            |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+            |[-+]?\\.(?:inf|Inf|INF)
+            |\\.(?:nan|NaN|NAN))$''', re.X),
+            list(u'-+0123456789.'))
+
         with open(yaml_file, 'r') as stream:
             try:
                 parsed_yaml = yaml.safe_load(stream)
@@ -12,7 +25,7 @@ class YamlParser:
                 print(exc)
 
         # parse required fields
-        required_fields = ['constraints', 'costs'] # 'solver'
+        required_fields = ['constraints', 'costs', 'solver'] # 'solver'
         required_fields_dict = cls._parse_required_fields(parsed_yaml, required_fields)
 
         # parse tasks
@@ -26,7 +39,7 @@ class YamlParser:
                     task_desc['fun_type'] = field_names[field]
                     task_list.append(task_desc)
 
-        return task_list #, required_fields_dict['solver']
+        return task_list, required_fields_dict['solver']
 
     @staticmethod
     def _parse_required_fields(parsed_yaml, required_fields):
