@@ -20,6 +20,7 @@ class CartesianTask(Task):
         self._initialize()
 
     def _initialize(self):
+        # todo this is wrong! how to get these variables?
         q = self.prb.getVariables('q')
         v = self.prb.getVariables('v')
 

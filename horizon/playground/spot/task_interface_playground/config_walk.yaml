@@ -1,4 +1,3 @@
-# todo add solver_option
 solver:
   type: 'ilqr'
   max_iter: 200
@@ -13,14 +12,16 @@ solver:
   constr_decomp_type: 'qr'
   verbose: True
 
+# todo add MinVelocity JointVelocity
 #regularization:
 #    velocity: 0.01
 #    acceleration: 0.01
 #    force: 0.01
 
-constraints: ['task_base_x', 'contact1', 'contact2', 'contact3', 'contact4', 'final_x']
+constraints: ['task_base_x', 'contact1', 'contact2', 'contact3', 'contact4', 'final_x', 'zero_velocity_lf_foot', 'zero_velocity_rf_foot', 'zero_velocity_lh_foot', 'zero_velocity_rh_foot', 'foot_contact_lf_foot', 'foot_contact_rf_foot', 'foot_contact_lh_foot', 'foot_contact_rh_foot', 'foot_z_lf_foot', 'foot_z_lr_foot', 'foot_z_lh_foot', 'foot_z_rh_foot', 'foot_xy_lf_foot', 'foot_xy_rf_foot', 'foot_xy_lh_foot', 'foot_xy_rh_foot']
 costs: ['final_base_y', 'min_rot', 'joint_posture', 'joint_regularization', 'final_y']
 
+# todo to cartesian
 task_base_x:
   type: 'Postural'
   indices: [0]
@@ -45,19 +46,19 @@ joint_posture:
   nodes: 'all'
   weight: 1.
 
-contact1:
+contact_lf_foot:
    type: 'Force'
    frame: 'lf_foot'
 
-contact2:
+contact_rf_foot:
    type: 'Force'
    frame: 'rf_foot'
 
-contact3:
+contact_lh_foot:
    type: 'Force'
    frame: 'lh_foot'
 
-contact4:
+contact_rh_foot:
    type: 'Force'
    frame: 'rh_foot'
 
@@ -81,3 +82,91 @@ final_y:
   weight: 1000
   nodes: 'final'
 
+# required for actionManager
+zero_velocity_lf_foot:
+  type: 'Cartesian'
+  frame: 'lf_foot'
+  indices: [0, 1, 2]
+  cartesian_type: 'velocity'
+
+zero_velocity_rf_foot:
+  type: 'Cartesian'
+  frame: 'rf_foot'
+  indices: [0, 1, 2]
+  cartesian_type: 'velocity'
+
+zero_velocity_lh_foot:
+  type: 'Cartesian'
+  frame: 'lh_foot'
+  indices: [0, 1, 2]
+  cartesian_type: 'velocity'
+
+zero_velocity_rh_foot:
+  type: 'Cartesian'
+  frame: 'rh_foot'
+  indices: [0, 1, 2]
+  cartesian_type: 'velocity'
+
+foot_contact_lf_foot:
+  type: 'Contact'
+  subtask: ['contact_lf_foot', 'zero_velocity_lf_foot']
+
+foot_contact_rf_foot:
+  type: 'Contact'
+  subtask: ['contact_rf_foot', 'zero_velocity_rf_foot']
+
+foot_contact_lh_foot:
+  type: 'Contact'
+  subtask: ['contact_lh_foot', 'zero_velocity_lh_foot']
+
+foot_contact_rh_foot:
+  type: 'Contact'
+  subtask: ['contact_rh_foot', 'zero_velocity_rh_foot']
+
+foot_z_lf_foot:
+  type: 'Cartesian'
+  frame: 'lf_foot'
+  indices: [2]
+  cartesian_type: 'position'
+
+foot_z_lr_foot:
+  type: 'Cartesian'
+  frame: 'lr_foot'
+  indices: [2]
+  cartesian_type: 'position'
+
+foot_z_lh_foot:
+  type: 'Cartesian'
+  frame: 'lh_foot'
+  indices: [2]
+  cartesian_type: 'position'
+
+foot_z_rh_foot:
+  type: 'Cartesian'
+  frame: 'rh_foot'
+  indices: [2]
+  cartesian_type: 'position'
+
+foot_xy_lf_foot:
+  type: 'Cartesian'
+  frame: 'lf_foot'
+  indices: [0, 1]
+  cartesian_type: 'position'
+
+foot_xy_rf_foot:
+  type: 'Cartesian'
+  frame: 'rf_foot'
+  indices: [0, 1]
+  cartesian_type: 'position'
+
+foot_xy_lh_foot:
+  type: 'Cartesian'
+  frame: 'lh_foot'
+  indices: [0, 1]
+  cartesian_type: 'position'
+
+foot_xy_rh_foot:
+  type: 'Cartesian'
+  frame: 'rh_foot'
+  indices: [0, 1]
+  cartesian_type: 'position'

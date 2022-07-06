@@ -84,7 +84,7 @@ class HorizonWpg:
                  'name': 'final_base_y',
                  'indices': [1],
                  'nodes': [self.N],
-                 'fun_type': 'cost',
+                 'fun_type': 'residual',
                  'weight': 1e3}
 
         # goalrz = self.ti.prb.createFinalResidual("final_rz", 1e3 * (self.ti.model.q[5] - self.ptgt[2]))
@@ -92,7 +92,7 @@ class HorizonWpg:
                   'name': 'final_base_rz',
                   'indices': [5],
                   'nodes': [self.N],
-                  'fun_type': 'cost',
+                  'fun_type': 'residual',
                   'weight': 1e3}
 
         self.ti.setTaskFromDict(goalx)
@@ -116,7 +116,7 @@ class HorizonWpg:
                   'name': 'min_rot',
                   'indices': [3, 4],
                   'nodes': list(range(self.N+1)),
-                  'fun_type': 'cost',
+                  'fun_type': 'residual',
                   'weight': 1e-4}
 
         self.ti.setTaskFromDict(minrot)
@@ -128,7 +128,7 @@ class HorizonWpg:
                   'name': 'min_q',
                   'indices': list(range(7, self.ti.model.q.getDim())),
                   'nodes': list(range(self.N+1)),
-                  'fun_type': 'cost',
+                  'fun_type': 'residual',
                   'weight': 1e-1}
 
         self.ti.setTaskFromDict(minq)
@@ -142,7 +142,7 @@ class HorizonWpg:
                   'name': 'min_qf',
                   'indices': list(range(7, self.ti.model.q.getDim())),
                   'nodes': [50],
-                  'fun_type': 'cost',
+                  'fun_type': 'residual',
                   'weight': 1e1}
 
         self.ti.setTaskFromDict(minqf)
@@ -158,7 +158,7 @@ class HorizonWpg:
                   'name': 'jlim_min',
                   'indices': [8, 9, 14, 15, 20, 21],
                   'nodes': list(range(self.N+1)),
-                  'fun_type': 'cost',
+                  'fun_type': 'residual',
                   'weight': 10,
                   'bound_scaling': 0.95}
 
@@ -199,14 +199,20 @@ class HorizonWpg:
             # add contact task (by dict)
 
             # todo: useless repetition of force and frame both present in subtask and task
-            force_frame = self.ti.prb.getVariables(f'f_{frame}')
-            subtask_force = {'type': 'Force', 'name': f'interaction_{frame}', 'frame': frame, 'force': force_frame, 'indices': [0, 1, 2]}
-            subtask_cartesian = {'type': 'Cartesian', 'name': 'zero_velocity', 'frame': frame, 'indices': [0, 1, 2, 3, 4, 5], 'cartesian_type': 'velocity'}
+
+            subtask_force = {'type': 'Force',
+                             'name': f'interaction_{frame}',
+                             'frame': frame,
+                             'indices': [0, 1, 2]}
+
+            subtask_cartesian = {'type': 'Cartesian',
+                                 'name': 'zero_velocity',
+                                 'frame': frame,
+                                 'indices': [0, 1, 2, 3, 4, 5],
+                                 'cartesian_type': 'velocity'}
 
             contact = {'type': 'Contact',
                        'subtask': [subtask_force, subtask_cartesian],
-                       'frame': frame,
-                       'force': force_frame,
                        'name': 'contact_' + frame}
 
             self.ti.setTaskFromDict(contact)
@@ -222,7 +228,14 @@ class HorizonWpg:
                            'cartesian_type': 'position'}
 
             self.ti.setTaskFromDict(z_task_dict)
-            task_node = {'name': f'{frame}_foot_tgt_constr', 'fun_type': 'constraint', 'frame': frame, 'indices': [0, 1], 'weight': 1., 'cartesian_type': 'position'}
+
+            task_node = {'type': 'Cartesian',
+                         'name': f'{frame}_foot_tgt_constr',
+                         'frame': frame,
+                         'indices': [0, 1],
+                         'weight': 1.,
+                         'cartesian_type': 'position'}
+
             context = {'prb': self.ti.prb, 'kin_dyn': self.ti.kd}
             foot_task = CartesianTask(**context, **task_node)
 
