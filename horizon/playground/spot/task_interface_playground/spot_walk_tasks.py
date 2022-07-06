@@ -36,6 +36,7 @@ q_init = {'lf_haa_joint': 0.0,
           'rh_kfe_joint': -1.52}
 
 problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
+
 model_description = 'whole_body'
 
 # todo: wrong way of adding the contacts contacts=['lf_foot']
@@ -79,38 +80,13 @@ for f in forces:
 # ===================== stuff to wrap ============================
 # ================================================================
 # ================================================================
-from horizon.solvers.solver import Solver
 import subprocess, rospy
 from horizon.ros import replay_trajectory
-
-opts = {'ipopt.tol': 0.001,
-        'ipopt.constr_viol_tol': 1e-3,
-        'ipopt.max_iter': 1000,
-        'error_on_fail': True,
-        'ilqr.max_iter': 200,
-        'ilqr.alpha_min': 0.01,
-        'ilqr.use_filter': False,
-        'ilqr.hxx_reg': 0.0,
-        'ilqr.integrator': 'RK4',
-        'ilqr.merit_der_threshold': 1e-6,
-        'ilqr.step_length_threshold': 1e-9,
-        'ilqr.line_search_accept_ratio': 1e-4,
-        'ilqr.kkt_decomp_type': 'qr',
-        'ilqr.constr_decomp_type': 'qr',
-        'ilqr.verbose': True,
-        'ipopt.linear_solver': 'ma57',
-        }
-
-opts_rti = opts.copy()
-opts_rti['ilqr.enable_line_search'] = False
-opts_rti['ilqr.max_iter'] = 4
-
-solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
-solver_rti = Solver.make_solver(solver_type, ti.prb, opts_rti)
 
 # todo
 # ptgt.assign(ptgt_final, nodes=ns)
 
+solver_bs, solver_rti = ti.getSolver()
 solver_bs.solve()
 solution = solver_bs.getSolutionDict()
 

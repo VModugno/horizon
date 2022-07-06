@@ -10,7 +10,7 @@ from typing import List, Dict
 import numpy as np
 from horizon.rhc import task_factory, plugin_handler, solver_interface
 from horizon.rhc.yaml_handler import YamlParser
-
+from horizon.solvers.solver import Solver
 
 class ModelDescription:
     def __init__(self, problem, model):
@@ -156,7 +156,9 @@ class TaskInterface:
             # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
         }
 
-        task_list = YamlParser.load(yaml_config) # solver_options
+        task_list, solver_options = YamlParser.load(yaml_config)
+
+        self.setSolverOptions(solver_options)
 
         # todo: this should be updated everytime a task is added
         for task_descr in task_list:
@@ -265,5 +267,20 @@ class TaskInterface:
         pass
 
     def setSolverOptions(self, solver_options):
-        si = solver_interface.SolverInterface(**solver_options)
+        solver_type = solver_options.pop('type')
+        is_receding = solver_options.pop('receding', False)
+        self.si = solver_interface.SolverInterface(solver_type, is_receding, solver_options)
+
+    def getSolver(self):
+
+        # todo if receding is true ....
+        scoped_opts = dict(zip([f"{self.si.type}.{key}" for key in self.si.opts.keys()], list(self.si.opts.values())))
+        solver_bs = Solver.make_solver(self.si.type, self.prb, scoped_opts)
+
+        scoped_opts_rti = scoped_opts.copy()
+        scoped_opts_rti['ilqr.enable_line_search'] = False
+        scoped_opts_rti['ilqr.max_iter'] = 4
+        solver_rti = Solver.make_solver(self.si.type, self.prb, scoped_opts_rti)
+
+        return solver_bs, solver_rti
 
