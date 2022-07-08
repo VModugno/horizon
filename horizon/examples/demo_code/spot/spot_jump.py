@@ -44,8 +44,8 @@ if not os.path.isdir(save_dir):
 ms = mat_storer.matStorer(path_to_examples + f'/mat_files/{file_name}.mat')
 
 # options for horizon transcription
-transcription_method = 'multiple_shooting' # can choose between 'multiple_shooting' and 'direct_collocation'
-transcription_opts = dict(integrator='RK4') # integrator used by the multiple_shooting
+transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
+transcription_opts = dict(integrator='RK4')  # integrator used by the multiple_shooting
 
 
 # Create CasADi interface to Pinocchio with casadi_kin_dyn
@@ -63,8 +63,6 @@ if 'floating_base_joint' in joint_names:
 # Optimization parameters
 n_nodes = 50
 node_action = (20, 40)
-node_start_step = 20
-node_end_step = 40
 
 # number of contacts (4 feet of spot)
 n_c = 4
@@ -206,7 +204,7 @@ prb.createFinalConstraint('final_velocity', q_dot)
 # set a final pose of the floating base and robot configuration:
 # rotate the robot orientation on the z-axis
 q_final = q_init.copy()
-q_final[3:7] = stance_orientation
+# q_final[3:7] = stance_orientation
 prb.createFinalConstraint(f"final_nominal_pos", q - q_final)
 
 
@@ -228,7 +226,7 @@ for frame, f in contact_map.items():
     a = DDFK(q=q, qdot=q_dot)['ee_acc_linear']
 
     # velocity of each end effector must be zero before and after the jump
-    prb.createConstraint(f"{frame}_vel_ground", v, nodes=nodes_stance)
+    prb.createConstraint(f"{frame}_vel_ground", v, nodes=nodes_stance + [nodes_swing[0]])
 
     # friction cones must be satisfied while the robot is touching the ground
     # parameters of the friction cones:
@@ -283,7 +281,7 @@ for name, item in prb.getConstraints().items():
     ub_mat = np.reshape(ub, (item.getDim(), len(item.getNodes())), order='F')
     solution_constraints_dict[name] = dict(val=solution_constraints[name], lb=lb_mat, ub=ub_mat, nodes=item.getNodes())
 
-info_dict = dict(n_nodes=n_nodes, node_start_step=node_start_step, node_end_step=node_end_step)
+info_dict = dict(n_nodes=n_nodes, node_action=node_action, stance_orientation=stance_orientation)
 
 if isinstance(dt, cs.SX):
     ms.store({**solution, **solution_constraints_dict, **info_dict})
@@ -322,7 +320,7 @@ if plot_sol:
             ax.plot(np.array([range(pos.shape[1])]), np.array(pos[dim, :]), marker="x", markersize=3,
                     linestyle='dotted')
 
-        plt.vlines([node_start_step, node_end_step], plt.gca().get_ylim()[0], plt.gca().get_ylim()[1], linestyles='dashed', colors='k', linewidth=0.4)
+        plt.vlines([node_action[0], node_action[1]], plt.gca().get_ylim()[0], plt.gca().get_ylim()[1], linestyles='dashed', colors='k', linewidth=0.4)
 
     plt.figure()
     for contact in contacts_name:

@@ -79,7 +79,7 @@ dt = tf / n_nodes
 contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
 
 # define dynamics
-prb = problem.Problem(n_nodes)
+prb = problem.Problem(n_nodes, receding=False)
 q = prb.createStateVariable('q', n_q)
 q_dot = prb.createStateVariable('q_dot', n_v)
 q_ddot = prb.createInputVariable('q_ddot', n_v)
@@ -118,7 +118,7 @@ def residual_to_cost(r):
 # base link vreg
 vref = prb.createParameter('vref', 3)
 v = cs.vertcat(q_dot[0], q_dot[1], q_dot[5])
-prb.createCost('vref', 2 * residual_to_cost(v - vref), nodes=range(1, n_nodes + 1))
+prb.createCost('vref_cost', 2 * residual_to_cost(v - vref), nodes=range(1, n_nodes + 1))
 
 
 # barrier function
@@ -200,7 +200,6 @@ try:
     solv.plot_iter = ilqr_plot_iter
 except:
     pass
-
 
 # helper class representing a step
 class Step:
@@ -309,7 +308,6 @@ t = time.time()
 solv.solve()
 elapsed = time.time() - t
 print(f'solved in {elapsed} s')
-
 solution = solv.getSolutionDict()
 dt_sol = solv.getDt()
 cumulative_dt = np.zeros(len(dt_sol) + 1)

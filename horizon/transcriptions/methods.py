@@ -135,7 +135,7 @@ class MultipleShooting(Transcriptor):
 
         # todo add support for dt that is not a variable/parameter of the problem but depends on problem variables/parameters
         # if dt is a single SX (which means that it involves ALL nodes):
-        if isinstance(self.dt, cs.SX):
+        if isinstance(self.dt, (cs.SX, cs.MX)):
             # for var in self.problem.getVariables().values():
             #     if cs.depends_on(self.dt, var):
             #         if var.getNodes() != -1 or len(var.getNodes()) != self.problem.getNNodes():
