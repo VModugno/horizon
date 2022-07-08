@@ -1045,6 +1045,22 @@ void IterativeLQR::ConstraintToGo::add(MatConstRef C, MatConstRef D, VecConstRef
     _dim += constr_size;
 }
 
+void IterativeLQR::ConstraintToGo::add(MatConstRef C, VecConstRef h)
+{
+    const int constr_size = h.size();
+
+    if(_dim + constr_size >= _h.size())
+    {
+        throw std::runtime_error("maximum constraint-to-go dimension "
+            "exceeded: try reducing the svd_threshold parameter");
+    }
+
+    _C.middleRows(_dim, constr_size) = C;
+    _D.middleRows(_dim, constr_size).setZero();
+    _h.segment(_dim, constr_size) = h;
+    _dim += constr_size;
+}
+
 void IterativeLQR::ConstraintToGo::set(const IterativeLQR::Constraint &constr)
 {
     if(!constr.is_valid())
