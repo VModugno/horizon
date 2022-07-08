@@ -196,7 +196,7 @@ bool SQPGaussNewton<CASADI_TYPE>::lineSearch(
     double merit_der = cost_derr - norminf_lam * constraint_violation;
     double initial_merit = initial_cost + norminf_lam*constraint_violation;
 
-    _alpha = 0.5;
+    _alpha = 1.0;
     bool accepted = false;
     while( _alpha > _alpha_min)
     {
@@ -213,7 +213,7 @@ bool SQPGaussNewton<CASADI_TYPE>::lineSearch(
         double candidate_merit = candidate_cost + norminf_lam*candidate_constraint_violation;
 
         // evaluate Armijo's condition
-        accepted = fabs(candidate_merit - (initial_merit + _beta*_alpha*merit_der)) <= _merit_eps;
+        accepted = candidate_merit < (initial_merit + _beta*_alpha*merit_der);
 
         _fpr.alpha = _alpha;
         _fpr.cost = candidate_cost;
