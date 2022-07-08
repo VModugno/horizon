@@ -54,7 +54,7 @@ casadi::Function horizon::utils::codegen(const casadi::Function &f, std::string 
 
     // else, generate and compile
     f.generate(fname + ".c");
-    system(("gcc -fPIC -shared -O3 -march=native " + fname + ".c -o " + fname + ".so").c_str());
+    system(("clang -fPIC -shared -O2 " + fname + ".c -o " + fname + ".so").c_str());
     return  casadi::external(f.name(),
                              "./" + fname + ".so");
 

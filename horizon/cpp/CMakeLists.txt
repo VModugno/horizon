@@ -100,4 +100,8 @@ target_link_libraries(ilqr_test ilqr)
 add_executable(sqp_test src/sqp_test.cpp)
 target_link_libraries(sqp_test sqp)
 
+add_executable(sqp_test2 src/sqp_test2.cpp)
+target_link_libraries(sqp_test2 sqp)
+
+
 add_subdirectory(tests)

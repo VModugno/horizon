@@ -19,11 +19,19 @@ void IterativeLQR::backward_pass()
     // ..and initialize constraints and bounds
     _constraint_to_go->set(_constraint.back());
 
+    if(_log) std::cout << "n_constr[" << _N << "] = " <<
+                  _constraint_to_go->dim() << " (before bounds)\n";
+
     add_bound_penalty(_N,
                &_value.back().S,
                nullptr,
                &_value.back().s,
                nullptr);
+
+    add_bound_constraint(_N);
+
+    if(_log) std::cout << "n_constr[" << _N << "] = " <<
+                  _constraint_to_go->dim() << "\n";
 
     // backward pass
     int i = _N - 1;
@@ -40,6 +48,19 @@ void IterativeLQR::backward_pass()
             if(_verbose) std::cout << "increasing reg at k = " << i << ", hxx_reg = " << _hxx_reg << "\n";
             // retry with increased reg
             return backward_pass();
+        }
+    }
+
+    // here we should've treated all constraints
+    if(_constraint_to_go->dim() > 0)
+    {
+        std::cout << "warn: " << _constraint_to_go->dim() <<
+                     " constraints left, residual inf-norm is " <<
+                     _constraint_to_go->h().lpNorm<Eigen::Infinity>() << "\n";
+
+        if(_constraint_to_go->h().lpNorm<Eigen::Infinity>() > 1e-6)
+        {
+            throw std::runtime_error("local infeasibility");
         }
     }
 
@@ -102,6 +123,18 @@ void IterativeLQR::backward_pass_iter(int i)
     tmp.Huu.diagonal().array() += _huu_reg;
     TOC(form_value_fn_inner);
 
+    // print
+    if(_log)
+    {
+        Eigen::VectorXd eigS = Snext.eigenvalues().real();
+        std::cout << "eig(Hxx[" << i+1 << "]) in [" <<
+                     eigS.minCoeff() << ", " << eigS.maxCoeff() << "] \n";
+
+        Eigen::VectorXd eigHuu = tmp.Huu.eigenvalues().real();
+        std::cout << "eig(Huu[" << i << "]) in [" <<
+                     eigHuu.minCoeff() << ", " << eigHuu.maxCoeff() << "] \n";
+    }
+
     // add inequality constraints to cost using barriers
     add_bound_penalty(i, &tmp.Hxx, &tmp.Huu, &tmp.hx, &tmp.hu);
 
@@ -148,9 +181,20 @@ void IterativeLQR::backward_pass_iter(int i)
 
     }
 
+    if(_log)
+    {
+        std::cout << "kkt_err[" << i << "] = " <<
+                     (K*u_lam - kx0).lpNorm<Eigen::Infinity>() << "\n";
+
+        std::cout << "feas_constr[" << i << "] = " <<
+                      nc << "\n";
+
+        std::cout << "infeas_constr[" << i << "] = " <<
+                     _constraint_to_go->dim() << "\n";
+    }
+
     THROW_NAN(u_lam);
     TOC(solve_kkt_inner);
-
 
     // save solution
     auto& res = _bp_res[i];
@@ -176,13 +220,8 @@ void IterativeLQR::backward_pass_iter(int i)
 
 }
 
-void IterativeLQR::add_bound_penalty(int k,
-                              Eigen::MatrixXd* Hxx,
-                              Eigen::MatrixXd* Huu,
-                              Eigen::VectorXd* hx,
-                              Eigen::VectorXd* hu)
+void IterativeLQR::add_bound_constraint(int k)
 {
-
     Eigen::RowVectorXd x_ei, u_ei;
 
     // state bounds
@@ -204,10 +243,60 @@ void IterativeLQR::add_bound_penalty(int k,
 
             _constraint_to_go->add(x_ei, u_ei, hd);
 
-            // skip rest of the loop, otherwise
-            // we'd also add a barrier to the cost
-            continue;
+            if(_log)
+            {
+                std::cout << k << ": detected state equality constraint (index " <<
+                             i << ", value = " << _x_lb(i, k) << ") \n";
+            }
 
+        }
+    }
+
+    // input bounds
+    x_ei.setZero(_nx);
+    for(int i = 0; i < _nu; i++)
+    {
+        if(k == _N)
+        {
+            break;
+        }
+
+        // equality
+        if(_u_lb(i, k) == _u_ub(i, k))
+        {
+            u_ei = u_ei.Unit(_nu, i);
+
+            Eigen::Matrix<double, 1, 1> hd;
+            hd(0) = _utrj(i, k) - _u_lb(i, k);
+
+            _constraint_to_go->add(x_ei, u_ei, hd);
+
+            if(_log)
+            {
+                std::cout << k << ": detected input equality constraint (index " <<
+                             i << ", value = " << _u_lb(i, k) << ") \n";
+            }
+        }
+    }
+
+}
+
+void IterativeLQR::add_bound_penalty(int k,
+                              Eigen::MatrixXd* Hxx,
+                              Eigen::MatrixXd* Huu,
+                              Eigen::VectorXd* hx,
+                              Eigen::VectorXd* hu)
+{
+
+    Eigen::RowVectorXd x_ei, u_ei;
+
+    // state bounds
+    u_ei.setZero(_nu);
+    for(int i = 0; i < _nx; i++)
+    {
+        if(k == 0)
+        {
+            break;
         }
 
         // if bound_violations comes out positive, we have
@@ -241,22 +330,6 @@ void IterativeLQR::add_bound_penalty(int k,
         if(k == _N)
         {
             break;
-        }
-
-        // equality
-        if(_u_lb(i, k) == _u_ub(i, k))
-        {
-            u_ei = u_ei.Unit(_nu, i);
-
-            Eigen::Matrix<double, 1, 1> hd;
-            hd(0) = _utrj(i, k) - _u_lb(i, k);
-
-            _constraint_to_go->add(x_ei, u_ei, hd);
-
-            // skip rest of the loop, otherwise
-            // we'd also add a barrier to the cost
-            continue;
-
         }
 
         // if negative, violation
@@ -334,11 +407,17 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     _constraint_to_go->add(_constraint[i]);
 
     // add bounds
-    add_bound_penalty(i);
+    add_bound_constraint(i);
 
     // number of constraints
     int nc = _constraint_to_go->dim();
     res.nc = nc;
+
+    if(_log)
+    {
+        std::cout << "n_constr[" << i << "] = " <<
+                      nc << "\n";
+    }
 
     // no constraint to handle, do nothing
     if(nc == 0)
@@ -364,18 +443,26 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     switch(_constr_decomp_type)
     {
         case Cod:
+            cod.setThreshold(_svd_threshold);
             cod.compute(D);
             rank = cod.rank();
             tmp.codQ = cod.matrixQ();
             break;
 
         case Qr:
+            qr.setThreshold(_svd_threshold);
             qr.compute(D);
             rank = qr.rank();
             tmp.codQ = qr.matrixQ();
+            if(_log)
+            {
+                std::cout << "matrixR diagonal entries = " <<
+                qr.matrixR().diagonal().head(rank).transpose().format(2) << "\n";
+            }
             break;
 
         case Svd:
+            svd.setThreshold(_svd_threshold);
             svd.compute(D, Eigen::ComputeFullU);
             rank = svd.rank();
             tmp.codQ = svd.matrixU();
@@ -398,7 +485,23 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     hf.noalias() = codQ1.transpose()*h;
 
     // infeasible part
-    _constraint_to_go->set(codQ2.transpose()*C, codQ2.transpose()*h);
+    Eigen::MatrixXd Cinf = codQ2.transpose()*C;
+    Eigen::VectorXd hinf = codQ2.transpose()*h;
+
+    _constraint_to_go->clear();
+
+    for(int i = 0; i < hinf.size(); i++)
+    {
+        if(std::fabs(hinf[i]) < 1e-9 &&
+                Cinf.row(i).lpNorm<Eigen::Infinity>() < 1e-9)
+        {
+            if(_log) std::cout << "removing linearly dependent constraint \n";
+            continue;
+        }
+
+        _constraint_to_go->add(Cinf.row(i),
+                               hinf.row(i));
+    }
 
     return FeasibleConstraint{Cf, Df, hf};
 

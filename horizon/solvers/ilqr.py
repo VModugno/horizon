@@ -270,6 +270,7 @@ class SolverILQR(Solver):
 
         if not fpres.accepted:
             return
+            print('-', end='', flush=True)
         else:
             print('*', end='', flush=True)
             
