@@ -227,10 +227,15 @@ class SolverILQR(Solver):
             # fn value
             value = f.getFunction()(*input_list, *param_list)
 
+            # set to ilqr fn could change if this is a residual
+            # and we're in gn mode
+            set_to_ilqr_actual = set_to_ilqr
+            outname_actual = outname
+
             # save function value
             if isinstance(f, ResidualFunction) and self.use_gn:
-                outname = 'res'
-                set_to_ilqr = self.ilqr.setIntermediateResidual
+                outname_actual = 'res'
+                set_to_ilqr_actual = self.ilqr.setIntermediateResidual
                 print('got residual')
             elif isinstance(f, ResidualFunction) and not self.use_gn:
                 value = cs.sumsqr(value)
@@ -240,11 +245,11 @@ class SolverILQR(Solver):
             l = cs.Function(fname, 
                             [self.x, self.u] + param_list, [value], 
                             ['x', 'u'] + [p.getName() for p in param_list], 
-                            [outname]
+                            [outname_actual]
                             )
 
 
-            set_to_ilqr(f.getNodes(), l)
+            set_to_ilqr_actual(f.getNodes(), l)
         
     
     def _set_param_values(self):
