@@ -324,6 +324,8 @@ struct IterativeLQR::ConstraintToGo
 
     void add(MatConstRef C, MatConstRef D, VecConstRef h);
 
+    void add(MatConstRef C, VecConstRef h);
+
     void clear();
 
     int dim() const;
@@ -333,6 +335,7 @@ struct IterativeLQR::ConstraintToGo
     MatConstRef D() const;
 
     VecConstRef h() const;
+
 
 private:
 
