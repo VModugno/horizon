@@ -115,7 +115,8 @@ prb.createResidual('ee_rot', 0.5*rot_err(ee_rot, ee_rot_tgt.reshape((3,3))))
 
 
 # final vel
-prb.createFinalConstraint('final_v', dq)
+prb.createFinalConstraint('final_v_base', dq[[0, 5]])
+prb.createFinalConstraint('final_v_arm', dq[-6:])
 
 # solver
 solv = solver.Solver.make_solver(solver_type, prb, 
@@ -135,6 +136,9 @@ try:
     solv.set_iteration_callback()
 except:
     pass
+
+
+
 
 class CartesioSolver:
     
@@ -178,6 +182,8 @@ class CartesioSolver:
         Tref = self.task.getPoseReference()[0]
         ee_pos_tgt.assign(Tref.translation)
         ee_rot_tgt.assign(Tref.linear.T.reshape((9, 1)))
+
+        print(Tref)
 
         tic = time.time()
         solv.solve()
