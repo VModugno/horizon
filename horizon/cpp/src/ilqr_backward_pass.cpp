@@ -54,14 +54,10 @@ void IterativeLQR::backward_pass()
     // here we should've treated all constraints
     if(_constraint_to_go->dim() > 0)
     {
-        std::cout << "warn: " << _constraint_to_go->dim() <<
-                     " constraints left, residual inf-norm is " <<
+        std::cout << "warn at k = 0: " << _constraint_to_go->dim() <<
+                     " constraints not satified, residual inf-norm is " <<
                      _constraint_to_go->h().lpNorm<Eigen::Infinity>() << "\n";
 
-        if(_constraint_to_go->h().lpNorm<Eigen::Infinity>() > 1e-6)
-        {
-            throw std::runtime_error("local infeasibility");
-        }
     }
 
 }
@@ -495,7 +491,7 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
         if(std::fabs(hinf[i]) < 1e-9 &&
                 Cinf.row(i).lpNorm<Eigen::Infinity>() < 1e-9)
         {
-            if(_log) std::cout << "removing linearly dependent constraint \n";
+            std::cout << "warn at k = " << i << ": removing linearly dependent constraint \n";
             continue;
         }
 
