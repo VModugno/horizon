@@ -10,6 +10,7 @@ from horizon.problem import Problem
 from typing import Dict
 import numpy as np
 import casadi as cs
+import itertools
 
 
 class GNSQPSolver(Solver):
@@ -41,10 +42,29 @@ class GNSQPSolver(Solver):
             cost_list.append(fun.getImpl())
         f = cs.vertcat(cs.vertcat(*cost_list))
 
+        # build parameters
+        f_par_list = []
+        for name in prb.function_container.getCost():
+            f_par_list.append(prb.function_container.getCost()[name].getParameters())
+
+        f_par_name_list = [pp.getName() for p in f_par_list for pp in p]
+        f_input_str = ['x'] + f_par_name_list
+        f_input = [w] + [pp.getImpl() for p in f_par_list for pp in p]
+
+        g_par_list = []
+        for name in prb.function_container.getCnstr():
+            g_par_list.append(prb.function_container.getCnstr()[name].getParameters())
+
+        g_par_name_list = [pp.getName() for p in g_par_list for pp in p]
+        g_input_str = ['x'] + g_par_name_list
+        g_input = [w] + [pp.getImpl() for p in g_par_list for pp in p]
+
         # create solver from prob
-        F = cs.Function('f', [w], [f], ['x'], ['f'])
-        G = cs.Function('g', [w], [g], ['x'], ['g'])
+        F = cs.Function('f', f_input, [f], f_input_str, ['f'])
+        G = cs.Function('g', g_input, [g], g_input_str, ['g'])
+
         self.solver = SQPGaussNewtonSX('gnsqp', qp_solver_plugin, F, G, self.opts)
+
 
     def set_iteration_callback(self, cb=None):
         if cb is None:
@@ -60,22 +80,27 @@ class GNSQPSolver(Solver):
             star = '*' if fpres.accepted else ' '
             fpres.print()
 
-    def solve(self) -> bool:
+    def _set_param_values(self):
+        params = self.prb.var_container.getParList()
+        for p in params:
+            self.solver.setParameterValue(p.getName(), cs.vertcat(*p.getValues()))
 
+    def solve(self) -> bool:
         # update bounds and initial guess
         # update lower/upper bounds of variables
         lbw = self._getVarList('lb')
         ubw = self._getVarList('ub')
         # update initial guess of variables
         w0 = self._getVarList('ig')
-        # update parameters
-        p = self._getParList()
         # update lower/upper bounds of constraints
         lbg = self._getFunList('lb')
         ubg = self._getFunList('ub')
 
+        # update parameters
+        self._set_param_values()
+
         # solve
-        sol = self.solver.solve(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg, p=p)
+        sol = self.solver.solve(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
 
         # self.cnstr_solution = self._createCnsrtSolDict(sol)
 

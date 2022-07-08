@@ -306,11 +306,13 @@ void IterativeLQR::line_search(int iter)
         test_pair.h = std::max(10.0*test_pair.h, 1e3);
         _fp_res->accepted = _it_filt.add(test_pair);
 
-        _fp_res->alpha = 0;
-        _fp_res->accepted = true;
-        _fp_res->merit = merit;
-        report_result(*_fp_res);
+
     }
+
+    _fp_res->alpha = 0;
+    _fp_res->accepted = iter == 0;
+    _fp_res->merit = merit;
+    report_result(*_fp_res);
 
     // run line search
     while(alpha >= alpha_min)
