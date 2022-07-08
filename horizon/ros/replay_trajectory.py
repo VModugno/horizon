@@ -171,7 +171,7 @@ class replay_trajectory:
         self.pub.publish(joint_state_pub)
 
 
-    def replay(self, is_floating_base=True):
+    def replay(self, is_floating_base=True, base_link='base_link'):
         rate = rospy.Rate(self.slow_down_rate / self.dt)
         joint_state_pub = JointState()
         joint_state_pub.header = Header()
@@ -181,7 +181,7 @@ class replay_trajectory:
             br = ros_tf.TransformBroadcaster()
             m = geometry_msgs.msg.TransformStamped()
             m.header.frame_id = 'world'
-            m.child_frame_id = 'base_link'
+            m.child_frame_id = base_link
 
         nq = np.shape(self.q_replay)[0]
         ns = np.shape(self.q_replay)[1]
