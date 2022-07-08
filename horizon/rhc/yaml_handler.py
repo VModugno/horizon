@@ -30,16 +30,24 @@ class YamlParser:
 
         # parse tasks
         field_names = {'constraints': 'constraint', 'costs': 'residual'}
+
+        # TODO tutto questo fa cagare diocane # refactor in a good way
         task_list = list()
+        non_active_task_list = list()
         for task_name, task_desc in parsed_yaml.items():
             task_desc['name'] = task_name
 
-            for field in required_fields:
-                if task_name in required_fields_dict[field]:
-                    task_desc['fun_type'] = field_names[field]
-                    task_list.append(task_desc)
+            if task_name in required_fields_dict['costs']:
+                task_desc['fun_type'] = 'residual'
+                task_list.append(task_desc)
+            elif task_name in required_fields_dict['constraints']:
+                task_desc['fun_type'] = 'constraint'
+                task_list.append(task_desc)
+            else:
+                non_active_task_list.append(task_desc)
 
-        return task_list, required_fields_dict['solver']
+
+        return task_list, non_active_task_list, required_fields_dict['solver']
 
     @staticmethod
     def _parse_required_fields(parsed_yaml, required_fields):
