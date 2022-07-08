@@ -15,6 +15,7 @@ PYBIND11_MODULE(pyilqr, m) {
             .def_readonly("cost", &IterativeLQR::ForwardPassResult::cost)
             .def_readonly("defect_norm", &IterativeLQR::ForwardPassResult::defect_norm)
             .def_readonly("merit", &IterativeLQR::ForwardPassResult::merit)
+            .def_readonly("armijo_merit", &IterativeLQR::ForwardPassResult::armijo_merit)
             .def_readonly("merit_der", &IterativeLQR::ForwardPassResult::merit_der)
             .def_readonly("mu_f", &IterativeLQR::ForwardPassResult::mu_f)
             .def_readonly("mu_c", &IterativeLQR::ForwardPassResult::mu_c)
