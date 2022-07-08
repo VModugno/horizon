@@ -8,28 +8,59 @@ class CartesianTask(Task):
     def __init__(self, frame, cartesian_type=None, *args, **kwargs):
 
         self.frame = frame
+
         self.cartesian_type = 'position' if cartesian_type is None else cartesian_type
 
         super().__init__(*args, **kwargs)
 
+        self.indices = np.array([0, 1, 2]).astype(int) if self.indices is None else np.array(self.indices).astype(int)
+
         if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint
         elif self.fun_type == 'cost':
+            self.instantiator = self.prb.createCost
+        elif self.fun_type == 'residual':
             self.instantiator = self.prb.createResidual
 
         self._initialize()
+
+    # TODO
+    # def _fk(self, frame, q, derivative=0):
+    #     if ...
+    #     fk = cs.Function.deserialize(self.kin_dyn.fk(frame))
+    #     ee_p_t = fk(q=q)['ee_pos']
+    #     ee_p_r = fk(q=q)['ee_rot']
+    #     return ee_p_t, ee_p_r
 
     def _initialize(self):
         # todo this is wrong! how to get these variables?
         q = self.prb.getVariables('q')
         v = self.prb.getVariables('v')
+        # a = self.prb.getVariables('a')
 
-        # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+        # if self.frame == 'floating_base':
+        #     if self.cartesian_type == 'position':
+        #         frame_name = f'{self.name}_{self.frame}_pos'
+        #         self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+        #         fun = q[self.indices] - self.pos_tgt
+        #     elif self.cartesian_type == 'velocity':
+        #         frame_name = f'{self.name}_{self.frame}_vel'
+        #         self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+        #         fun = v[self.indices] - self.pos_tgt
+        #     elif self.cartesian_type == 'acceleration':
+        #         frame_name = f'{self.name}_{self.frame}_acc'
+        #         self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+        #         fun = a[self.indices] - self.pos_tgt
+        #
+        # else:
+
+            # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
         if self.cartesian_type == 'position':
             fk = cs.Function.deserialize(self.kin_dyn.fk(self.frame))
             ee_p_t = fk(q=q)['ee_pos']
             ee_p_r = fk(q=q)['ee_rot']
             # ee_p = cs.vertcat(ee_p_t, ee_p_r)
+            # todo compute the rotation error
 
             frame_name = f'{self.name}_{self.frame}_pos'
             self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)

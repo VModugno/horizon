@@ -459,10 +459,10 @@ if __name__ == '__main__':
     model_description = 'whole_body'
 
     # todo for now, there are three ways to add contacts:
-        # contacts=contacts
-        # setContactFrame(contact)
-        # interactionTask
-    ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description) #contacts=contacts
+    #  contacts=contacts CORRECT
+    #  setContactFrame(contact) WRONG, does not update dynamics
+    #  interactionTask WRONG, does not update dynamics
+    ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts) #
     ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
 
     # [ti.model.setContactFrame(contact) for contact in contacts]

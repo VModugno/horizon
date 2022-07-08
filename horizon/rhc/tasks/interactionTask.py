@@ -8,6 +8,8 @@ class InteractionTask(Task):
         self.frame = frame
         super().__init__(*args, **kwargs)
 
+        self.indices = np.array([0, 1, 2]).astype(int) if self.indices is None else np.array(self.indices).astype(int)
+
         self.f = force[self.indices]
         self._initialize()
 

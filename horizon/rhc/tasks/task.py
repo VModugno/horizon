@@ -19,13 +19,13 @@ class Task:
     kin_dyn: pycasadi_kin_dyn.CasadiKinDyn
     kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
 
-    # todo: there should be also a type
+    # todo: how to initialize?
     type: str
     name: str
     fun_type: str = 'constraint'
     weight: Union[List, float] = 1.0
     nodes: Sequence = field(default_factory=list)
-    indices: Union[List, np.ndarray] = np.array([0, 1, 2]).astype(int)
+    indices: Union[List, np.ndarray] = None
     id: str = field(init=False, default_factory=generate_id)
 
     @classmethod
@@ -34,7 +34,7 @@ class Task:
 
     def __post_init__(self):
         # todo: this is for simplicity
-        self.indices = np.array(self.indices)
+        self.indices = np.array(self.indices) if self.indices is not None else None
 
     def setNodes(self, nodes):
         self.nodes = nodes

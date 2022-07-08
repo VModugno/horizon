@@ -18,7 +18,7 @@ class ModelDescription:
         self.prb = problem
         self.kd = model
 
-    def generateModel(self, model_type=None):
+    def generateModel(self, model_type=None, enable_torques=False):
 
         self.model_type = 'whole_body' if model_type is None else model_type
 
@@ -31,7 +31,7 @@ class ModelDescription:
             self.nv = self.kd.nv()
 
             # custom choices
-            self.nf = 3
+            self.nf = 3 if enable_torques is False else 6
             self.q = self.prb.createStateVariable('q', self.nq)
             self.v = self.prb.createStateVariable('v', self.nv)
             self.a = self.prb.createInputVariable('a', self.nv)
@@ -82,7 +82,8 @@ class TaskInterface:
                  problem_opts: Dict[str, any],
                  model_description: str,
                  fixed_joints: List[str] = None,
-                 contacts: List[str] = None):  # todo this is wrong, it should not be listed in the initialization
+                 contacts: List[str] = None,
+                 enable_torques: bool = False):  # todo this is wrong, it should not be listed in the initialization
 
         # get the model
 
@@ -112,6 +113,7 @@ class TaskInterface:
         # manage starting position
         # initial guess (also initial condition and nominal pose)
         q_init = {k: v for k, v in q_init.items() if k not in self.fixed_joints}
+
         self.q0 = self.kd.mapToQ(q_init)
         self.q0[:7] = base_init
         self.v0 = np.zeros(self.nv)
@@ -124,27 +126,25 @@ class TaskInterface:
 
         # model specification (whole body, centroidal, acceleration, velocity...)
         self.model = ModelDescription(self.prb, self.kd)
-        self.model.generateModel(model_description)
+        self.model.generateModel(model_description, enable_torques=enable_torques)
 
         if self.init_contacts is not None:
             for c in self.init_contacts:
                 self.model.setContactFrame(c)
 
-        self._initializeModel()
+        self.model.setDynamics()
+
 
     def _createProblem(self, problem_opts):
 
         # definition of the problem
         # todo: what if I want a variable dt?
-        self.N = problem_opts.get('N', 50)
+        self.N = problem_opts.get('ns', 50)
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
 
         self.prb = Problem(self.N, receding=True)
         self.prb.setDt(self.dt)
-
-    def _initializeModel(self):
-        self.model.setDynamics()
 
     # a possible method could read from yaml and create the task list
     def setTaskFromYaml(self, yaml_config):
@@ -156,12 +156,12 @@ class TaskInterface:
             # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
         }
 
-        task_list, solver_options = YamlParser.load(yaml_config)
+        self.task_desrc_list, self.non_active_task, self.solver_options = YamlParser.load(yaml_config)
 
-        self.setSolverOptions(solver_options)
+        self.setSolverOptions(self.solver_options)
 
         # todo: this should be updated everytime a task is added
-        for task_descr in task_list:
+        for task_descr in self.task_desrc_list:
             task_descr_resolved = YamlParser.resolve(task_descr, shortcuts)
 
             if 'weight' in task_descr and isinstance(task_descr['weight'], dict):
@@ -181,7 +181,6 @@ class TaskInterface:
 
             self.setTaskFromDict(task_descr_resolved)
 
-        # tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
 
     def setTaskFromDict(self, task_description):
         # todo if task is dict... ducktyping
@@ -233,8 +232,19 @@ class TaskInterface:
         if 'subtask' in task_description_copy:
             subtask_description_list = task_description_copy.pop(
                 'subtask') if 'subtask' in task_description_copy else []
+
+
             # inherit from parent:
             for subtask_description in subtask_description_list:
+
+                # TODO: wrong way to handle YAML subtasks
+                if isinstance(subtask_description, str):
+                    for task in self.non_active_task:
+                        if task['name'] == subtask_description:
+                            subtask_description = task
+                            break
+
+
                 # child inherit from parent the values, if not present
                 # parent define the context for the child: child can override it
                 for key, value in task_description_copy.items():
@@ -253,6 +263,7 @@ class TaskInterface:
         self.task_list.append(task)
 
     def getTask(self, task_name):
+        # todo better error
         list_1 = [t for t in self.task_list if t.getName() == task_name][0]
         return list_1
 
