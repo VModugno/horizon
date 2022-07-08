@@ -36,23 +36,6 @@ class CartesianTask(Task):
         # todo this is wrong! how to get these variables?
         q = self.prb.getVariables('q')
         v = self.prb.getVariables('v')
-        # a = self.prb.getVariables('a')
-
-        # if self.frame == 'floating_base':
-        #     if self.cartesian_type == 'position':
-        #         frame_name = f'{self.name}_{self.frame}_pos'
-        #         self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
-        #         fun = q[self.indices] - self.pos_tgt
-        #     elif self.cartesian_type == 'velocity':
-        #         frame_name = f'{self.name}_{self.frame}_vel'
-        #         self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
-        #         fun = v[self.indices] - self.pos_tgt
-        #     elif self.cartesian_type == 'acceleration':
-        #         frame_name = f'{self.name}_{self.frame}_acc'
-        #         self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
-        #         fun = a[self.indices] - self.pos_tgt
-        #
-        # else:
 
             # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
         if self.cartesian_type == 'position':

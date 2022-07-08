@@ -42,13 +42,15 @@ ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 
 ptgt_final = [0., 0., 0.]
 
-task_base_x = {'type': 'Postural',
+task_base_x = {'type': 'Cartesian',
+               'frame': 'base_link',
                'name': 'final_base_x',
                'indices': [0],
                'nodes': [ns],
                'weight': 1e3}
 
-task_base_y = {'type': 'Postural',
+task_base_y = {'type': 'Cartesian',
+               'frame': 'base_link',
                'name': 'final_base_y',
                'indices': [1],
                'nodes': [ns],
