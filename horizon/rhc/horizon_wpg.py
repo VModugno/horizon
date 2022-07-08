@@ -74,13 +74,15 @@ class HorizonWpg:
         # self.ptgt = self.ti.prb.createParameter('ptgt', 3)
 
         # goalx = self.ti.prb.createFinalConstraint("final_x", self.ti.model.q[0] - self.ptgt[0])
-        goalx = {'type': 'Postural',
+        goalx = {'type': 'Cartesian',
+                 'frame': 'base_link',
                  'name': 'final_base_x',
                  'indices': [0],
                  'nodes': [self.N]}
 
         # goaly = self.ti.prb.createFinalResidual("final_y", 1e3 * (self.ti.model.q[1] - self.ptgt[1]))
-        goaly = {'type': 'Postural',
+        goaly = {'type': 'Cartesian',
+                 'frame': 'base_link',
                  'name': 'final_base_y',
                  'indices': [1],
                  'nodes': [self.N],
@@ -88,16 +90,18 @@ class HorizonWpg:
                  'weight': 1e3}
 
         # goalrz = self.ti.prb.createFinalResidual("final_rz", 1e3 * (self.ti.model.q[5] - self.ptgt[2]))
-        goalrz = {'type': 'Postural',
-                  'name': 'final_base_rz',
-                  'indices': [5],
-                  'nodes': [self.N],
-                  'fun_type': 'residual',
-                  'weight': 1e3}
+        # TODO this does not work
+        # goalrz = {'type': 'Cartesian',
+        #           'name': 'final_base_rz',
+        #           'frame': 'base_link',
+        #           'indices': [5],
+        #           'nodes': [self.N],
+        #           'fun_type': 'residual',
+        #           'weight': 1e3}
 
         self.ti.setTaskFromDict(goalx)
         self.ti.setTaskFromDict(goaly)
-        self.ti.setTaskFromDict(goalrz)
+        # self.ti.setTaskFromDict(goalrz)
 
         self.base_goal_tasks = [self.ti.getTask('final_base_x'), self.ti.getTask('final_base_y'), self.ti.getTask('final_base_rz')]
 
@@ -112,7 +116,9 @@ class HorizonWpg:
 
         # base rotation
         # self.ti.prb.createResidual("min_rot", 1e-4 * (self.ti.model.q[3:5] - q0[3:5]))
-        minrot = {'type': 'Postural',
+
+        minrot = {'type': 'Cartesian',
+                  'frame': 'base_link',
                   'name': 'min_rot',
                   'indices': [3, 4],
                   'nodes': list(range(self.N+1)),
@@ -126,7 +132,6 @@ class HorizonWpg:
         # self.ti.prb.createResidual("min_q", 1e-1 * (self.ti.model.q[7:] - q0[7:]))
         minq = {'type': 'Postural',
                   'name': 'min_q',
-                  'indices': list(range(7, self.ti.model.q.getDim())),
                   'nodes': list(range(self.N+1)),
                   'fun_type': 'residual',
                   'weight': 1e-1}
@@ -140,7 +145,6 @@ class HorizonWpg:
         # self.ti.prb.createFinalResidual("min_qf", 1e1 * (self.ti.model.q[7:] - q0[7:]))
         minqf = {'type': 'Postural',
                   'name': 'min_qf',
-                  'indices': list(range(7, self.ti.model.q.getDim())),
                   'nodes': [50],
                   'fun_type': 'residual',
                   'weight': 1e1}
