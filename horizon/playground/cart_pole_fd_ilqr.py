@@ -86,6 +86,8 @@ solver = Solver.make_solver(solver_type, prb, opts={
     'ilqr.enable_gn': True,
     'ilqr.enable_line_search': True,
     'ilqr.line_search_accept_ratio': -0.4,
+    'ilqr.merit_der_threshold': 1e-9,
+    'ilqr.step_length_threshold': 1e-9,
     'ilqr.rho_base': 1e5,
     'ilqr.codegen_enabled': True, 
     'ilqr.codegen_workdir': '/tmp/cart_pole_fd'
