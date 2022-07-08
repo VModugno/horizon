@@ -136,6 +136,7 @@ public:
         double cost;
         double bound_violation;
         double merit;
+        double armijo_merit;
         double mu_f;
         double mu_c;
         double merit_der;
