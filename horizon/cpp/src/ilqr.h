@@ -196,6 +196,7 @@ private:
     void increase_regularization();
     void reduce_regularization();
     FeasibleConstraint handle_constraints(int i);
+    void add_bound_constraint(int k);
     void add_bound_penalty(int i,
                     Eigen::MatrixXd* Hxx = nullptr,
                     Eigen::MatrixXd* Huu = nullptr,
