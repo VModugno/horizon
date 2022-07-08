@@ -150,6 +150,12 @@ public:
             _qp_opts.erase("beta");
         }
 
+        if(_qp_opts.count("eps_regularization"))
+        {
+            _eps_regularization = _qp_opts.at("eps_regularization");
+            _qp_opts.erase("eps_regularization");
+        }
+
         if(_qp_opts.count("alpha_min"))
         {
             _alpha_min = _qp_opts.at("alpha_min");
@@ -498,6 +504,8 @@ private:
     double _solution_convergence;
     double _constraint_violation_tolerance;
     double _merit_derivative_tolerance;
+
+    double _eps_regularization = 0.0;
 
     bool _use_gr;
 

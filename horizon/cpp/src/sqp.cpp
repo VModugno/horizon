@@ -51,7 +51,7 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
         _I.resize(_H.rows(), _H.cols());
         _I.setIdentity();
 //        _H.selfadjointView<Eigen::Lower>().rankUpdate(_J.transpose());
-        _H = _J.transpose() * _J + 1e-6*_I;
+        _H = _J.transpose() * _J + _eps_regularization * _I;
 
 
         auto toc = std::chrono::high_resolution_clock::now();
@@ -228,6 +228,10 @@ bool SQPGaussNewton<CASADI_TYPE>::lineSearch(
         _fpr.mu_c = norminf_lam;
         _fpr.mu_f = NAN;
 
+        if(_iter_cb)
+        {
+            _iter_cb(_fpr);
+        }
 
         if(accepted)
             break;
