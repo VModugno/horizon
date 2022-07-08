@@ -7,6 +7,7 @@ from horizon.solvers.pyilqr import IterativeLQR
 
 from .solver import Solver
 from horizon.problem import Problem
+from horizon.functions import Cost, RecedingCost, Residual, RecedingResidual
 from typing import Dict
 import numpy as np
 import casadi as cs
@@ -17,7 +18,11 @@ class GNSQPSolver(Solver):
 
     def __init__(self, prb: Problem, opts: Dict, qp_solver_plugin: str) -> None:
 
-        super().__init__(prb, opts=opts)
+        filtered_opts = None 
+        if opts is not None:
+            filtered_opts = {k[6:]: opts[k] for k in opts.keys() if k.startswith('gnsqp.')}
+
+        super().__init__(prb, opts=filtered_opts)
 
         self.prb = prb
 
@@ -36,22 +41,34 @@ class GNSQPSolver(Solver):
             fun_list.append(fun.getImpl())
         g = cs.veccat(*fun_list)
 
-        # build cost functions list
-        cost_list = list()
-        for fun in prb.function_container.getCost().values():
-            cost_list.append(fun.getImpl())
-        f = cs.vertcat(cs.veccat(*cost_list))
-
+        # todo: residual, recedingResidual should be the same class
+        # sqp only supports residuals, warn the user otherwise
+        fun_list = list()
+        for fun in self.fun_container.getCost().values():
+            fun_to_append = fun.getImpl()
+            if fun_to_append is not None:
+                if type(fun) in (Cost, RecedingCost):
+                    print('warning: sqp solver does not support costs that are not residuals')
+                    fun_list.append(fun_to_append[:])
+                elif type(fun) in (Residual, RecedingResidual):
+                    fun_list.append(fun_to_append[:])
+                else:
+                    raise Exception('wrong type of function found in fun_container')
+        
+        f = cs.veccat(*fun_list)
+        
         # build parameters
         par_list = list()
         for par in self.var_container.getParList(offset=False):
             par_list.append(par.getImpl())
-        p = cs.vertcat(*par_list)
+        p = cs.veccat(*par_list)
 
         # create solver from prob
         F = cs.Function('f', [w, p], [f], ['w', 'p'], ['f'])
         G = cs.Function('g', [w, p], [g], ['w', 'p'], ['g'])
 
+        # create solver
+        print(self.opts)
         self.solver = SQPGaussNewtonSX('gnsqp', qp_solver_plugin, F, G, self.opts)
 
 
@@ -63,7 +80,7 @@ class GNSQPSolver(Solver):
 
     def _iter_callback(self, fpres):
             if not fpres.accepted:
-                return
+                pass
             fmt = ' <#09.3e'
             fmtf = ' <#04.2f'
             star = '*' if fpres.accepted else ' '
@@ -93,6 +110,8 @@ class GNSQPSolver(Solver):
 
         # get solution dict
         self.var_solution = self._createVarSolDict(sol)
+        self.var_solution['x_opt'] = self.x_opt
+        self.var_solution['u_opt'] = self.u_opt
 
         # get solution as state/input
         self._createVarSolAsInOut(sol)
