@@ -62,6 +62,7 @@ bool checkOptions(const std::string& key, py::handle& value, casadi::Dict& dict)
 {
     // -- sqp options --//
     if(setOption    <double>        (key,   "beta",                             value, dict)) return true;
+    if(setOption    <double>        (key,   "eps_regularization",               value, dict)) return true;
     if(setOption    <double>        (key,   "alpha_min",                        value, dict)) return true;
     if(setOption    <int>           (key,   "max_iter",                         value, dict)) return true;
     if(setOption    <bool>          (key,   "reinitialize_qpsolver",            value, dict)) return true;
