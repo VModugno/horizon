@@ -416,14 +416,14 @@ bool IterativeLQR::should_stop()
     // exit if merit function directional derivative (normalized)
     // is too close to zero
     if(_fp_res->merit_der < 0 &&
-            _fp_res->merit_der/_fp_res->merit > - merit_der_threshold)
+            _fp_res->merit_der > - merit_der_threshold*(1 + _fp_res->merit))
     {
         std::cout << "exiting due to small merit derivative \n";
         return true;
     }
 
     // exit if step size (normalized) is too short
-    if(_fp_res->step_length/_utrj.norm() < step_length_threshold)
+    if(_fp_res->step_length < step_length_threshold*(1 + _utrj.norm()))
     {
         std::cout << "exiting due to small control increment \n";
         return true;
