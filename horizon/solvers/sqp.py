@@ -43,25 +43,14 @@ class GNSQPSolver(Solver):
         f = cs.vertcat(cs.vertcat(*cost_list))
 
         # build parameters
-        f_par_list = []
-        for name in prb.function_container.getCost():
-            f_par_list.append(prb.function_container.getCost()[name].getParameters())
-
-        f_par_name_list = [pp.getName() for p in f_par_list for pp in p]
-        f_input_str = ['x'] + f_par_name_list
-        f_input = [w] + [pp.getImpl() for p in f_par_list for pp in p]
-
-        g_par_list = []
-        for name in prb.function_container.getCnstr():
-            g_par_list.append(prb.function_container.getCnstr()[name].getParameters())
-
-        g_par_name_list = [pp.getName() for p in g_par_list for pp in p]
-        g_input_str = ['x'] + g_par_name_list
-        g_input = [w] + [pp.getImpl() for p in g_par_list for pp in p]
+        par_list = list()
+        for par in self.var_container.getParList(offset=False):
+            par_list.append(par.getImpl())
+        p = cs.vertcat(*par_list)
 
         # create solver from prob
-        F = cs.Function('f', f_input, [f], f_input_str, ['f'])
-        G = cs.Function('g', g_input, [g], g_input_str, ['g'])
+        F = cs.Function('f', [w, p], [f], ['w', 'p'], ['f'])
+        G = cs.Function('g', [w, p], [g], ['w', 'p'], ['g'])
 
         self.solver = SQPGaussNewtonSX('gnsqp', qp_solver_plugin, F, G, self.opts)
 
@@ -80,27 +69,25 @@ class GNSQPSolver(Solver):
             star = '*' if fpres.accepted else ' '
             fpres.print()
 
-    def _set_param_values(self):
-        params = self.prb.var_container.getParList()
-        for p in params:
-            self.solver.setParameterValue(p.getName(), cs.vertcat(*p.getValues()))
 
     def solve(self) -> bool:
-        # update bounds and initial guess
+        
         # update lower/upper bounds of variables
         lbw = self._getVarList('lb')
         ubw = self._getVarList('ub')
+        
         # update initial guess of variables
         w0 = self._getVarList('ig')
+        
         # update lower/upper bounds of constraints
         lbg = self._getFunList('lb')
         ubg = self._getFunList('ub')
 
         # update parameters
-        self._set_param_values()
+        p = self._getParList()
 
         # solve
-        sol = self.solver.solve(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+        sol = self.solver.solve(x0=w0, p=p, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
 
         # self.cnstr_solution = self._createCnsrtSolDict(sol)
 
