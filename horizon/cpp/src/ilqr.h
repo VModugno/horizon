@@ -142,7 +142,6 @@ public:
         double step_length;
         double constraint_violation;
         double defect_norm;
-        double armijo_merit;
         int iter;
         bool accepted;
 
@@ -152,6 +151,7 @@ public:
         ForwardPassResult(int nx, int nu, int N);
         void print() const;
     };
+
 
 
 
