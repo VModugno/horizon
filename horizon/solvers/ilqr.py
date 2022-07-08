@@ -7,7 +7,7 @@ except ImportError as e:
 from horizon.variables import Parameter
 from horizon.solvers import Solver
 from horizon.problem import Problem
-from horizon.functions import Function, Constraint, ResidualFunction
+from horizon.functions import Function, Constraint, Residual, RecedingResidual
 from typing import Dict, List
 from horizon.transcriptions import integrators
 import casadi as cs
@@ -163,6 +163,12 @@ class SolverILQR(Solver):
 
         return self.dt_solution
 
+    def getSolutionState(self):
+        return self.solution_dict['x_opt']
+
+    def getSolutionInput(self):
+        return self.solution_dict['u_opt']
+
     def print_timings(self):
 
         prof_info = self.ilqr.getProfilingInfo()
@@ -233,11 +239,11 @@ class SolverILQR(Solver):
             outname_actual = outname
 
             # save function value
-            if isinstance(f, ResidualFunction) and self.use_gn:
+            if isinstance(f, (Residual, RecedingResidual)) and self.use_gn:
                 outname_actual = 'res'
                 set_to_ilqr_actual = self.ilqr.setIntermediateResidual
                 print('got residual')
-            elif isinstance(f, ResidualFunction) and not self.use_gn:
+            elif isinstance(f, (Residual, RecedingResidual)) and not self.use_gn:
                 value = cs.sumsqr(value)
                 print('got residual disables')
                 

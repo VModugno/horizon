@@ -6,6 +6,7 @@
 # The underlying idea is LOCALLY refining the trajectory by injecting more nodes so that, when resampling, less errors pop up.
 #to visualize the trajectory use vis_refiner_local.py and to resample + send it to gazebo use send_to_gazebo.py
 ##################
+import time
 
 import horizon.variables
 from horizon import problem
@@ -33,7 +34,8 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer('spot_jump.mat')
+ms = mat_storer.matStorer('refining_mat/spot_jump.mat')
+# ms = mat_storer.matStorer('spot_jump_refined_local.mat')
 prev_solution = ms.load()
 
 n_nodes = prev_solution['n_nodes'][0][0]
@@ -155,7 +157,7 @@ if plot_flag:
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.grid(alpha=0.4)
 
-    ax.yaxis.set_major_locator(plt.MultipleLocator(4))
+    ax.yaxis.set_major_locator(plt.MultipleLocator(2))
 
     wanted_time_label = {0, 20, 40, 49}
     label_list = list(range(nodes_vec[:-1].shape[0]))
@@ -185,11 +187,12 @@ if plot_flag:
 
 tau_sol_base = tau_sol_res[:6, :]
 
-threshold = 5
+threshold = 5.
 ## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
 indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
 # these indices corresponds to some nodes ..
 values_exceed = nodes_vec_res[indices_exceed]
+
 
 ## search for duplicates and remove them, both in indices_exceed and values_exceed
 indices_duplicates = np.where(np.in1d(values_exceed, nodes_vec))
@@ -197,6 +200,8 @@ value_duplicates = values_exceed[indices_duplicates]
 
 values_exceed = np.delete(values_exceed, np.where(np.in1d(values_exceed, value_duplicates)))
 indices_exceed = np.delete(indices_exceed, indices_duplicates)
+
+print('number of supplementary nodes:', len(indices_exceed))
 
 ## base vector nodes augmented with new nodes + sort
 nodes_vec_augmented = np.concatenate((nodes_vec, values_exceed))
@@ -405,16 +410,16 @@ for node in range(n_nodes+1):
     if node in base_indices:
         q_dot.setInitialGuess(prev_q_dot[:, k], node)
         k += 1
-    if node in zip_indices_new.keys():
-        q_dot.setInitialGuess(qdot_res[:, zip_indices_new[node]], node)
+    # if node in zip_indices_new.keys():
+    #     q_dot.setInitialGuess(qdot_res[:, zip_indices_new[node]], node)
 
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
         q_ddot.setInitialGuess(prev_q_ddot[:, k], node)
         k += 1
-    if node in zip_indices_new.keys():
-        q_ddot.setInitialGuess(qddot_res[:, zip_indices_new[node]], node)
+    # if node in zip_indices_new.keys():
+    #     q_ddot.setInitialGuess(qddot_res[:, zip_indices_new[node]], node)
 
 for i_f in range(len(f_list)):
     k = 0
@@ -422,8 +427,8 @@ for i_f in range(len(f_list)):
         if node in base_indices:
             f_list[i_f].setInitialGuess(prev_f_list[i_f][:, k], node)
             k += 1
-        if node in zip_indices_new.keys():
-            f_list[i_f].setInitialGuess(f_res_list[i_f][:, zip_indices_new[node]], node)
+        # if node in zip_indices_new.keys():
+        #     f_list[i_f].setInitialGuess(f_res_list[i_f][:, zip_indices_new[node]], node)
 
 plot_ig = False
 if plot_ig:
@@ -559,43 +564,47 @@ for frame, f in contact_map.items():
 
 # SET COST FUNCTIONS
 # prb.createCost(f"jump_fb", 10000 * cs.sumsqr(q[2] - fb_during_jump[2]), nodes=node_start_step)
-# prb.createCost("min_q_dot", 1. * cs.sumsqr(q_dot))
+prb.createCost("min_q_dot", 1. * cs.sumsqr(q_dot))
 # prb.createFinalCost(f"final_nominal_pos", 1000 * cs.sumsqr(q - q_init))
 for f in f_list:
-    prb.createIntermediateCost(f"min_{f.getName()}", 0.01 * cs.sumsqr(f))
+    prb.createIntermediateCost(f"min_{f.getName()}", 0.01 * cs.sumsqr(f)) #0.01
 
-prb.createIntermediateCost("min_qddot", 1 * cs.sumsqr(q_ddot))
+prb.createIntermediateCost("min_qddot", 1 * cs.sumsqr(q_ddot)) #1
 
 ######################################## proximal auxiliary cost function #######################################
+weight = 1e9
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
-        prb.createCost(f"q_close_to_old_node_{node}", 1e5 * cs.sumsqr(q - prev_q[:, k]), nodes=node)
+        prb.createCost(f"q_close_to_old_node_{node}", weight * cs.sumsqr(q - prev_q[:, k]), nodes=node)
         k = k+1
     if node in zip_indices_new.keys():
-        prb.createCost(f"q_close_to_res_node_{node}", 1e5 * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
+        prb.createCost(f"q_close_to_res_node_{node}", weight * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
 
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
-        prb.createCost(f"qdot_close_to_old_node_{node}", 1e5 * cs.sumsqr(q_dot - prev_q_dot[:, k]), nodes=node)
+        prb.createCost(f"qdot_close_to_old_node_{node}", weight * cs.sumsqr(q_dot - prev_q_dot[:, k]), nodes=node)
         k = k+1
     if node in zip_indices_new.keys():
-        prb.createCost(f"qdot_close_to_res_node_{node}", 1e5 * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
+        prb.createCost(f"qdot_close_to_res_node_{node}", weight * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
 
 # =============
 # SOLVE PROBLEM
 # =============
-opts = {'ipopt.tol': 0.001,
-        'ipopt.constr_viol_tol': 0.001,
-        'ipopt.max_iter': 2000,
+opts = {'ipopt.tol': 0.01,
+        'ipopt.constr_viol_tol': 0.01,
+        'ipopt.max_iter': 4000,
         'ipopt.linear_solver': 'ma57'}
 
 for i in range(len(new_dt_vec)):
     dt.assign(new_dt_vec[i], nodes=i)
 
 sol = Solver.make_solver('ipopt', prb, opts)
+tic = time.time()
 sol.solve()
+toc = time.time() - tic
+print('time elapsed solving:', toc)
 
 solution = sol.getSolutionDict()
 solution_constraints = sol.getConstraintSolutionDict()
@@ -607,15 +616,43 @@ for name, item in prb.getConstraints().items():
     ub_mat = np.reshape(ub, (item.getDim(), len(item.getNodes())), order='F')
     solution_constraints_dict[name] = dict(val=solution_constraints[name], lb=lb_mat, ub=ub_mat, nodes=item.getNodes())
 
+# ================================== resample refined trajectory ==================================
+f_list = list()
+for i in range(n_c):
+    f_list.append(solution[f'f{i}'])
+contact_map = dict(zip(contacts_name, f_list))
+
+q_sym = cs.SX.sym('q', n_q)
+q_dot_sym = cs.SX.sym('q_dot', n_v)
+q_ddot_sym = cs.SX.sym('q_ddot', n_v)
+x, x_dot = utils.double_integrator_with_floating_base(q_sym, q_dot_sym, q_ddot_sym)
+
+dae = {'x': x, 'p': q_ddot_sym, 'ode': x_dot, 'quad': 1}
+q_res, qdot_res, qddot_res, contact_map_res, tau_sol_res = resampler_trajectory.resample_torques(
+    solution['q'], solution['q_dot'], solution['q_ddot'], new_dt_vec, dt_res, dae, contact_map,
+    kindyn,
+    cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
+
+f_res_list = list()
+for f in prev_f_list:
+    f_res_list.append(resampler_trajectory.resample_input(f, new_dt_vec, dt_res))
+
+solution_resampled = dict()
+solution_resampled['q_res'] = q_res
+solution_resampled['tau_sol_res'] = tau_sol_res
+solution_resampled['f_res_list'] = f_res_list
 
 from horizon.variables import Variable, SingleVariable, Parameter, SingleParameter
 
 info_dict = dict(n_nodes=n_nodes, times=nodes_vec_augmented, node_start_step=node_start_step, node_end_step=node_end_step, node_peak=node_peak, jump_height=jump_height)
 if isinstance(dt, Variable) or isinstance(dt, SingleVariable):
-    ms.store({**solution, **solution_constraints_dict, **info_dict})
+    ms.store({**solution, **solution_constraints_dict, **solution_resampled, **info_dict})
 elif isinstance(dt, Parameter) or isinstance(dt, SingleParameter):
     dt_dict = dict(param_dt=new_dt_vec)
-    ms.store({**solution, **solution_constraints_dict, **info_dict, **dt_dict})
+    ms.store({**solution, **solution_constraints_dict, **solution_resampled, **info_dict, **dt_dict})
 else:
     dt_dict = dict(constant_dt=dt)
-    ms.store({**solution, **solution_constraints_dict, **info_dict, **dt_dict})
+    ms.store({**solution, **solution_constraints_dict, **solution_resampled, **info_dict, **dt_dict})
+
+
+

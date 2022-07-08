@@ -29,16 +29,18 @@ class Problem:
     """
 
     # todo probably better to set logger, not logging_level
-    def __init__(self, N: int, crash_if_suboptimal: bool = False, logging_level=logging.INFO):
+    def __init__(self, N: int, casadi_type=cs.MX, receding=False, logging_level=logging.INFO):
         """
         Initialize the optimization problem.
 
         Args:
             N: number of INTERMEDIATE nodes (transitions) in the optimization horizon. IMPORTANT: the final node is automatically generated. The problem will have N+1 nodes.
-            crash_if_suboptimal: returns an Error if the solver cannot find an optimal solution
             logging_level: accepts the level of logging from package logging (INFO, DEBUG, ...)
         """
         self.opts = None
+        self.is_receding = receding
+        self.thread_map_num = 10
+        self.default_casadi_type = casadi_type
         self.default_solver = cs.nlpsol
         self.default_solver_plugin = 'ipopt'
 
@@ -48,19 +50,17 @@ class Problem:
         stdout_handler = logging.StreamHandler(sys.stdout)
         self.logger.addHandler(stdout_handler)
 
-        self.crash_if_suboptimal = crash_if_suboptimal
-
         self.nodes = N + 1
         # state variable to optimize
-        self.var_container = sv.VariablesContainer(self.logger)
-        self.function_container = fc.FunctionsContainer(self.logger)
+        self.var_container = sv.VariablesContainer(self.is_receding, self.logger)
+        self.function_container = fc.FunctionsContainer(self.is_receding, self.thread_map_num, self.logger)
 
         self.state_aggr = sv.StateAggregate()
         self.input_aggr = sv.InputAggregate()
         self.state_der: cs.SX = None
         self.dt = None
 
-    def createStateVariable(self, name: str, dim: int) -> sv.StateVariable:
+    def createStateVariable(self, name: str, dim: int, casadi_type=None) -> sv.StateVariable:
         """
         Create a State Variable active on ALL the N+1 nodes of the optimization problem.
         Remember: the State of the problem contains, in order of creation, all the State Variables created.
@@ -72,13 +72,19 @@ class Problem:
             instance of the State Variable
 
         """
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
         if self.state_der is not None:
             raise RuntimeError('createStateVariable must be called *before* setDynamics')
-        var = self.var_container.setStateVar(name, dim, range(self.nodes))
+
+        # binary array to select which nodes are "active" for the variable. In this case, all of them
+        nodes_array = np.ones(self.nodes)
+
+        var = self.var_container.setStateVar(name, dim, nodes_array, casadi_type)
         self.state_aggr.addVariable(var)
         return var
 
-    def createInputVariable(self, name: str, dim: int) -> sv.InputVariable:
+    def createInputVariable(self, name: str, dim: int, casadi_type=None) -> sv.InputVariable:
         """
         Create an Input Variable active on all the nodes of the optimization problem except the final one. (Input is not defined on the last node)
         Remember: the Input of the problem contains, in order of creation, all the Input Variables created.
@@ -89,11 +95,17 @@ class Problem:
         Returns:
             instance of Input Variable
         """
-        var = self.var_container.setInputVar(name, dim, range(self.nodes-1))
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
+        # binary array to select which nodes are "active" for the variable. In this case, all of them
+        nodes_array = np.ones(self.nodes)
+        nodes_array[-1] = 0
+
+        var = self.var_container.setInputVar(name, dim, nodes_array, casadi_type)
         self.input_aggr.addVariable(var)
         return var
 
-    def createSingleVariable(self, name: str, dim: int) -> sv.SingleVariable:
+    def createSingleVariable(self, name: str, dim: int, casadi_type=None) -> sv.SingleVariable:
         """
         Create a node-independent Single Variable of the optimization problem. It is a single decision variable which is not projected over the horizon.
 
@@ -104,29 +116,40 @@ class Problem:
         Returns:
             instance of Single Variable
         """
-        var = self.var_container.setSingleVar(name, dim)
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
+        nodes_array = np.ones(self.nodes)  # dummy, cause it is the same on all the nodes
+
+        var = self.var_container.setSingleVar(name, dim, nodes_array, casadi_type)
         return var
 
-    def createVariable(self, name: str, dim: int, nodes: Iterable = None) -> Union[sv.StateVariable, sv.SingleVariable]:
+    def createVariable(self, name: str, dim: int, nodes: Iterable = None, casadi_type=None) -> Union[
+        sv.StateVariable, sv.SingleVariable]:
         """
         Create a generic Variable of the optimization problem. Can be specified over a desired portion of the horizon nodes.
 
         Args:
             name: name of the variable
             dim: dimension of the variable
-            nodes: nodes the variables is defined on. If not specified, the variable created is a Single Variable.
+            nodes: nodes the variables is defined on. If not specified, the variable is created on all the nodes.
 
         Returns:
             instance of Variable
 
         """
-        if nodes is not None:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+        # todo: right now the variable is created only in the nodes specified
+        #     better to create it on every nodes anyway?
 
-        var = self.var_container.setVar(name, dim, nodes)
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+
+        nodes_array = np.ones(self.nodes) if nodes is None else misc.getBinaryFromNodes(self.nodes,
+                                                                                        misc.checkNodes(nodes, np.ones(
+                                                                                            self.nodes)))
+
+        var = self.var_container.setVar(name, dim, nodes_array, casadi_type)
         return var
 
-    def createParameter(self, name: str, dim: int, nodes: Iterable = None) -> Union[
+    def createParameter(self, name: str, dim: int, nodes: Iterable = None, casadi_type=None) -> Union[
         sv.Parameter, sv.SingleParameter]:
         """
         Create a Parameter used in the optimization problem. Can be specified over a desired portion of the horizon nodes.
@@ -135,19 +158,21 @@ class Problem:
         Args:
             name: name of the parameter
             dim: dimension of the parameter
-            nodes: nodes the parameter is defined on. If not specified, the variable is created on all the nodes.
+            nodes: nodes the parameter is defined on. If not specified, the parameter is created on all the nodes.
 
         Returns:
             instance of Parameter
 
         """
-        if nodes is None:
-            nodes = range(self.nodes)
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
 
-        par = self.var_container.setParameter(name, dim, nodes)
+        nodes_array = np.zeros(self.nodes)
+        nodes_array[nodes] = 1
+
+        par = self.var_container.setParameter(name, dim, nodes_array, casadi_type)
         return par
 
-    def createSingleParameter(self, name: str, dim: int) -> sv.SingleParameter:
+    def createSingleParameter(self, name: str, dim: int, casadi_type=None) -> sv.SingleParameter:
         """
         Create a node-independent Single Parameter used to solve the optimization problem. It is a single parameter which is not projected over the horizon.
         Parameters are specified before building the problem and can be 'assigned' afterwards, before solving the problem.
@@ -160,21 +185,10 @@ class Problem:
             instance of Single Parameter
 
         """
-        par = self.var_container.setSingleParameter(name, dim)
+        casadi_type = self.default_casadi_type if casadi_type is None else casadi_type
+        nodes_array = np.ones(self.nodes)
+        par = self.var_container.setSingleParameter(name, dim, nodes_array, casadi_type)
         return par
-
-    # def setVariable(self, name, var):
-
-    # assert (isinstance(var, (cs.casadi.SX, cs.casadi.MX)))
-    # setattr(Problem, name, var)
-    # self.var_container.append(name)
-
-    # def getStateVariable(self, name):
-    #
-    #     for var in self.var_container:
-    #         if var.getName() == name:
-    #             return var
-    #     return None
 
     def getState(self) -> sv.StateAggregate:
         """
@@ -299,10 +313,27 @@ class Problem:
 
         return used_par
 
+    # def _autoNodes(self, type, nodes=None):
+    #
+    #     active_nodes_array = np.ones(self.nodes)
+    #     if type == 'generic' or type == 'intermediate':
+    #         if nodes is None:
+    #             if type == 'intermediate':
+    #                 active_nodes_array[-1] = 0
+    #         else:
+    #             active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+    #     elif type == 'final':
+    #         # FINAL
+    #         active_nodes_array[:-1] = 0
+    #     else:
+    #         raise Exception('type in autoNodes not recognized')
+    #
+    #     return active_nodes_array
+
     def createConstraint(self, name: str,
                          g,
                          nodes: Union[int, Iterable] = None,
-                         bounds=None) -> fc.Constraint:
+                         bounds=None) -> Union[fc.Constraint, fc.RecedingConstraint]:
         """
         Create a Constraint Function of the optimization problem.
 
@@ -316,22 +347,27 @@ class Problem:
             instance of Constraint
 
         """
+        # todo add guards
+        # todo create private function to handle the conversion from nodes to binary array of nodes:
+        #   createConstraint(nodes) calls _createFun(nodes) that insides calls fc.Constraint or fc.Cost with array nodes
         if nodes is None:
-            nodes = range(self.nodes)
+            # all the nodes
+            active_nodes_array = np.ones(self.nodes)
         else:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+            active_nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+
+            # nodes = misc.checkNodes(nodes, range(self.nodes))
 
         # get vars that constraint depends upon
-        used_var = self._getUsedVar(g)  # these now are fucking lists!
+        used_var = self._getUsedVar(g)  # these now are lists!
         used_par = self._getUsedPar(g)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Constraint Function "{name}": active in nodes: {nodes} using vars {used_var}')
+            self.logger.debug(
+                f'Creating Constraint Function "{name}": active in nodes: {misc.getNodesFromBinary(active_nodes_array)} using vars {used_var}')
 
         # create internal representation of a constraint
-        fun = fc.Constraint(name, g, used_var, used_par, nodes, bounds)
-
-        self.function_container.addFunction(fun)
+        fun = self.function_container.createConstraint(name, g, used_var, used_par, active_nodes_array, bounds)
 
         return fun
 
@@ -374,11 +410,12 @@ class Problem:
         """
         if nodes is None:
             nodes = range(self.nodes - 1)
+
         return self.createConstraint(name, g, nodes=nodes, bounds=bounds)
 
     def createCost(self, name: str,
-                           j,
-                           nodes: Union[int, Iterable] = None):
+                   j,
+                   nodes: Union[int, Iterable] = None):
         """
         Create a Cost Function of the optimization problem.
 
@@ -391,20 +428,27 @@ class Problem:
             instance of Cost Function
 
         """
+        # todo add guards
         if nodes is None:
-            nodes = range(self.nodes)
+            nodes_array = np.ones(self.nodes)
         else:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+            nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
+            # nodes = misc.checkNodes(nodes, range(self.nodes))
 
         used_var = self._getUsedVar(j)
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Cost Function "{name}": active in nodes: {nodes}')
+            self.logger.debug(
+                f'Creating Cost Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.CostFunction(name, j, used_var, used_par, nodes)
+        fun = self.function_container.createCost(name, j, used_var, used_par, nodes_array)
 
-        self.function_container.addFunction(fun)
+        # if receding, add a weight for activating/disabling the node
+        if self.is_receding:
+            fun._setWeightMask(self.default_casadi_type)
+            weight_mask = fun._getWeightMask()
+            self.var_container._pars[weight_mask.getName()] = weight_mask
 
         return fun
 
@@ -441,7 +485,6 @@ class Problem:
             instance of Function
 
         """
-
         if nodes is None:
             nodes = range(self.nodes - 1)
 
@@ -462,20 +505,26 @@ class Problem:
             instance of Residual Function
 
         """
+        # todo add guards
         if nodes is None:
-            nodes = list(range(self.nodes))
+            nodes_array = np.ones(self.nodes)
         else:
-            nodes = misc.checkNodes(nodes, range(self.nodes))
+            nodes_array = misc.getBinaryFromNodes(self.nodes, nodes)
 
         used_var = self._getUsedVar(j)
         used_par = self._getUsedPar(j)
 
         if self.debug_mode:
-            self.logger.debug(f'Creating Residual Function "{name}": active in nodes: {nodes}')
+            self.logger.debug(
+                f'Creating Residual Function "{name}": active in nodes: {misc.getNodesFromBinary(nodes_array)}')
 
-        fun = fc.ResidualFunction(name, j, used_var, used_par, nodes)
+        fun = self.function_container.createResidual(name, j, used_var, used_par, nodes_array)
 
-        self.function_container.addFunction(fun)
+        # if receding, add a weight for activating/disabling the node
+        if self.is_receding:
+            fun._setWeightMask(self.default_casadi_type)
+            weight_mask = fun._getWeightMask()
+            self.var_container._pars[weight_mask.getName()] = weight_mask
 
         return fun
 
@@ -512,7 +561,6 @@ class Problem:
             instance of Function
 
         """
-
         if nodes is None:
             nodes = range(self.nodes - 1)
 
@@ -620,7 +668,6 @@ class Problem:
         """
         fun = self.function_container.getCnstr(name)
 
-
         return fun
 
     def getCosts(self, name=None):
@@ -634,7 +681,6 @@ class Problem:
             the desired constraint/s
         """
         fun = self.function_container.getCost(name)
-
 
         return fun
 
@@ -664,13 +710,14 @@ class Problem:
                 #   its solution will be [a, b, c, d, e, f, g]. I'm interested in the values at position [3, 4, 5, 6]
                 # suppose a variable is defined only on nodes [3, 4, 5, 6].
                 #   its solution will be [a, b, c, d]. I'm interested in the values at position [0, 1, 2, 3], which corresponds to nodes [3, 4, 5, 6]
-                node_index = [i for i in range(len(var.getNodes())) if var.getNodes()[i] in np.array(fun.getNodes()) + var.getOffset()]
+                node_index = [i for i in range(len(var.getNodes())) if
+                              var.getNodes()[i] in np.array(fun.getNodes()) + var.getOffset()]
                 all_vars.append(solution[var_name][:, node_index])
 
         all_pars = list()
         for par in fun.getParameters():
-                # careful about ordering
-                # todo this is very ugly, but what can I do (wanted to do it without the if)
+            # careful about ordering
+            # todo this is very ugly, but what can I do (wanted to do it without the if)
             if isinstance(par, sv.SingleParameter):
                 all_pars.append(par.getValues())
             else:
@@ -679,7 +726,6 @@ class Problem:
 
         fun_evaluated = fun_to_evaluate(*(all_vars + all_pars)).toarray()
         return fun_evaluated
-
 
     def toParameter(self, var_name):
 
@@ -750,7 +796,6 @@ class Problem:
 
                 fun._project()
 
-
         # for fun in self.getConstraints().values():
         #     for fun_var in fun.getVariables():
         #         if fun_var.getName() == var_name:
@@ -760,11 +805,8 @@ class Problem:
         #             self.removeConstraint(fun.getName())
         #             self.createConstraint(f_name, fun._f, f_nodes)
 
-
-
-
     def scopeNodeVars(self, node: int):
-        """
+        """np.where(pos_nodes
         Scope the variables active at the desired node of the optimization problem.
 
         Args:
@@ -834,7 +876,7 @@ class Problem:
 
     def save(self):
         data = dict()
-        
+
         data['n_nodes'] = self.getNNodes() - 1
 
         # save state variables
@@ -871,7 +913,7 @@ class Problem:
         # save cost and constraints
         data['cost'] = dict()
         for f in self.function_container.getCost().values():
-            f : fc.Function = f
+            f: fc.Function = f
             var_data = dict()
             var_data['name'] = f.getName()
             var_data['repr'] = str(f.getFunction())
@@ -883,7 +925,7 @@ class Problem:
 
         data['constraint'] = dict()
         for f in self.function_container.getCnstr().values():
-            f : fc.Function = f
+            f: fc.Function = f
             var_data = dict()
             var_data['name'] = f.getName()
             var_data['repr'] = str(f.getFunction())
@@ -905,101 +947,278 @@ def pickleable(obj):
         return False
     return True
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     import pickle
     from transcriptions import transcriptor
     from horizon.solvers import Solver
     from horizon.utils import plotter
     import matplotlib.pyplot as plt
 
-    nodes = 10
+    N = 10
+    nodes_vec = np.array(range(N + 1))  # nodes = 10
     dt = 0.01
-    prb = Problem(nodes, crash_if_suboptimal=True)
-    x = prb.createStateVariable('x', 6)
-    u = prb.createInputVariable('u', 2)
-    p = prb.createSingleParameter('p', 6)
+    prb = Problem(N, receding=True, casadi_type=cs.SX)
+    x = prb.createStateVariable('x', 2)
+    y = prb.createInputVariable('y', 2)
+    dan = prb.createParameter('dan', 2)
+    x.setBounds([-2, -2], [2, 2])
+    y.setBounds([-5, -5], [5, 5])
+    prb.createCost('cost_x', x)
+    mimmo = prb.createIntermediateConstraint('cost_y', y - dan)
+
+    print(mimmo.getUpperBounds())
+    print(mimmo.getLowerBounds())
+    exit()
+
+    print(dan.getValues())
+    print(dan.getNodes())
+    dan.assign([[2, 3, 4]], [])
+    print(dan.getValues())
+    exit()
+    # for i in range(500):
+    #     cnsrt = prb.createConstraint(f'cnsrt_{i}', x - i * y, nodes=[])
+    #     print(cnsrt.getBounds())
 
     prb.setDynamics(x)
     prb.setDt(dt)
-    x.setBounds([1, 1, 0, 1, 5, 1], [2, 5, 0, 2, 10, 2])
 
-    constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
+    opts = dict()
+    opts['ipopt.linear_solver'] = 'ma27'
+    # opts['ipopt.check_derivatives_for_naninf'] = 'yes'
+    # opts['ipopt.jac_c_constant'] = 'yes'
+    # opts['ipopt.jac_d_constant'] = 'yes'
+    # opts['ipopt.hessian_constant'] = 'yes'
+    solv = Solver.make_solver('ipopt', prb, opts)
+    tic = time.time()
+    solv.solve()
+    toc = time.time() - tic
+    print(toc)
+    print(solv.getSolutionDict()['x'])
+    exit()
+    # N = 3
+    # nodes_vec = np.array(range(N+1))    # nodes = 10
+    # dt = 0.01
+    # prb = Problem(nodes, crash_if_suboptimal=True, receding=True)
+    # x = prb.createStateVariable('x', 6)
+    # u = prb.createInputVariable('u', 2)
+    # p = prb.createSingleParameter('p', 6)
+    #
+    # prb.setDynamics(x)
+    # prb.setDt(dt)
+    # x.setBounds([1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2])
+    #
+    # constr1 = prb.createIntermediateConstraint('constr', x[2:4] ** 2 + p[2:4] - u)
+    #
+    # constr1.setBounds([1, 1], [1, 1])
+    # solver = Solver.make_solver('ipopt', prb)
+    #
+    # all_sol = dict()
+    # for i in range(100):
+    #     p.assign(6 * [2 * i])
+    #     solver.solve()
+    #     sol = solver.getSolutionDict()
+    #     all_sol[i] = sol
+    #
+    # exit()
+    N = 10
+    nodes_vec = np.array(range(N + 1))  # nodes = 10
+    dt = 0.01
+    prb = Problem(N, receding=True, casadi_type=cs.SX)
+    x = prb.createStateVariable('x', 2)
+    y = prb.createInputVariable('y', 2)
+    par = prb.createParameter('par', 2)
 
-    constr1.setBounds([1, 2], [3, 5])
-    solver = Solver.make_solver('ipopt', prb)
+    cost = prb.createCost('cost', x, nodes=[3, 4, 5])
 
-    all_sol = dict()
-    for i in range(100):
-        p.assign(6 * [2 * i])
-        solver.solve()
-        sol = solver.getSolutionDict()
-        print(sol['x'])
-        exit()
-        all_sol[i] = sol
 
+    y_prev = y.getVarOffset(-1)
+    prb.setDynamics(x)
+    prb.setDt(dt)
+
+    print(par.getValues())
+    print('assigning new values ...')
+    par.assign([1, 2], nodes=[3, 4, 5, 6, 7, 8])
+    print(par.getValues())
+    print('shifting ...')
+    par.shift()
+    print(par.getValues())
+    print('assigning new values ...')
+    par.assign([3, 3], nodes=10)
+    print(par.getValues())
+    print('shifting ...')
+    par.shift()
+    print(par.getValues())
     exit()
 
-    N = 2
-    dt = 0.01
-    prob = Problem(N)
-    x = prob.createStateVariable('x', 2)
-    y = prob.createInputVariable('y', 2)
-    x_prev = x.getVarOffset(-1)
+    x.setUpperBounds([2, 3], nodes=[4, 5, 6])
+    print(x.getUpperBounds())
+    print('shifting ...')
+    x.shift()
+    print(x.getUpperBounds())
+    print('setting new bounds ...')
+    x.setUpperBounds([1, 2], nodes=10)
+    print(x.getUpperBounds())
+    print('shifting ...')
+    x.shift()
+    print('shifting ...')
+    x.shift()
+    print(x.getUpperBounds())
+    exit()
 
-    xdot = cs.vertcat(x)
-    prob.setDynamics(xdot)
+    # p1 = prb.createParameter('p1', 4)
+    # cnsrt = prb.createConstraint('cnsrt', x - y_prev, nodes=[1])
+    # cnsrt = prb.createConstraint('cnsrt', x, nodes=[1])
+    # cost1 = prb.createCost('cost_x', 1e-3 * cs.sumsqr(x))
+    # cost2 = prb.createIntermediateCost('cost_y', 1e-3 * cs.sumsqr(y))
+    c = prb.createConstraint('c1', x[0], nodes=[3, 4, 5, 6])
 
-    cnsrt = prob.createConstraint('cnsrt', x_prev + y, nodes=range(5, 11), bounds=dict(lb=[0, 0], ub=[10, 10]))
-    cost = prob.createIntermediateCost('cost', x*y)
+    print(c.getNodes())
+    c.setLowerBounds(2)
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    # c.setNodes([2, 3, 4, 5],  erasing=True)
+    print('shifting ...')
+    c.shift()
+    print('shifting ...')
+    c.shift()
+    print('shifting ...')
+    c.shift()
+    print('adding new nodes ...')
+    c.setNodes([9, 10])
+    c.setLowerBounds(-5, nodes=[9])
+    c.setLowerBounds(-10, nodes=[10])
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    print('shifting ...')
+    c.shift()
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    print('changing bounds ...')
+    c.setLowerBounds(-23, nodes=[8])
+    c.setLowerBounds(-25, nodes=[9])
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    print('shifting ...')
+    c.shift()
+    print(c.getLowerBounds())
+    print(c.getUpperBounds())
+    exit()
+    x.setInitialGuess([5, 5])
+    # print(x.getInitialGuess())
+
+    x.setBounds([-10, -10], [10, 10])
+    x.setBounds([7, 7], [7, 7], nodes=2)
+    print(x.getLowerBounds())
+    print(x.getUpperBounds())
+    opts = dict()
+    opts['ipopt.tol'] = 1e-12
+    opts['ipopt.constr_viol_tol'] = 1e-12
+    slvr = Solver.make_solver('ipopt', prb, opts=opts)
+    slvr.solve()
+    sol = slvr.getSolutionDict()
+
+    print('x:\n', sol['x'])
+    # print('y:\n', sol['y'])
+    old_sol = sol.copy()
+    print('=========== receding the horizon: ==============')
+
+    print('old initial guess: ')
+    print(x.getInitialGuess())
+    new_ig_elem = [3, 2]
+    x.setInitialGuess(sol['x'][:, 1:], nodes=nodes_vec[:-1])
+    x.setInitialGuess(new_ig_elem, nodes=N)
+    print('new initial guess: ')
+    print(x.getInitialGuess())
+
+    print('old bounds: ')
+    print(x.getLowerBounds())
+    print(x.getUpperBounds())
+
+    # === shifting algorithm ===
+    shifted_lb = x.getLowerBounds()[:, 1:]
+    shifted_ub = x.getUpperBounds()[:, 1:]
+    new_lb_elem = np.array([3, 3])
+    new_ub_elem = np.array([3, 3])
+
+    print('new bounds: ')
+    x.setLowerBounds(shifted_lb, nodes=nodes_vec[:-1])
+    x.setUpperBounds(shifted_ub, nodes=nodes_vec[:-1])
+    x.setLowerBounds(new_lb_elem, nodes=N)
+    x.setUpperBounds(new_ub_elem, nodes=N)
+
+    print(x.getLowerBounds())
+    print(x.getUpperBounds())
+
+    print('manage constraints')
+    print('old nodes:')
+    nodes_cnsrt = c.getNodes()
+    print(nodes_cnsrt)
+    print(c.getImpl())
+    c.setNodes(nodes_cnsrt - 1, erasing=True)
+    print('new nodes:')
+    print(c.getNodes())
+
+    print(c.getImpl())
+    print(x.setBounds([2, 2], [2, 2], 6))
+    slvr.solve()
+    sol = slvr.getSolutionDict()
+
+    print('old x:\n', old_sol['x'])
+    print('x:\n', sol['x'])
+    # print('y:\n', sol['y'])
+
+    # np.concatenate((shifted_lb, np.reshape(new_lb, (2, 1))))
+    # x.getUpperBounds()[1:]
+    # x.setBounds(, )
+    exit()
 
     # print('before', prob.var_container._vars)
     # print('before', prob.var_container._pars)
     # print('before:', [elem.getFunction() for elem in prob.function_container._cnstr_container.values()])
     # print('before:', [elem.getFunction() for elem in prob.function_container._costfun_container.values()])
 
-    for fun in prob.function_container._cnstr_container.values():
-        print(f"does {fun._f} depends on {prob.var_container._vars['y']}: {cs.depends_on(fun._f, prob.var_container._vars['y'])}")
-
-    prob.serialize()
-    print('===PICKLING===')
-    prob_serialized = pickle.dumps(prob)
-    print('===DEPICKLING===')
-    prob_new = pickle.loads(prob_serialized)
-    prb = prob_new.deserialize()
-
-    for fun in prb.function_container._cnstr_container.values():
-        print(f"does {fun._f} depends on {prb.var_container._vars['y']}: {cs.depends_on(fun._f, prb.var_container._vars['y'])}")
-
-    exit()
-
-    transcriptor.Transcriptor.make_method('multiple_shooting', prb, dt)
-    sol = Solver.make_solver('ipopt', prb, dt)
-    sol.solve()
-    solution = sol.getSolutionDict()
-
-
-    exit()
-
-    N = 10
-    dt = 0.01
-    prob = Problem(10)
-    x = prob.createStateVariable('x', 1)
-    y = prob.createVariable('y', 1, nodes=range(5, 11))
-
-    cnsrt = prob.createConstraint('cnsrt', x+y, nodes=range(5, 11))
-
-    xdot = cs.vertcat(x)
-    prob.setDynamics(xdot)
-
-    sol = Solver.make_solver('ipopt', prob, dt)
-    sol.solve()
-    solution = sol.getSolutionDict()
-
-    print(solution)
-    hplt = plotter.PlotterHorizon(prob, solution)
-    hplt.plotVariables()
-    hplt.plotFunctions()
-
-    plt.show()
-
+    # for fun in prob.function_container._cnstr_container.values():
+    #     print(f"does {fun._f} depends on {prob.var_container._vars['y']}: {cs.depends_on(fun._f, prob.var_container._vars['y'])}")
+    #
+    # prob.serialize()
+    # print('===PICKLING===')
+    # prob_serialized = pickle.dumps(prob)
+    # print('===DEPICKLING===')
+    # prob_new = pickle.loads(prob_serialized)
+    # prb = prob_new.deserialize()
+    #
+    # for fun in prb.function_container._cnstr_container.values():
+    #     print(f"does {fun._f} depends on {prb.var_container._vars['y']}: {cs.depends_on(fun._f, prb.var_container._vars['y'])}")
+    #
+    # exit()
+    #
+    # transcriptor.Transcriptor.make_method('multiple_shooting', prb, dt)
+    # sol = Solver.make_solver('ipopt', prb, dt)
+    # sol.solve()
+    # solution = sol.getSolutionDict()
+    #
+    #
+    # exit()
+    #
+    # N = 10
+    # dt = 0.01
+    # prob = Problem(10)
+    # x = prob.createStateVariable('x', 1)
+    # y = prob.createVariable('y', 1, nodes=range(5, 11))
+    #
+    # cnsrt = prob.createConstraint('cnsrt', x+y, nodes=range(5, 11))
+    #
+    # xdot = cs.vertcat(x)
+    # prob.setDynamics(xdot)
+    #
+    # sol = Solver.make_solver('ipopt', prob, dt)
+    # sol.solve()
+    # solution = sol.getSolutionDict()
+    #
+    # print(solution)
+    # hplt = plotter.PlotterHorizon(prob, solution)
+    # hplt.plotVariables()
+    # hplt.plotFunctions()
+    #
+    # plt.show()

@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 def unravelElements(elements):
     if isinstance(elements, int):
@@ -30,25 +31,24 @@ def listOfListFLOATtoINT(listOfList):
 
     return listOfList
 
-def checkNodes(nodes, nodes_self=None):
+def checkNodes(nodes, nodes_array=None):
 
-    if hasattr(nodes, "__iter__") and not isinstance(nodes, str):
-        if nodes_self is None:
-            checked_nodes = nodes
-        else:
-            checked_nodes = [node for node in nodes if node in nodes_self]
-    elif isinstance(nodes, (int, np.integer)):
-        if nodes_self is None:
-            checked_nodes = [nodes]
-        else:
-            checked_nodes = [nodes] if nodes in nodes_self else []
+    nodes_vec = np.array(nodes).astype(int)
+    # todo check for repeated nodes
+    if nodes_array is None:
+        checked_nodes = nodes_vec
     else:
-        raise Exception('Type {} is not supported to specify nodes.'.format(type(nodes)))
+        # get from nodes only the nodes active in nodes_array
+        # example: nodes_array = [0 0 1 0 1 1 0 0]
+        #                nodes = [2, 3, 4]
+        #       1. get from nodes array only the elements at position [2, 3, 4]  --> [1 0 1]
+        #       2. mask 'nodes' with [1 0 1] --> [2, 4]
+        checked_nodes = np.ma.masked_array(nodes_vec, mask=np.logical_not(nodes_array[nodes_vec])).compressed()
 
-    if checked_nodes is None:
-        raise Exception(f'Invalid nodes inserted: {nodes}')
-    # todo ADD WARNING if node (or nodes) are NOT present in own nodes.
-    #  (basically, when setting bounds for some node, it is left out because the var/fun does not exist in that node
+        if checked_nodes.size != nodes_vec.size:
+            wrong_nodes = np.ma.masked_array(nodes_vec, mask=nodes_array[nodes_vec]).compressed()
+            warnings.warn(f'Element requested is not defined/active on node: {wrong_nodes}.')
+
     return checked_nodes
 
 def checkValueEntry(val):
@@ -60,11 +60,48 @@ def checkValueEntry(val):
         # if single value, flatten
         # note: dont flatten matrix of values!
         multiple_vals = val.ndim == 2 and val.shape[1] != 1
+
         if not multiple_vals:
-            val = val.flatten()
+            # transform everything into a (n x 1) matrix (columns --> nodes, rows --> dim)
+            val = np.reshape(val, (val.size, 1))
 
     return val
 
+def convertNodestoPos(nodes, nodes_array):
+    # todo add guards
+    nodes_to_pos = np.nonzero(np.in1d(np.where(nodes_array == 1), nodes))[0]
+    return nodes_to_pos
+
+def getBinaryFromNodes(total_nodes: int, active_nodes: list):
+    # add guards
+    # if not isinstance(nodes, list):
+    #     raise TypeError('input must be a list of nodes')
+
+    nodes_array = np.zeros(total_nodes)
+    nodes_array[active_nodes] = 1
+
+    return nodes_array
+
+def getNodesFromBinary(nodes_array):
+    # add guards
+    # if not isinstance(nodes_array, list):
+    #     raise TypeError('input must be a list of binary nodes')
+    nodes = np.where(nodes_array == 1)[0]
+
+    return nodes
+
+def shift_array(arr, num, fill_value=np.nan):
+    result = np.empty_like(arr)
+    if num > 0:
+        result[:, :num] = fill_value
+        result[:, num:] = arr[:, :-num]
+    elif num < 0:
+        result[:, num:] = fill_value
+        result[:, :num] = arr[:, -num:]
+    else:
+        result[:] = arr
+    return result
+
 if __name__ == '__main__':
-    penis = [[1, 5], [3, 9], [12, 18]]
-    print(unravelElements(penis))
+
+    print(checkNodes([3,3,4,5,6], np.array([0, 0, 1, 1, 1, 0, 0, 1, 0])))
