@@ -192,6 +192,12 @@ if PRINT:
     plt.xlabel('$\mathrm{[sec]}$', size=20)
     plt.ylabel('$\mathrm{ [N] }} $', size=20)
 
+    plt.rcParams.update({
+        "text.usetex": True,
+        "mathtext.fontset": "cm",
+        "legend.fontsize": 20
+    })
+
     plt.figure()
     KE = cs.Function.deserialize(kindyn.kineticEnergy())
     PE = cs.Function.deserialize(kindyn.potentialEnergy())
@@ -203,9 +209,9 @@ if PRINT:
         pe_hist[i] = PE(q=q_hist[:, i])["DU"]
         tote_hist[i] = ke_hist[i] + pe_hist[i]
     plt.suptitle('$\mathrm{Energy}$', size=20)
-    plt.plot(time, ke_hist, linewidth=3.0, color='blue', label='$\mathrm{Kinetic}$')
-    plt.plot(time, pe_hist, linewidth=3.0, color='red', label='$\mathrm{Potential}$')
-    plt.plot(time, tote_hist, linewidth=3.0, color='green', label='$\mathrm{Total}$')
+    plt.plot(time, ke_hist, linewidth=2.0, label='$\mathrm{Kinetic}$')
+    plt.plot(time, pe_hist, linewidth=2.0, label='$\mathrm{Potential}$')
+    plt.plot(time, tote_hist, linewidth=2.0, label='$\mathrm{Total}$')
     plt.legend(loc='upper center', fancybox=True, framealpha=0.5, ncol=3)
     axes = plt.gca()
     axes.set_ylim([-110.0, 40.])
@@ -221,13 +227,11 @@ if PRINT:
     for i in range(q_hist.shape[1]):
         mp_hist[:, i] = (MP(q=q_hist[:, i])['ee_pos']).T
         com_hist[:, i] = (COM(q=q_hist[:, i], v=qdot_hist[:, i], a=qdot_hist[:, i])['com']).T
-    plt.suptitle('$\mathrm{Master \ Point \ and \ COM  \ trajectories}$', size=20)
-    plt.plot(time, mp_hist[0, :], linewidth=3.0, color='red', label='$\mathrm{Master \ Point \ x}$ ',
-             linestyle='--')
-    plt.plot(time, mp_hist[2, :], linewidth=3.0, color='blue', label='$\mathrm{Master \ Point \ z}$',
-             linestyle='--')
-    plt.plot(time, com_hist[0, :], linewidth=3.0, color='red', label='$\mathrm{COM \ x}$')
-    plt.plot(time, com_hist[2, :], linewidth=3.0, color='blue', label='$\mathrm{COM \ z}$')
+    plt.suptitle('$\mathrm{Base \ and \ COM  \ trajectories}$', size=20)
+    plt.plot(time, mp_hist[0, :], linewidth=2.0, label='$\mathrm{Base \ x}$ ', linestyle='--')
+    plt.plot(time, mp_hist[2, :], linewidth=2.0, label='$\mathrm{Base \ z}$', linestyle='--')
+    plt.plot(time, com_hist[0, :], linewidth=2.0, label='$\mathrm{COM \ x}$')
+    plt.plot(time, com_hist[2, :], linewidth=2.0, label='$\mathrm{COM \ z}$')
     plt.legend(loc='upper center', fancybox=True, framealpha=0.5, ncol=2)
     axes = plt.gca()
     axes.set_ylim([-0.2, 0.5])
@@ -260,4 +264,4 @@ joint_list = ['Contact1_x', 'Contact1_y', 'Contact1_z',
               'rope_anchor1_1_x', 'rope_anchor1_2_y', 'rope_anchor1_3_z',
               'rope_joint']
 
-replay_trajectory(dt, joint_list, q_res, frame_force_res_mapping).replay()
+replay_trajectory(dt, joint_list, q_res, frame_force_res_mapping, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED, kindyn).replay()

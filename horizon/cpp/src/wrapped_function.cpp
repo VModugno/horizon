@@ -123,7 +123,7 @@ Eigen::MatrixXd& WrappedFunction::out(int i)
     return _out_matrix[i];
 }
 
-casadi::Function& WrappedFunction::function()
+casadi::Function& WrappedFunction::functionRef()
 {
     return _f;
 }
