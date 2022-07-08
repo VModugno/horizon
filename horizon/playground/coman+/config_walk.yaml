@@ -1,0 +1,89 @@
+solver:
+  type: 'ipopt'
+  tol: 0.001
+  constr_viol_tol: 0.001
+  max_iter: 2000
+
+constraints: ['zero_velocity_l_foot',
+              'zero_velocity_r_foot']
+#              'foot_contact_l_foot',
+#              'foot_contact_r_foot']
+              # 'task_base_x',
+              # 'final_x',
+
+costs: [ 'joint_posture', 'joint_regularization' ] # 'final_base_y', 'min_rot' # 'final_y'
+
+# todo to cartesian
+task_base_x:
+  type: 'Postural'
+  indices: [0]
+  nodes: 'final'
+  weight: 1000
+
+final_base_y:
+  type: 'Postural'
+  indices: [1]
+  nodes: 'final'
+  weight: 1000
+# ===============================
+interaction_l_foot:
+  type: 'Force'
+  frame: 'l_sole'
+
+zero_velocity_l_foot:
+  type: 'Cartesian'
+  frame: 'l_sole'
+  indices: [0, 1, 2]
+  nodes: 'all'
+  cartesian_type: 'velocity'
+
+interaction_r_foot:
+  type: 'Force'
+  frame: 'r_sole'
+
+zero_velocity_r_foot:
+  type: 'Cartesian'
+  frame: 'r_sole'
+  indices: [0, 1, 2]
+  nodes: 'all'
+  cartesian_type: 'velocity'
+# ==================================
+
+foot_contact_l_foot:
+  type: 'Contact'
+  subtask: ['interaction_l_foot', 'zero_velocity_l_foot']
+
+foot_contact_r_foot:
+  type: 'Contact'
+  subtask: ['interaction_r_foot', 'zero_velocity_r_foot']
+
+min_rot:
+  type: 'Postural'
+  indices: [3,4]
+  nodes: 'all'
+  weight: 0.001
+#
+joint_posture:
+  type: 'Postural'
+  weight: 1.
+
+final_x:
+  type: "Postural"
+  indices: [0]
+  nodes: 'final'
+
+final_y:
+  type: "Postural"
+  indices: [1]
+  weight: 1000
+  nodes: 'final'
+
+# todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they won't get considered.
+joint_regularization:
+  type: 'Regularization'
+  nodes: 'all'
+  weight:
+#    velocity: 0.01
+    acceleration: 0.01
+    force: 0.01 # todo <----- how to do?
+
