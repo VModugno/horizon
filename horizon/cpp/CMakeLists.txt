@@ -35,6 +35,7 @@ add_library(ilqr STATIC
 add_library(sqp STATIC
     src/wrapped_function.cpp
     src/profiling.cpp
+    src/sqp.cpp
 )
 
 
