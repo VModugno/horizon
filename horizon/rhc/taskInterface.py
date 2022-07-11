@@ -18,8 +18,9 @@ class ModelDescription:
         self.prb = problem
         self.kd = model
 
-    def generateModel(self, model_type=None, enable_torques=False):
+    def generateModel(self, model_type=None, enable_torques=False, floating_base=False):
 
+        self.floating_base = floating_base
         self.model_type = 'whole_body' if model_type is None else model_type
 
         # todo choose
@@ -31,6 +32,7 @@ class ModelDescription:
             self.nv = self.kd.nv()
 
             # custom choices
+            # todo this is ugly
             self.nf = 3 if enable_torques is False else 6
             self.q = self.prb.createStateVariable('q', self.nq)
             self.v = self.prb.createStateVariable('v', self.nv)
@@ -54,9 +56,13 @@ class ModelDescription:
         return f_c
 
     def setDynamics(self):
-        _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
-        self.prb.setDynamics(self.xdot)
+        # todo refactor this floating base stuff
+        if self.floating_base:
+            _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
+        else:
+            _, self.xdot = utils.double_integrator(self.q, self.v, self.a)
 
+        self.prb.setDynamics(self.xdot)
         # underactuation constraints
         if self.contacts:
             id_fn = kin_dyn.InverseDynamics(self.kd, self.contacts, self.kd_frame)
@@ -67,6 +73,7 @@ class ModelDescription:
 
     def getContacts(self):
         return self.contacts
+
     # def getInput(self):
     #     return self.a
     #
@@ -102,8 +109,6 @@ class TaskInterface:
         self.kd = pycasadi_kin_dyn.CasadiKinDyn(self.urdf, fixed_joints=fixed_joint_map)
         self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
 
-        self.joint_names = self.kd.joint_names()[2:]
-
         self.init_contacts = contacts
 
         # number of dof
@@ -115,7 +120,15 @@ class TaskInterface:
         q_init = {k: v for k, v in q_init.items() if k not in self.fixed_joints}
 
         self.q0 = self.kd.mapToQ(q_init)
-        self.q0[:7] = base_init
+
+        floating_base = False
+        if base_init is not None:
+            self.q0[:7] = base_init
+            floating_base = True
+            self.joint_names = self.kd.joint_names()[2:]
+        else:
+            self.joint_names = self.kd.joint_names()[1:]
+
         self.v0 = np.zeros(self.nv)
         # self.a0 = np.zeros(self.nv)
 
@@ -126,7 +139,7 @@ class TaskInterface:
 
         # model specification (whole body, centroidal, acceleration, velocity...)
         self.model = ModelDescription(self.prb, self.kd)
-        self.model.generateModel(model_description, enable_torques=enable_torques)
+        self.model.generateModel(model_description, enable_torques=enable_torques, floating_base=floating_base)
 
         if self.init_contacts is not None:
             for c in self.init_contacts:
