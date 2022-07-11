@@ -67,7 +67,7 @@ u.setBounds(-tau_lims, tau_lims)
 qtgt = np.array([0.0, np.pi])
 prb.createIntermediateResidual("err", q - qtgt)
 prb.createIntermediateResidual("tau", 10*tau)
-prb.createIntermediateCost("qdot", cs.sumsqr(qdot))
+prb.createIntermediateResidual("qdot", qdot)
 
 if solver_type != 'ilqr':
     # Dynamics
