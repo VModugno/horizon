@@ -51,9 +51,9 @@ cart = {'type': 'Cartesian',
 ti.setTaskFromDict(cart)
 ee_cart = ti.getTask('arm_1_tcp_ee')
 
-goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
+# goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
 # goal_vec = [0.5, -0.2, 0.5, 0, 0.7071068, 0, 0.7071068]
-# goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
+goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
 tf = TFBroadcaster()
 tf.publish('arm_1_tcp_ee_goal', goal_vec)
 # tf.publish('marcolino', goal_vec_1)
@@ -81,7 +81,7 @@ if solver_type != 'ilqr':
 # ================================== to wrap ================================================
 # ===========================================================================================
 opts = {'ipopt.tol': 0.001,
-        'ipopt.constr_viol_tol': 1e-3,
+        'ipopt.constr_viol_tol': 1e-6,
         'ipopt.max_iter': 1000,
         'error_on_fail': True,
         'ilqr.max_iter': 200,
@@ -100,6 +100,11 @@ opts = {'ipopt.tol': 0.001,
 
 
 solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
+
+try:
+        solver_bs.set_iteration_callback()
+except:
+        pass
 
 solver_bs.solve()
 solution = solver_bs.getSolutionDict()

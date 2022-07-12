@@ -40,15 +40,18 @@ ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, con
 # register my plugin 'Contact'
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 
-ptgt_final = [0., 0., 0.]
+ptgt_final = base_init.copy()
 
-task_base_x = {'type': 'Cartesian',
-               'frame': 'base_link',
-               'name': 'final_base_x',
-               'indices': [0],
-               'nodes': [ns],
-               'weight': 1e3}
 
+
+
+# task_base_x = {'type': 'Cartesian',
+#                'frame': 'base_link',
+#                'name': 'final_base_x',
+#                'indices': [0],
+#                'nodes': [ns],
+#                'weight': 1e3}
+#
 task_base_y = {'type': 'Cartesian',
                'frame': 'base_link',
                'name': 'final_base_y',
@@ -57,19 +60,12 @@ task_base_y = {'type': 'Cartesian',
                'fun_type': 'residual',
                'weight': 1e3}
 
-# todo this should add the contacts tasks:
-# for c in contacts:
-#     task_contact = {'type': 'force',
-#                     'frame': c,
-#                     'name': 'force_' + c,
-#                     'dim': [0, 1, 2]}
-#     ti.setTask(task_contact)
 
-ti.setTaskFromDict(task_base_x)
+# ti.setTaskFromDict(task_base_x)
 ti.setTaskFromDict(task_base_y)
 
-task_base_x = ti.getTask('final_base_x')
-task_base_x.setRef(ptgt_final[0])
+# task_base_x = ti.getTask('final_base_x')
+# task_base_x.setRef(ptgt_final[0])
 
 task_base_y = ti.getTask('final_base_y')
 task_base_y.setRef(ptgt_final[1])
@@ -88,6 +84,12 @@ f0 = np.array([0, 0, 300])
 # final velocity
 v.setBounds(v0, v0, nodes=ns)
 # regularization costs
+
+# final base x
+ti.prb.createFinalConstraint("final_base_x", 1e3 * (q[0] - q0[0]))
+
+# final base y
+# ti.prb.createFinalResidual("final_base_y", 1e3 * (q[1] - q0[1]))
 
 # base rotation
 ti.prb.createResidual("min_rot", 1e-4 * (q[3:5] - q0[3:5]))
@@ -174,7 +176,6 @@ c_2 = ti.getTask('contact_arm_3_TCP')
 
 step = range(10, 30)
 contact_c_0 = [c_n for c_n in list(range(ns + 1)) if c_n not in step]
-print(contact_c_0)
 c_0.setNodes(contact_c_0)
 c_1.setNodes(range(ns + 1))
 c_2.setNodes(range(ns + 1))

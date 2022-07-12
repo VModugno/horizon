@@ -100,7 +100,7 @@ class CartesianTask(Task):
 
         return skew_op
 
-    def _compute_orientation_error2(self, val1, val2):
+    def _compute_orientation_error1(self, val1, val2):
 
         # siciliano's method
         quat_1 = self._rot_to_quat(val1)
@@ -115,23 +115,34 @@ class CartesianTask(Task):
 
         return rot_err
 
-    def _compute_orientation_error(self, R_0, R_1, epsi=1e-5):
+    def _compute_orientation_error(self, R_0, R_1):
 
-        R_err = cs.mtimes(R_0, R_1.T)
+        R_err = R_0 @ R_1.T
+        M_err = np.eye(3) - R_err
+
+        rot_err = cs.trace(M_err)
+
+        return rot_err
+
+    def _compute_orientation_error2(self, R_0, R_1, epsi=1e-5):
+
+        # not well digested by IPOPT // very well digested by ilqr
+        R_err = R_0 @ R_1.T
         R_skew = (R_err - R_err.T) / 2
 
         r = cs.vertcat(R_skew[2, 1], R_skew[0, 2], R_skew[1, 0])
 
         div = cs.sqrt(epsi + 1 + cs.trace(R_err))
-        rot_error = r / div
+        rot_err = r / div
 
-        return rot_error
+        return rot_err
 
     def _initialize(self):
         # todo this is wrong! how to get these variables?
         q = self.prb.getVariables('q')
         v = self.prb.getVariables('v')
 
+        # todo the indices here represent the position and the orientation error
         # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
         if self.cartesian_type == 'position':
             fk = cs.Function.deserialize(self.kin_dyn.fk(self.frame))
@@ -140,20 +151,20 @@ class CartesianTask(Task):
             ee_p_r = ee_p['ee_rot']
 
             frame_name = f'{self.name}_{self.frame}_pos'
-            self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', 7)
+            self.pose_tgt = self.prb.createParameter(f'{frame_name}_tgt', 7) # 3 position + 4 orientation
+            self.ref = self.pose_tgt[self.indices]
 
-            fun_trans = ee_p_t - self.pos_tgt[:3]
-
-            # todo why with norm_2 is faster?
-            # fun_lin = cs.norm_2(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pos_tgt[3:])))
-            fun_lin = self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pos_tgt[3:]))
+            fun_trans = ee_p_t - self.pose_tgt[:3]
+            # todo check norm_2 with _compute_orientation_error2
+            # fun_lin = cs.norm_2(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pose_tgt[3:])))
+            fun_lin = self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pose_tgt[3:]))
 
             # todo this is ugly, but for now keep it
             #   find a way to check if also rotation is involved
             if self.indices.size > 3:
-                fun = cs.vertcat(fun_trans, fun_lin)
+                fun = cs.vertcat(fun_trans, fun_lin)[self.indices]
             else:
-                fun = fun_trans
+                fun = fun_trans[self.indices]
 
         elif self.cartesian_type == 'velocity':
             dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
@@ -163,6 +174,7 @@ class CartesianTask(Task):
 
             frame_name = f'{self.name}_{self.frame}_vel'
             self.vel_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+            self.ref = self.vel_tgt
             fun = ee_v[self.indices] - self.vel_tgt
 
         elif self.cartesian_type == 'acceleration':
@@ -172,33 +184,25 @@ class CartesianTask(Task):
             ee_a = cs.vertcat(ee_a_t, ee_a_r)
             frame_name = f'{self.name}_{self.frame}_acc'
             self.acc_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+            self.ref = self.acc_tgt
             fun = ee_a[self.indices] - self.acc_tgt
 
         self.constr = self.instantiator(f'{frame_name}_task', self.weight * fun, nodes=self.nodes)
         # todo should I keep track of the nodes here?
         #  in other words: should be setNodes resetting?
 
-        # todo initialize well ref (right now only position)
-        self.ref = self.pos_tgt[self.indices]
 
     def getConstraint(self):
         return self.constr
 
     def setRef(self, ref_traj):
 
-        # if self.cartesian_type == 'position':
-        #     cnsrt = self.pos_constr
-        # elif self.cartesian_type == 'velocity':
-        #     cnsrt = self.vel_constr
-        # elif self.cartesian_type == 'acceleration':
-        #     cnsrt = self.acc_constr
+        ref_matrix = np.array(ref_traj)
 
-        ref_matrix = np.atleast_2d(ref_traj)
+        if self.ref.shape[1] != len(self.nodes):
+            raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
 
-        # if ref_matrix.shape[0] != cnsrt.getDim():
-        #     raise ValueError(f'Wrong goal dimension inserted: ({ref_matrix.shape[0]} != {cnsrt.getDim()})')
-        # todo: add this in the initialization
-        self.ref.assign(ref_matrix.flatten())
+        self.ref.assign(ref_matrix) # <==== SET TARGET
 
     def setNodes(self, nodes):
         super().setNodes(nodes)
@@ -208,27 +212,11 @@ class CartesianTask(Task):
             self.constr.setNodes(self.nodes, erasing=True)
             return 0
 
-        # todo when to activate manual mode?
-
-        if self.ref is not None and self.ref.shape[1] != len(self.nodes):
-            raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
-
-        if self.cartesian_type == 'position':
-            tgt = self.pos_tgt
-        elif self.cartesian_type == 'velocity':
-            tgt = self.vel_tgt
-        elif self.cartesian_type == 'acceleration':
-            tgt = self.acc_tgt
-        else:
-            raise Exception('Wrong cartesian type')
+        print('=============================================')
 
         # core
-        if self.ref is not None:
-            tgt.assign(self.ref, nodes=self.nodes)  # <==== SET TARGET
         self.constr.setNodes(self.nodes, erasing=True)  # <==== SET NODES
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
         # print('===================================')
-
-
