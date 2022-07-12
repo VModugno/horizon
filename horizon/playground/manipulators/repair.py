@@ -6,6 +6,7 @@ import rospkg, rospy
 import numpy as np
 import casadi as cs
 from horizon.transcriptions.transcriptor import Transcriptor
+from horizon.utils.tf_broadcaster import TFBroadcaster
 
 urdf_path = rospkg.RosPack().get_path('repair_urdf') + '/urdf/repair.urdf'
 urdf = open(urdf_path, 'r').read()
@@ -49,8 +50,15 @@ cart = {'type': 'Cartesian',
 
 ti.setTaskFromDict(cart)
 ee_cart = ti.getTask('arm_1_tcp_ee')
-ee_cart.setRef([0.5, -0.2, 0.5, 0, 0, 0, 1])
-ee_cart.setRef([0.5, -0.2, 0.5, 0, 0.7071068, 0, 0.7071068 ])
+
+goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
+# goal_vec = [0.5, -0.2, 0.5, 0, 0.7071068, 0, 0.7071068]
+# goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
+tf = TFBroadcaster()
+tf.publish('arm_1_tcp_ee_goal', goal_vec)
+# tf.publish('marcolino', goal_vec_1)
+
+ee_cart.setRef(goal_vec)
 
 q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')

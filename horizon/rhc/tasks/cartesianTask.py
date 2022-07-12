@@ -48,7 +48,7 @@ class CartesianTask(Task):
         Covert a quaternion into a full three-dimensional rotation matrix.
 
         Input
-        :param quat: A 4 element array representing the quaternion (q0,q1,q2,q3)
+        :param quat: A 4 element array representing the quaternion (im(quat), re(quat))
 
         Output
         :return: A 3x3 element matrix representing the full 3D rotation matrix.
@@ -56,10 +56,10 @@ class CartesianTask(Task):
                  frame to a point in the global reference frame.
         """
         # Extract the values from Q
-        q0 = quat[0]
-        q1 = quat[1]
-        q2 = quat[2]
-        q3 = quat[3]
+        q1 = quat[0]
+        q2 = quat[1]
+        q3 = quat[2]
+        q0 = quat[3]
 
         # First row of the rotation matrix
         r00 = 2 * (q0 * q0 + q1 * q1) - 1
@@ -102,22 +102,22 @@ class CartesianTask(Task):
 
     def _compute_orientation_error2(self, val1, val2):
 
+        # siciliano's method
         quat_1 = self._rot_to_quat(val1)
         if val2.shape == (3, 3):
             quat_2 = self._rot_to_quat(val2)
         elif val2.shape == (4, 1):
             quat_2 = val2
 
-        # siciliano's method
         rot_err = quat_1[3] * quat_2[0:3] - \
                   quat_2[3] * quat_1[0:3] - \
-                            cs.mtimes(self._skew(quat_2[0:3]), quat_1[0:3])
+                  cs.mtimes(self._skew(quat_2[0:3]), quat_1[0:3])
 
         return rot_err
 
-    def _compute_orientation_error(self, R_1, R_2, epsi=1e-5):
+    def _compute_orientation_error(self, R_0, R_1, epsi=1e-5):
 
-        R_err = cs.mtimes(R_1, R_2.T)
+        R_err = cs.mtimes(R_0, R_1.T)
         R_skew = (R_err - R_err.T) / 2
 
         r = cs.vertcat(R_skew[2, 1], R_skew[0, 2], R_skew[1, 0])
@@ -141,9 +141,12 @@ class CartesianTask(Task):
 
             frame_name = f'{self.name}_{self.frame}_pos'
             self.pos_tgt = self.prb.createParameter(f'{frame_name}_tgt', 7)
+
             fun_trans = ee_p_t - self.pos_tgt[:3]
 
-            fun_lin = cs.norm_fro(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pos_tgt[3:])))
+            # todo why with norm_2 is faster?
+            # fun_lin = cs.norm_2(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pos_tgt[3:])))
+            fun_lin = self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pos_tgt[3:]))
 
             # todo this is ugly, but for now keep it
             #   find a way to check if also rotation is involved
