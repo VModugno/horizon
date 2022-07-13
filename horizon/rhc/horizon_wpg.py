@@ -91,17 +91,17 @@ class HorizonWpg:
 
         # goalrz = self.ti.prb.createFinalResidual("final_rz", 1e3 * (self.ti.model.q[5] - self.ptgt[2]))
         # TODO this does not work
-        # goalrz = {'type': 'Cartesian',
-        #           'name': 'final_base_rz',
-        #           'frame': 'base_link',
-        #           'indices': [5],
-        #           'nodes': [self.N],
-        #           'fun_type': 'residual',
-        #           'weight': 1e3}
+        goalrz = {'type': 'Cartesian',
+                  'name': 'final_base_rz',
+                  'frame': 'base_link',
+                  'indices': [5],
+                  'nodes': [self.N],
+                  'fun_type': 'residual',
+                  'weight': 1e3}
 
         self.ti.setTaskFromDict(goalx)
         self.ti.setTaskFromDict(goaly)
-        # self.ti.setTaskFromDict(goalrz)
+        self.ti.setTaskFromDict(goalrz)
 
         self.base_goal_tasks = [self.ti.getTask('final_base_x'), self.ti.getTask('final_base_y'), self.ti.getTask('final_base_rz')]
 

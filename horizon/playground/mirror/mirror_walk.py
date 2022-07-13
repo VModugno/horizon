@@ -42,15 +42,12 @@ ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 
 ptgt_final = base_init.copy()
 
-
-
-
-# task_base_x = {'type': 'Cartesian',
-#                'frame': 'base_link',
-#                'name': 'final_base_x',
-#                'indices': [0],
-#                'nodes': [ns],
-#                'weight': 1e3}
+task_base_x = {'type': 'Cartesian',
+               'frame': 'base_link',
+               'name': 'final_base_x',
+               'indices': [0],
+               'nodes': [ns],
+               'weight': 1e3}
 #
 task_base_y = {'type': 'Cartesian',
                'frame': 'base_link',
@@ -61,14 +58,14 @@ task_base_y = {'type': 'Cartesian',
                'weight': 1e3}
 
 
-# ti.setTaskFromDict(task_base_x)
+ti.setTaskFromDict(task_base_x)
 ti.setTaskFromDict(task_base_y)
 
-# task_base_x = ti.getTask('final_base_x')
-# task_base_x.setRef(ptgt_final[0])
+task_base_x = ti.getTask('final_base_x')
+task_base_x.setRef([0, 0, 0, ptgt_final[0], 0, 0, 1])
 
 task_base_y = ti.getTask('final_base_y')
-task_base_y.setRef(ptgt_final[1])
+task_base_y.setRef([0, 0, 0, 0, ptgt_final[1], 0, 1])
 
 # todo: next section to wrap up like the lines above
 contacts = [f'arm_{i + 1}_TCP' for i in range(3)]
@@ -86,7 +83,7 @@ v.setBounds(v0, v0, nodes=ns)
 # regularization costs
 
 # final base x
-ti.prb.createFinalConstraint("final_base_x", 1e3 * (q[0] - q0[0]))
+# ti.prb.createFinalConstraint("final_base_x", 1e3 * (q[0] - q0[0]))
 
 # final base y
 # ti.prb.createFinalResidual("final_base_y", 1e3 * (q[1] - q0[1]))

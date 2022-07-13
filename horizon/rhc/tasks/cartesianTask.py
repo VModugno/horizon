@@ -152,19 +152,18 @@ class CartesianTask(Task):
 
             frame_name = f'{self.name}_{self.frame}_pos'
             self.pose_tgt = self.prb.createParameter(f'{frame_name}_tgt', 7) # 3 position + 4 orientation
-            self.ref = self.pose_tgt[self.indices]
+
+            self.ref = self.pose_tgt
 
             fun_trans = ee_p_t - self.pose_tgt[:3]
             # todo check norm_2 with _compute_orientation_error2
+
             # fun_lin = cs.norm_2(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pose_tgt[3:])))
-            fun_lin = self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pose_tgt[3:]))
+            fun_lin = self._compute_orientation_error2(ee_p_r, self._quat_to_rot(self.pose_tgt[3:]))
 
             # todo this is ugly, but for now keep it
             #   find a way to check if also rotation is involved
-            if self.indices.size > 3:
-                fun = cs.vertcat(fun_trans, fun_lin)[self.indices]
-            else:
-                fun = fun_trans[self.indices]
+            fun = cs.vertcat(fun_trans, fun_lin)
 
         elif self.cartesian_type == 'velocity':
             dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
@@ -188,6 +187,7 @@ class CartesianTask(Task):
             fun = ee_a[self.indices] - self.acc_tgt
 
         self.constr = self.instantiator(f'{frame_name}_task', self.weight * fun, nodes=self.nodes)
+
         # todo should I keep track of the nodes here?
         #  in other words: should be setNodes resetting?
 
@@ -199,10 +199,13 @@ class CartesianTask(Task):
 
         ref_matrix = np.array(ref_traj)
 
-        if self.ref.shape[1] != len(self.nodes):
+        if ref_matrix.ndim == 2 and ref_matrix.shape[1] != len(self.nodes):
+            raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
+        elif ref_matrix.ndim == 1 and len(self.nodes) > 1:
             raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
 
-        self.ref.assign(ref_matrix) # <==== SET TARGET
+        self.ref.assign(ref_matrix, self.nodes) # <==== SET TARGET
+        # self.nodes
 
     def setNodes(self, nodes):
         super().setNodes(nodes)
