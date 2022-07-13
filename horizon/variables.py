@@ -912,12 +912,11 @@ class Variable(AbstractVariable):
         else:
             indices_vec = np.array(indices).astype(int)
 
-
         val_checked = misc.checkValueEntry(val)
         if val_checked.shape[0] != indices_vec.size:
             raise Exception(f'Wrong dimension of variable values inserted: {val_checked.shape[0]} instead of {indices_vec.size}')
 
-        self._impl[val_type][np.ix_(indices_vec, pos_nodes)] = val_checked
+        self._impl[val_type][np.ix_(np.atleast_1d(indices_vec), pos_nodes)] = val_checked
 
     def setLowerBounds(self, bounds, nodes=None):
         """
