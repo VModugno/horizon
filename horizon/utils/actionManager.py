@@ -141,11 +141,11 @@ class ActionManager:
             self.foot_tgt_constr_nodes[frame] = []
 
         for frame, param in self._foot_z_param.items():
-            self._foot_z_param[frame] = np.empty((1, self.N + 1))
+            self._foot_z_param[frame] = np.empty((7, self.N + 1))
             self._foot_z_param[frame][:] = np.NaN
 
         for frame, param in self._foot_tgt_params.items():
-            self._foot_tgt_params[frame] = np.empty((2, self.N + 1))
+            self._foot_tgt_params[frame] = np.empty((7, self.N + 1))
             self._foot_tgt_params[frame][:] = np.NaN
 
         # clearance nodes
@@ -306,10 +306,14 @@ class ActionManager:
 
         z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes_in_horizon, n_swing, start, goal, s.clearance,
                                                     dim=2)
+
+        cart_mask_z = np.zeros([7, len(swing_nodes_in_horizon)])
+        cart_mask_z[2, :] = z_traj[:len(swing_nodes_in_horizon)]
+
         # adding param
-        self._foot_z_param[frame][:, swing_nodes_in_horizon] = z_traj[:len(swing_nodes_in_horizon)]
-        self.z_constr[frame].setRef(self._foot_z_param[frame][:, self.z_constr_nodes[frame]])  # z_traj
+        self._foot_z_param[frame][:, swing_nodes_in_horizon] = cart_mask_z
         self.z_constr[frame].setNodes(self.z_constr_nodes[frame])  # swing_nodes_in_horizon
+        self.z_constr[frame].setRef(self._foot_z_param[frame][:, self.z_constr_nodes[frame]])  # z_traj
 
     # todo unify the actions below, these are just different pattern of actions
     def _jump(self, nodes):
