@@ -22,12 +22,6 @@ void IterativeLQR::backward_pass()
     if(_log) std::cout << "n_constr[" << _N << "] = " <<
                   _constraint_to_go->dim() << " (before bounds)\n";
 
-    add_bound_penalty(_N,
-               &_value.back().S,
-               nullptr,
-               &_value.back().s,
-               nullptr);
-
     add_bound_constraint(_N);
 
     if(_log) std::cout << "n_constr[" << _N << "] = " <<
@@ -131,9 +125,6 @@ void IterativeLQR::backward_pass_iter(int i)
                      eigHuu.minCoeff() << ", " << eigHuu.maxCoeff() << "] \n";
     }
 
-    // add inequality constraints to cost using barriers
-    add_bound_penalty(i, &tmp.Hxx, &tmp.Huu, &tmp.hx, &tmp.hu);
-
     // todo: second-order terms from dynamics
 
     // form kkt matrix
@@ -191,6 +182,12 @@ void IterativeLQR::backward_pass_iter(int i)
 
     THROW_NAN(u_lam);
     TOC(solve_kkt_inner);
+
+    // check
+    if(!u_lam.allFinite() || u_lam.hasNaN())
+    {
+        throw HessianIndefinite("");
+    }
 
     // save solution
     auto& res = _bp_res[i];
@@ -277,73 +274,49 @@ void IterativeLQR::add_bound_constraint(int k)
 
 }
 
-void IterativeLQR::add_bound_penalty(int k,
-                              Eigen::MatrixXd* Hxx,
-                              Eigen::MatrixXd* Huu,
-                              Eigen::VectorXd* hx,
-                              Eigen::VectorXd* hu)
+bool IterativeLQR::auglag_update()
 {
-
-    Eigen::RowVectorXd x_ei, u_ei;
-
-    // state bounds
-    u_ei.setZero(_nu);
-    for(int i = 0; i < _nx; i++)
+    // check if we need to update the aug lag estimate
+    if(_enable_auglag)
     {
-        if(k == 0)
-        {
-            break;
-        }
-
-        // if bound_violations comes out positive, we have
-        // an actual violation
-        // ------|------*----|------
-        // ------|-----------|---*--
-        // --*---|-----------|------
-        //       lb          ub
-
-        // if negative, violation
-        double ub_violation = _x_ub(i, k) - _xtrj(i, k);
-
-        // if positive, violation
-        double lb_violation = _x_lb(i, k) - _xtrj(i, k);
-
-        double bound_violation = ub_violation < 0 ? ub_violation :
-            (lb_violation > 0 ? lb_violation : 0.0);
-
-        // we add a cost like 0.5*rho*|bound_violation|^2
-        if(bound_violation != 0.0 && Hxx && hx)
-        {
-            (*Hxx)(i, i) += _rho;
-            (*hx)(i) -= _rho*bound_violation;
-        }
+        return false;
     }
 
-    // input bounds
-    x_ei.setZero(_nx);
-    for(int i = 0; i < _nu; i++)
+    // current solution too coarse based on merit derivative
+    if(std::fabs(_fp_res->merit_der) >
+            _merit_der_threshold*(1 + _fp_res->merit))
     {
-        if(k == _N)
-        {
-            break;
-        }
-
-        // if negative, violation
-        double ub_violation = _u_ub(i, k) - _utrj(i, k);
-
-        // if positive, violation
-        double lb_violation = _u_lb(i, k) - _utrj(i, k);
-
-        double bound_violation = ub_violation < 0 ? ub_violation :
-            (lb_violation > 0 ? lb_violation : 0.0);
-
-        // we add a cost like 0.5*rho*|du - bound_violation|^2
-        if(bound_violation != 0.0 && Huu && hu)
-        {
-            (*Huu)(i, i) += _rho;
-            (*hu)(i) -= _rho*bound_violation;
-        }
+        return false;
     }
+
+    // current solution does not satisfy bounds,
+    // we need to increase rho further
+    if(_fp_res->bound_violation > _constraint_violation_threshold)
+    {
+        // grow rho
+        _rho *= _rho_growth_factor;
+    }
+
+    // update lag mult estimate
+    for(int i = 0; i < _N + 1; i++)
+    {
+        _auglag_cost[i]->update_lam(
+                    _xtrj.col(i),
+                    _utrj.col(i),
+                    i);
+
+        _auglag_cost[i]->setRho(_rho);
+
+        _lam_bound_x.col(i) = _auglag_cost[i]->getStateMultiplier();
+
+        _lam_bound_u.col(i) = _auglag_cost[i]->getInputMultiplier();
+    }
+
+    _fp_res->mu_b = _lam_bound_u.lpNorm<1>() + _lam_bound_x.lpNorm<1>();
+
+    std::cout << "[ilqr] performing auglag update \n";
+
+    return true;
 }
 
 void IterativeLQR::increase_regularization()

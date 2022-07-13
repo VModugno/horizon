@@ -183,8 +183,6 @@ class CartesioSolver:
         ee_pos_tgt.assign(Tref.translation)
         ee_rot_tgt.assign(Tref.linear.T.reshape((9, 1)))
 
-        print(Tref)
-
         tic = time.time()
         solv.solve()
         toc = time.time() 

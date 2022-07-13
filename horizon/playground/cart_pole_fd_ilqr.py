@@ -46,8 +46,8 @@ xdot = cs.vertcat(qdot, fd(q=q, v=qdot, tau=tau)['a'])
 prb.setDynamics(xdot)
 prb.setDt(dt)
 # Limits
-q_min = [-1, -2.*np.pi]
-q_max = [1, 2.*np.pi]
+q_min = [-10, -2.*np.pi]
+q_max = [10, 2.*np.pi]
 q_init = [0.0, 0.1]
 
 qdot_lims = np.array([100., 100.])
@@ -66,7 +66,7 @@ u.setBounds(-tau_lims, tau_lims)
 # Cost function
 qtgt = np.array([0.0, np.pi])
 prb.createIntermediateResidual("err", q - qtgt)
-prb.createIntermediateResidual("tau", 10*tau)
+prb.createIntermediateResidual("tau", tau)
 prb.createIntermediateResidual("qdot", qdot)
 
 if solver_type != 'ilqr':
@@ -83,12 +83,13 @@ prb.createFinalConstraint("final_qdot", qdot)
 
 # Creates problem
 solver = Solver.make_solver(solver_type, prb, opts={
+    'ilqr.alpha_min': 1e-6,
     'ilqr.enable_gn': True,
-    'ilqr.enable_line_search': True,
-    'ilqr.line_search_accept_ratio': -0.4,
-    'ilqr.merit_der_threshold': 1e-9,
-    'ilqr.step_length_threshold': 1e-9,
-    'ilqr.rho_base': 1e5,
+    'ilqr.line_search_accept_ratio': -1e-3,
+    'ilqr.merit_der_threshold': 1e-6,
+    'ilqr.rho_base': 1e3,
+    'ilqr.rho_growth_factor': 10.0,
+    'ilqr.enable_auglag': True,
     'ilqr.codegen_enabled': True, 
     'ilqr.codegen_workdir': '/tmp/cart_pole_fd'
     })  #, opts={'max_iter': 10})
