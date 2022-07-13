@@ -682,12 +682,7 @@ class SingleVariable(AbstractVariable):
         else:
             nodes = misc.checkNodes(nodes, self._nodes_array)
             num_nodes = int(np.sum(self._nodes_array[nodes]))
-            # todo right now repeating with repmat the same variables if requested: is it ok?
-            # todo here and also everywhere this should return a matrix [dim x nodes]
             val_impl = cs.repmat(self._impl[val_type], 1, num_nodes)
-            # todo to remove for the reason above (everywhere should return a matrix)
-            if not isinstance(val_impl, cs.DM):
-                val_impl = cs.reshape(val_impl, (self._dim*num_nodes, 1))
 
         if isinstance(val_impl, cs.DM):
             val_impl = val_impl.toarray()
