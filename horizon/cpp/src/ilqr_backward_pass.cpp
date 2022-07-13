@@ -277,7 +277,7 @@ void IterativeLQR::add_bound_constraint(int k)
 bool IterativeLQR::auglag_update()
 {
     // check if we need to update the aug lag estimate
-    if(_enable_auglag)
+    if(!_enable_auglag)
     {
         return false;
     }
@@ -289,13 +289,15 @@ bool IterativeLQR::auglag_update()
         return false;
     }
 
-    // current solution does not satisfy bounds,
-    // we need to increase rho further
-    if(_fp_res->bound_violation > _constraint_violation_threshold)
+    // current solution does satisfy bounds,
+    // we dont need to increase rho further
+    if(_fp_res->bound_violation < _constraint_violation_threshold)
     {
-        // grow rho
-        _rho *= _rho_growth_factor;
+        return false;
     }
+
+    // grow rho
+    _rho *= _rho_growth_factor;
 
     // update lag mult estimate
     for(int i = 0; i < _N + 1; i++)

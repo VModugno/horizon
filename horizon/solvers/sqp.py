@@ -102,6 +102,8 @@ class GNSQPSolver(Solver):
 
         # update parameters
         p = self._getParList()
+        if p.size1() == 0:
+            p = cs.DM([])
 
         # solve
         sol = self.solver.solve(x0=w0, p=p, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)

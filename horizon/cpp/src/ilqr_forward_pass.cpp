@@ -418,7 +418,8 @@ bool IterativeLQR::should_stop()
         return false;
     }
 
-    if(_fp_res->bound_violation > constraint_violation_threshold)
+    if(_enable_auglag &&
+            _fp_res->bound_violation > constraint_violation_threshold)
     {
         return false;
     }

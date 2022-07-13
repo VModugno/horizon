@@ -77,6 +77,7 @@ def make_problem(solver_type, A11, A13, A21, A32, B21, B32):
     if solver_type == 'ilqr':
         ilqrsol = Solver.make_solver('ilqr', prob,  
                 opts={'max_iter': 3, 'ilqr.integrator': 'EULER'})
+        ilqrsol.set_iteration_callback()
         return ilqrsol
 
     # solver with sqp or ipopt need a dynamic constraint
