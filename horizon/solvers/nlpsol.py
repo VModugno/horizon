@@ -123,9 +123,6 @@ class NlpsolSolver(Solver):
         # solve
         sol = self.solver(**self.dict_sol)
 
-        if not self.solver.stats()['success']:
-            raise Exception('Optimal solution NOT found.')
-
         if self.cond_warm_start:
             self.dict_sol['lam_x0'] = sol['lam_x']
             self.dict_sol['lam_g0'] = sol['lam_g']
@@ -145,7 +142,7 @@ class NlpsolSolver(Solver):
         # build dt_solution as an array
         self._createDtSol()
 
-        return True
+        return self.solver.stats()['success']
 
     def getSolutionDict(self):
         return self.var_solution
