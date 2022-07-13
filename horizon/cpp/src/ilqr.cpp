@@ -89,7 +89,8 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
 
     _rho_base = value_or(opt, "ilqr.rho_base", 0.0);
     _rho = _rho_base;
-    _rho_growth_factor = value_or(opt, "ilqr.rho_growth_factor", 1.0);
+    _rho_growth_factor = value_or(opt, "ilqr.rho_growth_factor", 10.0);
+    _enable_auglag = value_or(opt, "ilqr.enable_auglag", 0);
 
     _hxx_reg = value_or(opt, "ilqr.hxx_reg", 0.0);
     _hxx_reg_base = value_or(opt, "ilqr.hxx_reg_base", 0.0);
@@ -153,7 +154,9 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     // initialize trajectories
     _xtrj.setZero(_nx, _N+1);
     _utrj.setZero(_nu, _N);
-    _lam_x.setZero(_nx, _N);
+    _lam_x.setZero(_nx, _N+1);
+    _lam_bound_x.setZero(_nx, _N+1);
+    _lam_bound_u.setZero(_nu, _N);
 
     // initialize bounds
     _x_lb.setConstant(_nx, _N+1, -inf);
@@ -165,6 +168,22 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     //  *) default intermediate cost -> l(x, u) = eps*|u|^2
     //  *) default final cost        -> lf(x)   = eps*|xf|^2
     set_default_cost();
+
+    // add auglag cost
+    for(int i = 0; i < _N+1; i++)
+    {
+        auto al = std::make_shared<BoundAuglagCostEntity>(
+                    _N,
+                    _x_lb.col(i), _x_ub.col(i),
+                    _u_lb.col(i), _u_ub.col(i));
+
+        al->setRho(_rho);
+
+        _auglag_cost.push_back(al);
+
+        _cost[i].addCost(al);
+
+    }
 }
 
 void IterativeLQR::setStateBounds(const Eigen::MatrixXd& lb, const Eigen::MatrixXd& ub)
@@ -410,6 +429,12 @@ void IterativeLQR::updateIndices()
         }
     }
 
+    // add auglag
+    for(int i = 0; i < _N + 1; i++)
+    {
+        _cost[i].addCost(_auglag_cost[i]);
+    }
+
     // clear constraints;
     for(auto& c : _constraint)
     {
@@ -527,10 +552,28 @@ bool IterativeLQR::solve(int max_iter)
 
         _fp_res->iter = i;
 
+        // compute linear-quadratic mdoel
         linearize_quadratize();
-        backward_pass();
-        line_search(i);
 
+        // solve kkt
+        backward_pass();
+
+        // if line search failed, go directly
+        // to next iteration
+        if(!line_search(i))
+        {
+            continue;
+        }
+
+        // if the auglag approximation needs to be
+        // updated, skip termination conditions
+        if(auglag_update())
+        {
+            continue;
+        }
+
+        // if termination criteria fulfilled,
+        // exit and report success
         if(should_stop())
         {
             return true;
@@ -745,6 +788,97 @@ casadi::Function IterativeLQR::Dynamics::Jacobian(const casadi::Function &f)
 {
     auto df = f.factory("df", f.name_in(), {"jac:f:x", "jac:f:u"});
     return df;
+}
+
+IterativeLQR::BoundAuglagCostEntity::BoundAuglagCostEntity(int N,
+                                                           VecConstRef xlb,
+                                                           VecConstRef xub,
+                                                           VecConstRef ulb,
+                                                           VecConstRef uub):
+    _xlb(xlb), _xub(xub), _ulb(ulb), _uub(uub), _N(N)
+{
+    _Q.setZero(xlb.size(), xlb.size());
+    _R.setZero(ulb.size(), ulb.size());
+    _P.setZero(ulb.size(), xlb.size());
+    _r.setZero(ulb.size());
+    _q.setZero(xlb.size());
+    _xlam.setZero(xlb.size());
+    _ulam.setZero(ulb.size());
+}
+
+void IterativeLQR::BoundAuglagCostEntity::setRho(double rho)
+{
+    _rho = rho;
+}
+
+double IterativeLQR::BoundAuglagCostEntity::evaluate(VecConstRef x,
+                                                     VecConstRef u,
+                                                     int k)
+{
+    double value = 0.0;
+
+    // positive if ub violated, negtive if lb violated
+    _x_violation = (x - _xub).cwiseMax(0) + (x - _xlb).cwiseMin(0);
+    value += 0.5 * _rho * _x_violation.squaredNorm();
+    value += _xlam.dot(_x_violation);
+
+    if(k < _N)
+    {
+        _u_violation = (u - _uub).cwiseMax(0) + (u - _ulb).cwiseMin(0);
+        value += 0.5 * _rho * _u_violation.squaredNorm();
+        value += _ulam.dot(_u_violation);
+    }
+
+    return value;
+}
+
+void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
+                                                     VecConstRef u,
+                                                     int k)
+{
+    evaluate(x, u, k);
+
+    _q = _xlam + _rho * _x_violation;
+
+    for(int i = 0; i < x.size(); i++)
+    {
+        _Q(i, i) = _x_violation(i) != 0.0 ? _rho : 0.0;
+    }
+
+    if(k < _N)
+    {
+        _r = _ulam + _rho * _u_violation;
+
+        for(int i = 0; i < u.size(); i++)
+        {
+            _R(i, i) = _u_violation(i) != 0.0 ? _rho : 0.0;
+        }
+    }
+}
+
+void IterativeLQR::BoundAuglagCostEntity::update_lam(VecConstRef x, VecConstRef u, int k)
+{
+    evaluate(x, u, k);
+
+    _xlam += _rho * _x_violation;
+
+    if(k < _N)
+    {
+        _ulam += _rho * _u_violation;
+
+//        std::cout << "u_err[" << k << "] = " << _u_violation.transpose().format(3) << ",  ";
+//        std::cout << "u_lam[" << k << "] = " << _ulam.transpose().format(3) << "\n";
+    }
+}
+
+VecConstRef IterativeLQR::BoundAuglagCostEntity::getStateMultiplier() const
+{
+    return _xlam;
+}
+
+VecConstRef IterativeLQR::BoundAuglagCostEntity::getInputMultiplier() const
+{
+    return _ulam;
 }
 
 void IterativeLQR::IntermediateCostEntity::setCost(casadi::Function _l,
@@ -1004,12 +1138,14 @@ IterativeLQR::ForwardPassResult::ForwardPassResult(int nx, int nu, int N):
     step_length = 0.0;
     constraint_values.setZero(N+1);
     defect_values.setZero(nx, N);
+
+    mu_b = 0;
 }
 
 void IterativeLQR::ForwardPassResult::print() const
 {
-    printf("%2.2d al=%.3e  reg=%.3e  m=%.3e  dm=%.3e  mu_f=%.3e  mu_c=%.3e  cost=%.3e  du=%.3e  con=%.3e  bound=%.3e  gap=%.3e \n",
-           iter, alpha, hxx_reg, merit, merit_der, mu_f, mu_c, cost, step_length, constraint_violation, bound_violation, defect_norm);
+    printf("%2.2d al=%.3e  reg=%.1e  rho=%.1e  m=%.3e  dm=%.3e  mu_f=%.1e  mu_c=%.1e  mu_b=%.1e  cost=%.3e  du=%.3e  con=%.3e  bound=%.3e  gap=%.3e \n",
+           iter, alpha, hxx_reg, rho, merit, merit_der, mu_f, mu_c, mu_b, cost, step_length, constraint_violation, bound_violation, defect_norm);
 }
 
 IterativeLQR::ConstraintToGo::ConstraintToGo(int nx, int nu):

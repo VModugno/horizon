@@ -172,6 +172,41 @@ protected:
     Eigen::VectorXd _q, _r;
 };
 
+struct IterativeLQR::BoundAuglagCostEntity : CostEntityBase
+{
+    typedef std::shared_ptr<BoundAuglagCostEntity> Ptr;
+
+    BoundAuglagCostEntity(int N,
+                          VecConstRef xlb, VecConstRef xub,
+                          VecConstRef ulb, VecConstRef uub);
+
+    void setRho(double rho);
+
+    double evaluate(VecConstRef x, VecConstRef u, int k) override;
+
+    void quadratize(VecConstRef x, VecConstRef u, int k) override;
+
+    void update_lam(VecConstRef x, VecConstRef u, int k);
+
+    VecConstRef getStateMultiplier() const;
+
+    VecConstRef getInputMultiplier() const;
+
+private:
+
+    VecConstRef _xlb, _xub;
+    VecConstRef _ulb, _uub;
+
+    Eigen::VectorXd _x_violation;
+    Eigen::VectorXd _u_violation;
+
+    Eigen::VectorXd _xlam, _ulam;
+    double _rho;
+
+    const int _N;
+};
+
+
 struct IterativeLQR::IntermediateCostEntity : CostEntityBase
 {
     typedef std::shared_ptr<IntermediateCostEntity> Ptr;

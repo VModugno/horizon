@@ -139,6 +139,7 @@ public:
         double armijo_merit;
         double mu_f;
         double mu_c;
+        double mu_b;
         double merit_der;
         double step_length;
         double constraint_violation;
@@ -170,6 +171,7 @@ private:
     struct IntermediateCost;
     struct ConstraintEntity;
     struct CostEntityBase;
+    struct BoundAuglagCostEntity;
     struct IntermediateCostEntity;
     struct IntermediateResidualEntity;
     struct Temporaries;
@@ -198,11 +200,7 @@ private:
     void reduce_regularization();
     FeasibleConstraint handle_constraints(int i);
     void add_bound_constraint(int k);
-    void add_bound_penalty(int i,
-                    Eigen::MatrixXd* Hxx = nullptr,
-                    Eigen::MatrixXd* Huu = nullptr,
-                    Eigen::VectorXd* hx = nullptr,
-                    Eigen::VectorXd* hu = nullptr);
+    bool auglag_update();
     void compute_constrained_input(Temporaries& tmp, BackwardPassResult& res);
     void compute_constrained_input_svd(Temporaries& tmp, BackwardPassResult& res);
     void compute_constrained_input_qr(Temporaries& tmp, BackwardPassResult& res);
@@ -215,7 +213,7 @@ private:
     double compute_defect(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
     bool forward_pass(double alpha);
     void forward_pass_iter(int i, double alpha);
-    void line_search(int iter);
+    bool line_search(int iter);
     bool should_stop();
     void set_default_cost();
 
@@ -250,6 +248,7 @@ private:
     double _merit_der_threshold;
     double _step_length_threshold;
     bool _enable_line_search;
+    bool _enable_auglag;
 
     bool _closed_loop_forward_pass;
     std::string _codegen_workdir;
@@ -261,6 +260,7 @@ private:
     CostPtrMap _cost_map;
     ConstraintPtrMap _constr_map;
 
+    std::vector<std::shared_ptr<BoundAuglagCostEntity>> _auglag_cost;
     std::vector<IntermediateCost> _cost;
     std::vector<Constraint> _constraint;
     Eigen::MatrixXd _x_lb, _x_ub;
@@ -275,10 +275,14 @@ private:
 
     IterateFilter _it_filt;
     bool _use_it_filter;
+
     Eigen::MatrixXd _xtrj;
     Eigen::MatrixXd _utrj;
     std::vector<Eigen::VectorXd> _lam_g;
     Eigen::MatrixXd _lam_x;
+
+    Eigen::MatrixXd _lam_bound_x;
+    Eigen::MatrixXd _lam_bound_u;
 
     std::vector<Temporaries> _tmp;
 

@@ -109,6 +109,7 @@ double IterativeLQR::compute_merit_slope(double mu_f, double mu_c,
     }
 
     return der - mu_f*defect_norm - mu_c*constr_viol;
+
 }
 
 double IterativeLQR::compute_merit_value(double mu_f,
@@ -159,7 +160,6 @@ std::pair<double, double> IterativeLQR::compute_merit_weights()
         }
     }
 
-
     const double merit_safety_factor = 2.0;
     double mu_f = lam_x_max * merit_safety_factor;
     double mu_c = std::max(lam_g_max * merit_safety_factor, 0.0);
@@ -198,12 +198,12 @@ double IterativeLQR::compute_bound_penalty(const Eigen::MatrixXd &xtrj,
     auto xineq = _x_lb.array() < _x_ub.array();
     auto uineq = _u_lb.array() < _u_ub.array();
 
-    res += xineq.select(_x_lb - xtrj, 0).cwiseMax(0).squaredNorm();
-    res += xineq.select(_x_ub - xtrj, 0).cwiseMin(0).squaredNorm();
-    res += uineq.select(_u_lb - utrj, 0).cwiseMax(0).squaredNorm();
-    res += uineq.select(_u_ub - utrj, 0).cwiseMin(0).squaredNorm();
+    res += xineq.select(_x_lb - xtrj, 0).cwiseMax(0).lpNorm<1>();
+    res += xineq.select(_x_ub - xtrj, 0).cwiseMin(0).lpNorm<1>();
+    res += uineq.select(_u_lb - utrj, 0).cwiseMax(0).lpNorm<1>();
+    res += uineq.select(_u_ub - utrj, 0).cwiseMin(0).lpNorm<1>();
 
-    return std::sqrt(res / _N);
+    return res / _N;
 }
 
 double IterativeLQR::compute_constr(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj)
@@ -269,7 +269,7 @@ double IterativeLQR::compute_defect(const Eigen::MatrixXd& xtrj, const Eigen::Ma
     return defect / _N;
 }
 
-void IterativeLQR::line_search(int iter)
+bool IterativeLQR::line_search(int iter)
 {
     TIC(line_search);
 
@@ -284,10 +284,11 @@ void IterativeLQR::line_search(int iter)
 
     _fp_res->mu_f = mu_f;
     _fp_res->mu_c = mu_c;
+    _fp_res->rho = _rho;
 
     // compute merit function initial value
     double merit = compute_merit_value(mu_f, mu_c,
-            _fp_res->cost + 0.5 * _rho * std::pow(_fp_res->bound_violation, 2),
+            _fp_res->cost,
             _fp_res->defect_norm,
             _fp_res->constraint_violation);
 
@@ -322,7 +323,7 @@ void IterativeLQR::line_search(int iter)
 
         // compute merit
         _fp_res->merit = compute_merit_value(mu_f, mu_c,
-                                             _fp_res->cost + 0.5 * _rho * std::pow(_fp_res->bound_violation, 2),
+                                             _fp_res->cost,
                                              _fp_res->defect_norm,
                                              _fp_res->constraint_violation);
 
@@ -374,10 +375,10 @@ void IterativeLQR::line_search(int iter)
     if(!_fp_res->accepted)
     {
         report_result(*_fp_res);
-        if(_verbose) std::cout << "[ilqr] line search failed, increasing regularization..\n";
+        std::cout << "[ilqr] line search failed, increasing regularization..\n";
         increase_regularization();
         _fp_accepted = 0;
-        return;
+        return false;
     }
 
 
@@ -389,6 +390,11 @@ void IterativeLQR::line_search(int iter)
 
     _xtrj = _fp_res->xtrj;
     _utrj = _fp_res->utrj;
+
+    // note: we should update the lag mult at the solution
+    // by including the dx part
+
+    return true;
 }
 
 bool IterativeLQR::should_stop()
@@ -412,13 +418,17 @@ bool IterativeLQR::should_stop()
         return false;
     }
 
+    if(_fp_res->bound_violation > constraint_violation_threshold)
+    {
+        return false;
+    }
+
 
     // here we're feasible
 
     // exit if merit function directional derivative (normalized)
     // is too close to zero
-    if(_fp_res->merit_der < 0 &&
-            _fp_res->merit_der > - merit_der_threshold*(1 + _fp_res->merit))
+    if(std::fabs(_fp_res->merit_der) < merit_der_threshold*(1 + _fp_res->merit))
     {
         std::cout << "exiting due to small merit derivative \n";
         return true;
