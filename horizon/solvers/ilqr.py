@@ -320,5 +320,5 @@ class SolverILQR(Solver):
             self.dax.autoscale_view()
             self.hax.autoscale_view()
             plt.pause(0.01)
-            # plt.waitforbuttonpress()
+            plt.waitforbuttonpress()
 
