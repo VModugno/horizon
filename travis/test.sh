@@ -2,6 +2,6 @@
 set -ev
 
 if [ "$DISTRIBUTION" = "python" ]; then
-    cd horizon/tests
-    nosetests3 .
+    cd $HOME
+    nosetests3 -w $HORIZON_DIR/horizon/tests
 fi
