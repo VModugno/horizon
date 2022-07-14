@@ -90,10 +90,12 @@ class TaskInterface:
                  model_description: str,
                  fixed_joints: List[str] = None,
                  contacts: List[str] = None,
-                 enable_torques: bool = False):  # todo this is wrong, it should not be listed in the initialization
+                 enable_torques: bool = False,
+                 is_receding: bool = True):  # todo this is wrong, it should not be listed in the initialization
 
         # get the model
 
+        self.is_receding = is_receding
         # here I register the the default tasks
         # todo: should I do it here?
         task_factory.register('Cartesian', CartesianTask)
@@ -156,7 +158,7 @@ class TaskInterface:
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
 
-        self.prb = Problem(self.N, receding=True)
+        self.prb = Problem(self.N, receding=self.is_receding)
         self.prb.setDt(self.dt)
 
     # a possible method could read from yaml and create the task list
