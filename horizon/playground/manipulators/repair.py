@@ -45,15 +45,15 @@ ti = TaskInterface(urdf, q_init, None, problem_opts, model_description, is_reced
 cart = {'type': 'Cartesian',
         'frame': 'arm_1_tcp',
         'name': 'arm_1_tcp_ee',
-        'indices': [0, 1, 2, 3, 4, 5],
+        'indices': [0, 1, 2, 3, 5],
         'nodes': [N]}
 
 ti.setTaskFromDict(cart)
 ee_cart = ti.getTask('arm_1_tcp_ee')
 
-# goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
+goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
 # goal_vec = [0.5, -0.2, 0.5, 0, 0.7071068, 0, 0.7071068]
-goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
+# goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
 
 tf = TFBroadcaster()
 tf.publish('arm_1_tcp_ee_goal', goal_vec)

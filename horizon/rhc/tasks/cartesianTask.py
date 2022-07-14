@@ -167,10 +167,13 @@ class CartesianTask(Task):
 
             # fun_lin = cs.norm_2(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pose_tgt[3:])))
             fun_lin = self._compute_orientation_error2(ee_p_r, self._quat_to_rot(self.pose_tgt[3:]))
+            # ee_p_r_component = ee_p_r[:, [0,1]]
+            # ee_tgt_component = self._quat_to_rot(self.pose_tgt[3:])[:, [0,1]]
+            # fun_lin = self._compute_orientation_error(ee_p_r_component, ee_tgt_component)
 
             # todo this is ugly, but for now keep it
             #   find a way to check if also rotation is involved
-            fun = cs.vertcat(fun_trans, fun_lin)[0, 1, 2, 3]
+            fun = cs.vertcat(fun_trans, fun_lin)[self.indices]
 
         elif self.cartesian_type == 'velocity':
             dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
@@ -204,15 +207,20 @@ class CartesianTask(Task):
 
     def setRef(self, ref_traj):
 
+        # todo shouldn't just ignore None, right?
+        if ref_traj is None:
+            return False
+
         ref_matrix = np.array(ref_traj)
 
-        if ref_matrix.ndim == 2 and ref_matrix.shape[1] != len(self.nodes):
-            raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
-        elif ref_matrix.ndim == 1 and len(self.nodes) > 1:
-            raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
+        # if ref_matrix.ndim == 2 and ref_matrix.shape[1] != len(self.nodes):
+        #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
+        # elif ref_matrix.ndim == 1 and len(self.nodes) > 1:
+        #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
 
         self.ref.assign(ref_matrix, self.nodes) # <==== SET TARGET
-        # self.nodes
+
+        return True
 
     def setNodes(self, nodes):
         super().setNodes(nodes)
