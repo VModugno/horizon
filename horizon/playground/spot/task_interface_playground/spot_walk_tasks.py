@@ -49,19 +49,19 @@ ti.setTaskFromYaml('config_walk.yaml')
 #     print(constraint)
 
 final_base_x = ti.getTask('final_base_x')
-final_base_x.setRef(ti.q0[0])
+final_base_x.setRef([ti.q0[0], 0, 0, 0, 0, 0, 1])
 
 final_base_y = ti.getTask('final_base_y')
-final_base_y.setRef(ti.q0[1])
+final_base_y.setRef([0, ti.q0[1], 0, 0, 0, 0, 1])
 
 # min_rot = ti.getTask('min_rot')
 # min_rot.setRef(ti.q0[3:5])
 
 final_x = ti.getTask('final_x')
-final_x.setRef(ti.q0[0])
+final_x.setRef([ti.q0[0], 0, 0, 0, 0, 0, 1])
 
 final_y = ti.getTask('final_y')
-final_y.setRef(ti.q0[1])
+final_y.setRef([0, ti.q0[1], 0, 0, 0, 0, 1])
 
 f0 = np.array([0, 0, 55])
 contact1 = ti.getTask('joint_regularization')
@@ -74,7 +74,6 @@ opts = dict()
 
 am = ActionManager(ti, opts)
 am._walk([10, 200], [0, 2, 1, 3])
-
 
 
 # ===============================================================

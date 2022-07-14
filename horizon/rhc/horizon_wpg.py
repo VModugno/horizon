@@ -103,7 +103,15 @@ class HorizonWpg:
         self.ti.setTaskFromDict(goaly)
         self.ti.setTaskFromDict(goalrz)
 
-        self.base_goal_tasks = [self.ti.getTask('final_base_x'), self.ti.getTask('final_base_y'), self.ti.getTask('final_base_rz')]
+        f_b_x = self.ti.getTask('final_base_x')
+        f_b_y = self.ti.getTask('final_base_y')
+        f_b_rz = self.ti.getTask('final_base_rz')
+
+        f_b_x.setRef([self.ti.q0[0], 0, 0, 0, 0, 0, 1])
+        f_b_y.setRef([0, self.ti.q0[1], 0, 0, 0, 0, 1])
+        f_b_rz.setRef([0, 0, 0, 0, 0, self.ti.q0[5], 1])
+
+        self.base_goal_tasks = [f_b_x, f_b_y, f_b_rz]
 
         q0 = self.ti.q0
         v0 = self.ti.v0
@@ -127,6 +135,8 @@ class HorizonWpg:
 
         self.ti.setTaskFromDict(minrot)
 
+        min_rot = self.ti.getTask('min_rot')
+        min_rot.setRef([0, 0, 0, self.ti.q0[3], self.ti.q0[4], self.ti.q0[5], 1])
 
         # joint posture
         # self.ti.prb.createResidual("min_q", 1e-1 * (self.ti.model.q[7:] - q0[7:]))
@@ -313,9 +323,11 @@ class HorizonWpg:
         kf_rotz = int(abs((math.sin(rotz / 2.0) - self.solution['q'][5, 0]) / self.vmax[2] / self.dt) + 0.5)
         kf = k + max((kf_x, kf_y, kf_rotz))
         print(f'[k = {k}] target {self.ptgt_final} to be reached at kf = {kf}')
-        self.ti.getTask('final_base_x').setRef(self.ptgt_final[0])
-        self.ti.getTask('final_base_y').setRef(self.ptgt_final[1])
-        self.ti.getTask('final_base_rz').setRef(self.ptgt_final[2])
+
+
+        self.ti.getTask('final_base_x').setRef([self.ptgt_final[0], 0, 0, 0, 0, 0, 1])
+        self.ti.getTask('final_base_y').setRef([0, self.ptgt_final[1], 0, 0, 0, 0, 1])
+        self.ti.getTask('final_base_rz').setRef([0, 0, 0, 0, 0, self.ptgt_final[2], 1])
         # self.ptgt.assign(self.ptgt_final, nodes=self.N)
 
     def set_mode(self, mode: str):
@@ -598,12 +610,23 @@ class HorizonWpg:
 
         # update contact nodes
 
+        # TODO: this is very ugly.
+        #  this is because I require now to set the whole vector [pos (3) + orientation (4)] to the cartesian Task
         for frame in self.contacts:
             self.ti.getTask(f'contact_{frame}').setNodes(contact_nodes[frame])
-            self.ti.getTask(f'{frame}_z_task').setRef(z_ref[frame])
             self.ti.getTask(f'{frame}_z_task').setNodes(clea_nodes[frame])
-            self.ti.getTask(f'{frame}_foot_tgt_constr').setRef(np.array((xy_ref[frame])))
+
+            if z_ref[frame] is not None:
+                z_ref_mat = np.zeros([7, z_ref[frame].size])
+                z_ref_mat[2, :] = z_ref[frame]
+            else:
+                z_ref_mat = None
+
+            self.ti.getTask(f'{frame}_z_task').setRef(z_ref_mat)
             self.ti.getTask(f'{frame}_foot_tgt_constr').setNodes(contact_k[frame])
+
+            xy_ref_mat = None if xy_ref[frame] is None else [xy_ref[frame][0], xy_ref[frame][1], 0, 0, 0, 0, 1]
+            self.ti.getTask(f'{frame}_foot_tgt_constr').setRef(xy_ref_mat)
             # self.contact_constr[i].setNodes(contact_nodes[i], erasing=True)
             # self.unilat_constr[i].setNodes(unilat_nodes[i], erasing=True)  # fz > 10
             # friction_constr[i].setNodes(unilat_nodes[i], erasing=True)

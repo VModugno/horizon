@@ -89,9 +89,9 @@ class TaskInterface:
                  problem_opts: Dict[str, any],
                  model_description: str,
                  fixed_joints: List[str] = None,
-                 contacts: List[str] = None,
+                 contacts: List[str] = None,  # todo this is wrong, it should not be listed in the initialization
                  enable_torques: bool = False,
-                 is_receding: bool = True):  # todo this is wrong, it should not be listed in the initialization
+                 is_receding: bool = True):
 
         # get the model
 
