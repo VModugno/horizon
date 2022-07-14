@@ -1344,6 +1344,7 @@ class RecedingVariable(Variable):
         print(f'SHIFTED UB: {self.getUpperBounds()}')
 
 
+# TODO: should I create the parameter on all the nodes and make it active only on the active_nodes, if nodes= is specified
 class RecedingParameter(Parameter):
     def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
         super().__init__(tag, dim, nodes_array, casadi_type)
