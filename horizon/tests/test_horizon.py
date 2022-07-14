@@ -9,7 +9,7 @@ from horizon.transcriptions.transcriptor import Transcriptor
 def test_singleParameter():
     nodes = 10
     dt = 0.01
-    prb = Problem(nodes, crash_if_suboptimal=True)
+    prb = Problem(nodes)
     x = prb.createStateVariable('x', 6)
     u = prb.createInputVariable('u', 2)
     p = prb.createSingleParameter('p', 6)
@@ -36,7 +36,7 @@ def test_parameters():
     #  check if bounds are correct when setting them AFTER building the problem
     nodes = 10
     dt = 0.01
-    prb = Problem(nodes, crash_if_suboptimal=True)
+    prb = Problem(nodes)
     x = prb.createStateVariable('x', 6)
     u = prb.createInputVariable('u', 2)
     p = prb.createParameter('p', 1)
@@ -62,7 +62,7 @@ def test_singleVariable():
     #  check if bounds are correct when setting them AFTER building the problem
     nodes = 10
     dt = 0.01
-    prb = Problem(nodes, crash_if_suboptimal=True)
+    prb = Problem(nodes)
     x = prb.createStateVariable('x', 6)
     u = prb.createSingleVariable('u', 2)
     prb.setDynamics(x)
@@ -84,7 +84,7 @@ def test_constraintBounds():
     #  check if bounds are correct when setting them AFTER building the problem
     nodes = 10
     dt = 0.01
-    prb = Problem(nodes, crash_if_suboptimal=True)
+    prb = Problem(nodes)
     x = prb.createStateVariable('x', 2)
     u = prb.createSingleVariable('u', 2)
     prb.setDynamics(x)
