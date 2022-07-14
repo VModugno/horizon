@@ -4,14 +4,13 @@ solver:
   constr_viol_tol: 0.001
   max_iter: 2000
 
-constraints: ['zero_velocity_l_foot',
-              'zero_velocity_r_foot']
-#              'foot_contact_l_foot',
-#              'foot_contact_r_foot']
+constraints: ['foot_contact_l_foot',
+              'foot_contact_r_foot']
               # 'task_base_x',
               # 'final_x',
-
-costs: [ 'joint_posture', 'joint_regularization' ] # 'final_base_y', 'min_rot' # 'final_y'
+#               'zero_velocity_l_foot',
+#               'zero_velocity_r_foot'
+costs: [ 'joint_posture', 'joint_regularization'] # 'final_base_y', 'min_rot' # 'final_y'
 
 # todo to cartesian
 task_base_x:
@@ -26,6 +25,7 @@ final_base_y:
   nodes: 'final'
   weight: 1000
 # ===============================
+
 interaction_l_foot:
   type: 'Force'
   frame: 'l_sole'
