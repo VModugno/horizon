@@ -151,6 +151,13 @@ class CartesianTask(Task):
             ee_p_r = ee_p['ee_rot']
 
             frame_name = f'{self.name}_{self.frame}_pos'
+            # TODO: right now this is slightly unintuitive:
+            #  if the function is receding, there are two important concepts to stress:
+            #    - function EXISTS: the function exists only on the nodes where ALL the variables and parameters of the function are defined.
+            #    - function is ACTIVE: the function can be activated/disabled on the nodes where it exists
+            #  so, basically, given the following parameter (self.pose_tgt):
+            #    - if the parameter exists only on the node n, the whole function will only exists in the node n
+            #    - if the parameter exists on all the nodes, the whole function will exists on all the nodes
             self.pose_tgt = self.prb.createParameter(f'{frame_name}_tgt', 7) # 3 position + 4 orientation
 
             self.ref = self.pose_tgt
@@ -163,7 +170,7 @@ class CartesianTask(Task):
 
             # todo this is ugly, but for now keep it
             #   find a way to check if also rotation is involved
-            fun = cs.vertcat(fun_trans, fun_lin)
+            fun = cs.vertcat(fun_trans, fun_lin)[0, 1, 2, 3]
 
         elif self.cartesian_type == 'velocity':
             dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
@@ -215,7 +222,7 @@ class CartesianTask(Task):
             self.constr.setNodes(self.nodes, erasing=True)
             return 0
 
-        print('=============================================')
+        # print('=============================================')
 
         # core
         self.constr.setNodes(self.nodes, erasing=True)  # <==== SET NODES
