@@ -12,7 +12,7 @@ bool IterativeLQR::forward_pass(double alpha)
     _fp_res->hxx_reg = _hxx_reg;
 
     // initialize forward pass with initial state
-    _fp_res->xtrj.col(0) = _xtrj.col(0);
+    _fp_res->xtrj.col(0) = alpha*_bp_res[0].dx + state(0);
 
     // do forward pass
     for(int i = 0; i < _N; i++)
@@ -382,7 +382,8 @@ bool IterativeLQR::line_search(int iter)
     }
 
 
-    if(_fp_accepted > 5 && _enable_line_search)
+    if(_enable_line_search &&
+            _fp_res->alpha > 0.1)
     {
         reduce_regularization();
         _fp_accepted = 0;

@@ -110,7 +110,6 @@ class SolverILQR(Solver):
         x0 = self.prb.getInitialState()
         xinit = self.prb.getState().getInitialGuess()
         uinit = self.prb.getInput().getInitialGuess()
-        xinit[:, 0] = x0.flatten()
 
         # update initial guess
         self.ilqr.setStateInitialGuess(xinit)

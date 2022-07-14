@@ -196,6 +196,7 @@ private:
     void report_result(const ForwardPassResult& fpres);
     void backward_pass();
     void backward_pass_iter(int i);
+    void optimize_initial_state();
     void increase_regularization();
     void reduce_regularization();
     FeasibleConstraint handle_constraints(int i);
@@ -216,6 +217,7 @@ private:
     bool line_search(int iter);
     bool should_stop();
     void set_default_cost();
+    bool fixed_initial_state();
 
     enum DecompositionType
     {
