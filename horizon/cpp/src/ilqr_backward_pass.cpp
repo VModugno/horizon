@@ -417,6 +417,10 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
             cod.setThreshold(_svd_threshold);
             cod.compute(D);
             rank = cod.rank();
+            if(cod.maxPivot() < _svd_threshold)
+            {
+                rank = 0;
+            }
             tmp.codQ = cod.matrixQ();
             break;
 
@@ -424,6 +428,10 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
             qr.setThreshold(_svd_threshold);
             qr.compute(D);
             rank = qr.rank();
+            if(qr.maxPivot() < _svd_threshold)
+            {
+                rank = 0;
+            }
             tmp.codQ = qr.matrixQ();
             if(_log)
             {
@@ -436,6 +444,10 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
             svd.setThreshold(_svd_threshold);
             svd.compute(D, Eigen::ComputeFullU);
             rank = svd.rank();
+            if(svd.singularValues()[0] < _svd_threshold)
+            {
+                rank = 0;
+            }
             tmp.codQ = svd.matrixU();
             break;
 
