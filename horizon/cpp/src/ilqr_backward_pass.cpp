@@ -45,12 +45,33 @@ void IterativeLQR::backward_pass()
         }
     }
 
+    // compute dx[0]
+    optimize_initial_state();
+
     // here we should've treated all constraints
     if(_constraint_to_go->dim() > 0)
     {
-        std::cout << "warn at k = 0: " << _constraint_to_go->dim() <<
-                     " constraints not satified, residual inf-norm is " <<
-                     _constraint_to_go->h().lpNorm<Eigen::Infinity>() << "\n";
+        // some of them could be infeasible unless the initial
+        // satisfies them already, let's check the residual
+        // from the computed dx[0]
+        Eigen::VectorXd residual;
+        residual = _constraint_to_go->C()*_bp_res[0].dx +
+                    _constraint_to_go->h();
+
+        // infeasible warning
+        if(residual.lpNorm<1>() > 1e-8)
+        {
+
+            std::cout << "warn at k = 0: " << _constraint_to_go->dim() <<
+                         " constraints not satified, residual inf-norm is " <<
+                         residual.lpNorm<Eigen::Infinity>() << "\n";
+
+            if(_log)
+            {
+                std::cout << "C = \n" << _constraint_to_go->C().format(2) << "\n" <<
+                             "h = " << _constraint_to_go->h().transpose().format(2) << "\n";
+            }
+        }
 
     }
 
@@ -213,6 +234,110 @@ void IterativeLQR::backward_pass_iter(int i)
 
 }
 
+void IterativeLQR::optimize_initial_state()
+{
+    Eigen::VectorXd& dx = _bp_res[0].dx;
+    Eigen::VectorXd& lam = _bp_res[0].dx_lam;
+
+    // typical case: initial state is fixed
+    if(fixed_initial_state())
+    {
+        dx = _x_lb.col(0) - state(0);
+        return;
+    }
+
+    // cost
+    auto& S = _value[0].S;
+    auto& s = _value[0].s;
+
+    // constraints and bounds
+    auto C = _constraint_to_go->C();
+    auto h = _constraint_to_go->h();
+
+    // construct kkt matrix
+    TIC(construct_state_kkt);
+    Eigen::MatrixXd& K = _tmp[0].x_kkt;
+    K.resize(s.size() + h.size(), s.size() + h.size());
+    K.topLeftCorner(S.rows(), S.cols()) = S;
+    K.topRightCorner(C.cols(), C.rows()) = C.transpose();
+    K.bottomLeftCorner(C.rows(), C.cols()) = C;
+    K.bottomRightCorner(C.rows(), C.rows()).setZero();
+    TOC(construct_state_kkt);
+
+    // residual vector
+    Eigen::VectorXd k = _tmp[0].x_k0;
+    k.resize(s.size() + h.size());
+    k << -s,
+         -h;
+
+    THROW_NAN(K);
+    THROW_NAN(k);
+
+    // solve kkt equation
+    TIC(solve_state_kkt);
+    auto& lu = _tmp[0].x_lu;
+    auto& qr = _tmp[0].x_qr;
+    auto& ldlt = _tmp[0].x_ldlt;
+    Eigen::VectorXd& dx_lam = _tmp[0].dx_lam;
+
+    switch(_kkt_decomp_type)
+    {
+        case Lu:
+
+            lu.compute(K);
+            dx_lam = lu.solve(k);
+            break;
+
+        case Qr:
+
+            dx_lam = qr.solve(k);
+            break;
+
+        case Ldlt:
+
+            ldlt.compute(K);
+            dx_lam = ldlt.solve(k);
+            break;
+
+        default:
+             throw std::invalid_argument("kkt decomposition supports only qr, lu, or ldlt");
+
+    }
+    TOC(solve_state_kkt);
+    THROW_NAN(dx_lam);
+
+    if(_log)
+    {
+        std::cout << "state_kkt_err = " <<
+                     (K*dx_lam - k).lpNorm<Eigen::Infinity>() << "\n";
+    }
+
+    // save solution
+    dx = dx_lam.head(s.size());
+    lam = dx_lam.tail(h.size());
+
+    // check constraints
+    Eigen::MatrixXd Cinf = C;
+    Eigen::VectorXd hinf = h;
+
+    _constraint_to_go->clear();
+
+    for(int i = 0; i < hinf.size(); i++)
+    {
+        // feasible, do nothing
+        if(std::fabs(Cinf.row(i)*dx + hinf[i]) <
+                _constraint_violation_threshold)
+        {
+            continue;
+        }
+
+        // infeasible, add it back to constraint to go
+        // this will generate an infeasibility warning
+        _constraint_to_go->add(Cinf.row(i),
+                               hinf.row(i));
+    }
+}
+
 void IterativeLQR::add_bound_constraint(int k)
 {
     Eigen::RowVectorXd x_ei, u_ei;
@@ -221,9 +346,11 @@ void IterativeLQR::add_bound_constraint(int k)
     u_ei.setZero(_nu);
     for(int i = 0; i < _nx; i++)
     {
-        if(k == 0)
+        // if initial state is fixed, don't add
+        // constraints for it
+        if(k == 0 && fixed_initial_state())
         {
-            break;
+            continue;
         }
 
         // equality

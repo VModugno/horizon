@@ -659,6 +659,13 @@ void IterativeLQR::set_default_cost()
     setFinalCost(lf);
 }
 
+bool IterativeLQR::fixed_initial_state()
+{
+    return _x_lb.col(0).allFinite() &&
+            _x_ub.col(0).allFinite() &&
+            _x_lb.col(0).isApprox(_x_ub.col(0));
+}
+
 IterativeLQR::DecompositionType IterativeLQR::str_to_decomp_type(const std::string &dt_str)
 {
     if(dt_str == "ldlt")

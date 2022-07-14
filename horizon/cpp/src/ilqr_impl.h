@@ -338,6 +338,15 @@ struct IterativeLQR::Temporaries
     Eigen::MatrixXd rotC;
     Eigen::VectorXd roth;
 
+    // optimal state computation
+    // (note: only for initial state x[0])
+    Eigen::FullPivLU<Eigen::MatrixXd> x_lu;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> x_qr;
+    Eigen::LDLT<Eigen::MatrixXd> x_ldlt;
+    Eigen::MatrixXd x_kkt;
+    Eigen::VectorXd x_k0;
+    Eigen::VectorXd dx_lam;
+
     /* Forward pass */
     Eigen::VectorXd dx;
     Eigen::VectorXd du;
@@ -407,6 +416,11 @@ struct IterativeLQR::BackwardPassResult
     Eigen::MatrixXd Gu;
     Eigen::MatrixXd Gx;
     Eigen::VectorXd glam;
+
+    // optimal state
+    // (this is only filled at i = 0)
+    Eigen::VectorXd dx;
+    Eigen::VectorXd dx_lam;
 
     BackwardPassResult(int nx, int nu);
 };
