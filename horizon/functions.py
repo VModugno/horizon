@@ -109,6 +109,8 @@ class AbstractFunction:
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
+        # todo check for repetition in setted nodes? otherwise this does not work
+        # todo this way of checking is not robust
         if len(pos_nodes) != len(nodes):
             feas_nodes = misc.getNodesFromBinary(self._feas_nodes_array)
             raise Exception(f'You are trying to set nodes of the function where it is NOT defined. Available nodes: {feas_nodes}. If you want to change the nodes freely in the horizon, use the receding mode.')
@@ -324,6 +326,7 @@ class Function(AbstractFunction):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo check for repetition in setted nodes?
         super().setNodes(nodes, erasing)
         # usually the number of nodes stays the same, while the active nodes of a function may change.
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
@@ -414,6 +417,7 @@ class RecedingFunction(AbstractFunction):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo check for repetition in setted nodes?
         super().setNodes(nodes, erasing)
         # usually the number of nodes stays the same, while the active nodes of a function may change.
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
@@ -566,6 +570,7 @@ class AbstractBounds:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo check for repetition in setted nodes?
         # todo think about this, it depends on how the mechanics of the receding works
         if erasing:
             self.bounds['lb'][:] = -np.inf
@@ -641,6 +646,7 @@ class Constraint(Function, AbstractBounds):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo check for repetition in setted nodes?
         Function.setNodes(self, nodes, erasing)
         # todo am I wrong?
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
@@ -711,10 +717,8 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         return val_type
 
     def setNodes(self, nodes, erasing=False):
-
+        # todo check for repetition in setted nodes?
         RecedingFunction.setNodes(self, nodes, erasing)
-
-        # todo am I wrong?
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
         AbstractBounds.setNodes(self, pos_nodes, erasing)
