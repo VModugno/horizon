@@ -602,6 +602,7 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
 
     for(int i = 0; i < hinf.size(); i++)
     {
+        // i-th infeasible constraint is in the form 0x = 0
         if(std::fabs(hinf[i]) < 1e-9 &&
                 Cinf.row(i).lpNorm<Eigen::Infinity>() < 1e-9)
         {
