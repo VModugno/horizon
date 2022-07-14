@@ -55,7 +55,7 @@ q_init = {"LHipLat":       -0.0,
 problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 
 model_description = 'whole_body'
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=True)
+ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=True, is_receding=False)
 
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 ti.setTaskFromYaml('config_walk.yaml')
@@ -70,6 +70,31 @@ init_force.setRef(2, f0)
 
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
+
+
+zero_vel_lf = ti.getTask('zero_velocity_l_foot')
+zero_vel_rf = ti.getTask('zero_velocity_r_foot')
+
+# import casadi as cs
+# FK = cs.Function.deserialize(ti.kd.fk('l_sole'))
+# DFK = cs.Function.deserialize(ti.kd.frameVelocity('l_sole', ti.kd_frame))
+#
+# p_lf_start = FK(q=ti.q0)['ee_pos']
+# v_lf_start = DFK(q=ti.q0, qdot=ti.v0)['ee_vel_linear']
+#
+# FK = cs.Function.deserialize(ti.kd.fk('l_sole'))
+# DFK = cs.Function.deserialize(ti.kd.frameVelocity('l_sole', ti.kd_frame))
+#
+# rf_start = FK(q=ti.q0)['ee_pos']
+# v = DFK(q=ti.q0, qdot=ti.v0)['ee_vel_linear']
+
+# lf_ref = np.array([[0, 0, 0, 0, 0, 0, 1]]).T
+# lf_ref[:3] = lf_start
+# rf_ref = np.array([[0, 0, 0, 0, 0, 0, 1]]).T
+# rf_ref[:3] = rf_start
+# zero_vel_lf.setRef([0, 0, 0])
+# zero_vel_rf.setRef([0, 0, 0])
+
 # l_contact = ti.getTask('foot_contact_l_foot')
 # l_contact.setNodes(list(range(10, 80)))
 # ===============================================================
@@ -77,6 +102,7 @@ if solver_type != 'ilqr':
 # ===============================================================
 q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')
+a = ti.prb.getVariables('a')
 
 q.setBounds(ti.q0, ti.q0, nodes=0)
 v.setBounds(ti.v0, ti.v0, nodes=0)
@@ -88,6 +114,9 @@ forces = [ti.prb.getVariables('f_' + c) for c in contacts]
 for f in forces:
     f.setInitialGuess(f0)
 
+import casadi as cs
+ti.prb.createCost("min_q_dot", 3 * cs.sumsqr(v))
+ti.prb.createIntermediateCost("min_q_ddot", 0.01 * cs.sumsqr(a))
 # ================================================================
 # ================================================================
 # ===================== stuff to wrap ============================
@@ -109,7 +138,6 @@ rospy.loginfo("'cogimon' visualization started.")
 
 # single replay
 q_sol = solution['q']
-print(q_sol[:, ns-1])
 frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(2)}
 repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.kd_frame, ti.kd)
 repl.sleep(1.)

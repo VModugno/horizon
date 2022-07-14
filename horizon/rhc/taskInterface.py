@@ -165,6 +165,7 @@ class TaskInterface:
     def setTaskFromYaml(self, yaml_config):
 
         # todo this should probably go in each single task definition --> i don't have the info from the ti then
+        # todo this should not be here as the subtask doesn't get checked
         shortcuts = {
             'nodes': {'final': self.N, 'all': range(self.N + 1)},
             # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
