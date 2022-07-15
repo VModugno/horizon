@@ -97,10 +97,13 @@ class ActionManager:
 
         self.k0 = 0
 
+        # TODO: action manager requires some tasks from the ti. It searches them by NAME.
         self.required_tasks = dict()
         self.required_tasks['foot_contact'] = {contact: self.ti.getTask(f"foot_contact_{contact}") for contact in self.contacts}
         self.required_tasks['foot_z'] = {contact: self.ti.getTask(f"foot_z_{contact}") for contact in self.contacts}
         self.required_tasks['foot_xy'] = {contact: self.ti.getTask(f"foot_xy_{contact}") for contact in self.contacts}
+        # TODO: merge the foot_z and the foot_xy?
+        # self.required_tasks['foot_cartesian'] = {contact: self.ti.getTask(f"foot_cartesian_{contact}") for contact in self.contacts}
 
         self.task_type = self._check_required_tasks_type(['Cartesian', 'Contact'])
         self.init_constraints()
@@ -224,7 +227,6 @@ class ActionManager:
             self.z_constr[frame] = self.required_tasks['foot_z'][frame]
             self.foot_tgt_constr[frame] = self.required_tasks['foot_xy'][frame]
 
-            print(self.z_constr[frame])
 
     def setContact(self, frame, nodes):
         """

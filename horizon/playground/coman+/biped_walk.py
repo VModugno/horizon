@@ -2,6 +2,7 @@ import os
 import numpy as np
 from horizon.rhc.taskInterface import TaskInterface
 from horizon.transcriptions.transcriptor import Transcriptor
+from horizon.utils.actionManager import ActionManager
 # set up problem
 ns = 50
 tf = 10.0  # 10s
@@ -38,24 +39,24 @@ q_init = {"LHipLat":       -0.0,
           "WaistLat":      0.0,
           "WaistYaw":      0.0,
           "LShSag":        1.1717860 ,    #0.959931,   #   1.1717860
-          "LShLat":         -0.059091562,    #0.007266,   #   -0.059091562
-          "LShYaw":         -5.18150657e-02,    #-0.0,       #   -5.18150657e-02
+          "LShLat":        -0.059091562,    #0.007266,   #   -0.059091562
+          "LShYaw":        -5.18150657e-02,    #-0.0,       #   -5.18150657e-02
           "LElbj":         -1.85118,    #-1.919862,  #  -1.85118
-          "LForearmPlate":  0.0,
-          "LWrj1":          -0.523599,
-          "LWrj2":          -0.0,
-          "RShSag":          1.17128697,  #0.959931,    #   1.17128697
-          "RShLat":         6.01664139e-02,  #-0.007266,   #   6.01664139e-02
-          "RShYaw":         0.052782481,  #-0.0,        #   0.052782481
-          "RElbj":          -1.8513760,  #-1.919862,   #   -1.8513760
-          "RForearmPlate":  0.0,
-          "RWrj1":          -0.523599,
-          "RWrj2":          -0.0}
+          "LForearmPlate": 0.0,
+          "LWrj1":         -0.523599,
+          "LWrj2":         -0.0,
+          "RShSag":        1.17128697,  #0.959931,    #   1.17128697
+          "RShLat":        6.01664139e-02,  #-0.007266,   #   6.01664139e-02
+          "RShYaw":        0.052782481,  #-0.0,        #   0.052782481
+          "RElbj":         -1.8513760,  #-1.919862,   #   -1.8513760
+          "RForearmPlate": 0.0,
+          "RWrj1":         -0.523599,
+          "RWrj2":         -0.0}
 
 problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 
 model_description = 'whole_body'
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=True, is_receding=False)
+ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=True, is_receding=True)
 
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 ti.setTaskFromYaml('config_walk.yaml')
@@ -63,40 +64,27 @@ ti.setTaskFromYaml('config_walk.yaml')
 # for task in ti.task_list:
 #     print(task)
 
-f0 = np.array([0, 0, 55, 0, 0, 0])
+f0 = np.array([0, 0, 315, 0, 0, 0])
 init_force = ti.getTask('joint_regularization')
-init_force.setRef(1, f0)
 init_force.setRef(2, f0)
+init_force.setRef(3, f0)
 
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
 
-zero_vel_lf = ti.getTask('zero_velocity_l_foot')
-zero_vel_rf = ti.getTask('zero_velocity_r_foot')
-
-# import casadi as cs
-# FK = cs.Function.deserialize(ti.kd.fk('l_sole'))
-# DFK = cs.Function.deserialize(ti.kd.frameVelocity('l_sole', ti.kd_frame))
+# rot_l_sole = ti.getTask('rot_l_sole')
+# rot_r_sole = ti.getTask('rot_r_sole')
 #
-# p_lf_start = FK(q=ti.q0)['ee_pos']
-# v_lf_start = DFK(q=ti.q0, qdot=ti.v0)['ee_vel_linear']
-#
-# FK = cs.Function.deserialize(ti.kd.fk('l_sole'))
-# DFK = cs.Function.deserialize(ti.kd.frameVelocity('l_sole', ti.kd_frame))
-#
-# rf_start = FK(q=ti.q0)['ee_pos']
-# v = DFK(q=ti.q0, qdot=ti.v0)['ee_vel_linear']
+# rot_l_sole.setRef([0, 0, 0, 0, 0, 0, 1])
+# rot_r_sole.setRef([0, 0, 0, 0, 0, 0, 1])
 
-# lf_ref = np.array([[0, 0, 0, 0, 0, 0, 1]]).T
-# lf_ref[:3] = lf_start
-# rf_ref = np.array([[0, 0, 0, 0, 0, 0, 1]]).T
-# rf_ref[:3] = rf_start
-# zero_vel_lf.setRef([0, 0, 0])
-# zero_vel_rf.setRef([0, 0, 0])
-
-# l_contact = ti.getTask('foot_contact_l_foot')
-# l_contact.setNodes(list(range(10, 80)))
+opts = dict()
+am = ActionManager(ti, opts)
+am._walk([10, 200], [0, 1])
+# todo: horrible API
+# l_contact.setNodes(list(range(5)) + list(range(15, 50)))
+# r_contact.setNodes(list(range(0, 25)) + list(range(35, 50)))
 # ===============================================================
 # ===============================================================
 # ===============================================================
@@ -114,9 +102,8 @@ forces = [ti.prb.getVariables('f_' + c) for c in contacts]
 for f in forces:
     f.setInitialGuess(f0)
 
-import casadi as cs
-ti.prb.createCost("min_q_dot", 3 * cs.sumsqr(v))
-ti.prb.createIntermediateCost("min_q_ddot", 0.01 * cs.sumsqr(a))
+
+ti.prb.createFinalConstraint('final_v', v)
 # ================================================================
 # ================================================================
 # ===================== stuff to wrap ============================
@@ -124,9 +111,6 @@ ti.prb.createIntermediateCost("min_q_ddot", 0.01 * cs.sumsqr(a))
 # ================================================================
 import subprocess, rospy
 from horizon.ros import replay_trajectory
-
-# todo
-# ptgt.assign(ptgt_final, nodes=ns)
 
 solver_bs, solver_rti = ti.getSolver()
 solver_bs.solve()
@@ -154,6 +138,7 @@ if plot_sol:
     hplt = plotter.PlotterHorizon(ti.prb, solution)
     hplt.plotVariables([elem.getName() for elem in forces], show_bounds=False, gather=2, legend=False)
     hplt.plotFunction('dynamics', show_bounds=True, legend=True, dim=range(6))
+    hplt.plotVariable('v', show_bounds=True, legend=True, dim=range(6))
 
     # some custom plots to visualize the robot motion
     fig = plt.figure()
@@ -209,3 +194,29 @@ if plot_sol:
 #     repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
 #     repl.publish_joints(solution['q'][:, 0])
 #     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+
+
+
+
+# todo this is important: what if I want to get the current position of a CartesianTask? do it!
+# import casadi as cs
+# FK = cs.Function.deserialize(ti.kd.fk('l_sole'))
+# DFK = cs.Function.deserialize(ti.kd.frameVelocity('l_sole', ti.kd_frame))
+#
+# p_lf_start = FK(q=ti.q0)['ee_pos']
+# v_lf_start = DFK(q=ti.q0, qdot=ti.v0)['ee_vel_linear']
+#
+# FK = cs.Function.deserialize(ti.kd.fk('l_sole'))
+# DFK = cs.Function.deserialize(ti.kd.frameVelocity('l_sole', ti.kd_frame))
+#
+# rf_start = FK(q=ti.q0)['ee_pos']
+# v = DFK(q=ti.q0, qdot=ti.v0)['ee_vel_linear']
+
+# lf_ref = np.array([[0, 0, 0, 0, 0, 0, 1]]).T
+# lf_ref[:3] = lf_start
+# rf_ref = np.array([[0, 0, 0, 0, 0, 0, 1]]).T
+# rf_ref[:3] = rf_start
+# zero_vel_lf.setRef([0, 0, 0])
+# zero_vel_rf.setRef([0, 0, 0])
+
+# l_contact = ti.getTask('foot_contact_l_foot')
