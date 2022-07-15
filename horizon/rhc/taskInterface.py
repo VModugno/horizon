@@ -66,8 +66,8 @@ class ModelDescription:
         # underactuation constraints
         if self.contacts:
             id_fn = kin_dyn.InverseDynamics(self.kd, self.contacts, self.kd_frame)
-            tau = id_fn.call(self.q, self.v, self.a, self.fmap)
-            self.prb.createIntermediateConstraint('dynamics', tau[:6])
+            self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
+            self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
         # else:
         #     id_fn = kin_dyn.InverseDynamics(self.kd)
 
@@ -234,6 +234,9 @@ class TaskInterface:
                 self.model.setContactFrame(contact_frame)
 
             task_description_mod['force'] = self.prb.getVariables('f_' + task_description_mod['frame'])
+
+        if task_description_mod['type'] == 'TorqueLimits':
+            task_description_mod['var'] = self.model.tau
 
         return task_description_mod
 
