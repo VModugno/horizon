@@ -164,21 +164,11 @@ class TaskInterface:
     # a possible method could read from yaml and create the task list
     def setTaskFromYaml(self, yaml_config):
 
-        # todo this should probably go in each single task definition --> i don't have the info from the ti then
-        # todo this should not be here as the subtask doesn't get checked
-        shortcuts = {
-            'nodes': {'final': self.N, 'all': range(self.N + 1)},
-            # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
-            # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
-        }
-
         self.task_desrc_list, self.non_active_task, self.solver_options = YamlParser.load(yaml_config)
-
         self.setSolverOptions(self.solver_options)
 
         # todo: this should be updated everytime a task is added
         for task_descr in self.task_desrc_list:
-            task_descr_resolved = YamlParser.resolve(task_descr, shortcuts)
 
             if 'weight' in task_descr and isinstance(task_descr['weight'], dict):
                 weight_dict = task_descr['weight']
@@ -195,7 +185,7 @@ class TaskInterface:
                     for f in self.model.fmap.values():
                         weight_dict[f.getName()] = weight_force
 
-            self.setTaskFromDict(task_descr_resolved)
+            self.setTaskFromDict(task_descr)
 
 
     def setTaskFromDict(self, task_description):
@@ -207,7 +197,15 @@ class TaskInterface:
 
     def generateTaskFromDict(self, task_description):
 
-        task_description_with_subtasks = self._handle_subtask(task_description)
+        # todo this should probably go in each single task definition --> i don't have the info from the ti then
+        shortcuts = {
+            'nodes': {'final': self.N, 'all': range(self.N + 1)},
+            # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
+            # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
+        }
+        task_descr_resolved = YamlParser.resolve(task_description, shortcuts)
+
+        task_description_with_subtasks = self._handle_subtask(task_descr_resolved)
         task_specific = self.generateTaskContext(task_description_with_subtasks)
 
         task = task_factory.create(task_specific)
