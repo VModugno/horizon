@@ -102,6 +102,8 @@ import subprocess, rospy
 from horizon.ros import replay_trajectory
 
 # todo
+
+final_base_x.setRef([0.5, 0, 0, 0, 0, 0, 1])
 # ptgt.assign(ptgt_final, nodes=ns)
 
 solver_bs, solver_rti = ti.getSolver()

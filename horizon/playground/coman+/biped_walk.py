@@ -61,9 +61,6 @@ ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, con
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 ti.setTaskFromYaml('config_walk.yaml')
 
-# for task in ti.task_list:
-#     print(task)
-
 f0 = np.array([0, 0, 315, 0, 0, 0])
 init_force = ti.getTask('joint_regularization')
 init_force.setRef(2, f0)
@@ -72,19 +69,28 @@ init_force.setRef(3, f0)
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
+final_base_x = ti.getTask('final_base_x')
+final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
-# rot_l_sole = ti.getTask('rot_l_sole')
-# rot_r_sole = ti.getTask('rot_r_sole')
-#
-# rot_l_sole.setRef([0, 0, 0, 0, 0, 0, 1])
-# rot_r_sole.setRef([0, 0, 0, 0, 0, 0, 1])
 
 opts = dict()
 am = ActionManager(ti, opts)
-am._walk([10, 200], [0, 1])
+am._walk([10, 50], [0, 1])
+
 # todo: horrible API
 # l_contact.setNodes(list(range(5)) + list(range(15, 50)))
 # r_contact.setNodes(list(range(0, 25)) + list(range(35, 50)))
+
+def compute_cop(frame): # xmin, xmax, ymin, ymax
+    wrench = ti.model.fmap[frame]
+    f_min = wrench[3:5] - wrench[2] * [-0.1, -0.2]
+    f_max = wrench[3:5] - wrench[2] * [0.1, 0.2]
+    ti.prb.createIntermediateConstraint(f'cop_{frame}_min', f_min)  # [11, 12, 17, 18]
+    ti.prb.createIntermediateConstraint(f'cop_{frame}_max', f_max)  # [11, 12, 17, 18]
+
+
+compute_cop('l_sole')
+compute_cop('r_sole')
 # ===============================================================
 # ===============================================================
 # ===============================================================
@@ -103,7 +109,8 @@ for f in forces:
     f.setInitialGuess(f0)
 
 
-ti.prb.createFinalConstraint('final_v', v)
+# todo how to add?
+# ti.prb.createFinalConstraint('final_v', v)
 # ================================================================
 # ================================================================
 # ===================== stuff to wrap ============================
