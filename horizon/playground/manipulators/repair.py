@@ -11,7 +11,69 @@ from horizon.utils.tf_broadcaster import TFBroadcaster
 urdf_path = rospkg.RosPack().get_path('repair_urdf') + '/urdf/repair.urdf'
 urdf = open(urdf_path, 'r').read()
 
-solver_type = 'ipopt' # ilqr
+
+def add_cartesian_tasks_vel():
+    cart_vel_1 = {'type': 'Cartesian',
+                  'distal_link': 'arm_1_tcp',
+                  'name': 'arm_1_tcp_ee_vel_world',
+                  'indices': [0, 1, 2, 3, 4, 5],
+                  'nodes': range(1, N),
+                  'cartesian_type': 'velocity'}
+
+    cart_vel_2 = {'type': 'Cartesian',
+                  'distal_link': 'arm_2_tcp',
+                  'base_link': 'arm_1_tcp',
+                  'name': 'arm_2_tcp_ee_vel_rel',
+                  'indices': [0, 1, 2, 3, 4, 5],
+                  'nodes': range(1, N),
+                  'cartesian_type': 'velocity'}
+
+    ti.setTaskFromDict(cart_vel_1)
+    ti.setTaskFromDict(cart_vel_2)
+    ee_cart_1 = ti.getTask('arm_1_tcp_ee_vel_world')
+    ee_cart_2 = ti.getTask('arm_2_tcp_ee_vel_rel')
+
+    goal_vec_1 = [0., 0., 0.1, 0, 0, 0]
+    goal_vec_2 = [0, 0., 0, 0, 0, 0]
+
+    ee_cart_1.setRef(goal_vec_1)
+    ee_cart_2.setRef(goal_vec_2)
+
+
+def add_cartesian_tasks_pos():
+    cart_1 = {'type': 'Cartesian',
+              'distal_link': 'arm_1_tcp',
+              'name': 'arm_1_tcp_ee_world',
+              'indices': [0, 1, 2, 3, 4, 5],
+              'nodes': [N]}
+
+    cart_2 = {'type': 'Cartesian',
+              'distal_link': 'arm_2_tcp',
+              'base_link': 'arm_1_tcp',
+              'name': 'arm_2_tcp_ee_rel',
+              'indices': [0, 1, 2, 3, 4, 5],
+              'nodes': [N]}
+
+    ti.setTaskFromDict(cart_1)
+    ti.setTaskFromDict(cart_2)
+    ee_cart_1 = ti.getTask('arm_1_tcp_ee_world')
+    ee_cart_2 = ti.getTask('arm_2_tcp_ee_rel')
+
+    # goal_vec = [0, 0, 0., 0, 0, 0, 1]
+    goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
+    # goal_vec = [0.5, -0.2, 0.5, 0, 0.7071068, 0, 0.7071068]
+    goal_vec_1 = [0., 0.3, 0., 0, 0.7071068, 0, 0.7071068]  # 90deg on the y
+    goal_vec_1 = [0., 0.3, 0., 0, 0, 0.3826834, 0.9238795]  # 45deg on the x
+    # goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
+
+    tf = TFBroadcaster()
+    tf.publish('arm_1_tcp_ee_goal', goal_vec)
+
+    ee_cart_1.setRef(goal_vec)
+    ee_cart_2.setRef(goal_vec_1)
+
+
+solver_type = 'ipopt'  # ilqr
 transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
 transcription_opts = dict(integrator='RK4')  # integrator used by the multiple_shooting
 
@@ -23,7 +85,6 @@ problem_opts = {'ns': N, 'tf': tf, 'dt': dt}
 
 model_description = 'whole_body'
 q_init = {}
-
 
 q_init[f'arm_1_joint_1'] = 0.
 q_init[f'arm_1_joint_2'] = -0.76
@@ -42,31 +103,15 @@ q_init[f'arm_2_joint_7'] = 0.
 
 ti = TaskInterface(urdf, q_init, None, problem_opts, model_description, is_receding=False)
 
-cart = {'type': 'Cartesian',
-        'frame': 'arm_1_tcp',
-        'name': 'arm_1_tcp_ee',
-        'indices': [0, 1, 2, 3, 5],
-        'nodes': [N]}
+# cartesian_task
+add_cartesian_tasks_vel()
 
-ti.setTaskFromDict(cart)
-ee_cart = ti.getTask('arm_1_tcp_ee')
-
-goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
-# goal_vec = [0.5, -0.2, 0.5, 0, 0.7071068, 0, 0.7071068]
-# goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
-
-tf = TFBroadcaster()
-tf.publish('arm_1_tcp_ee_goal', goal_vec)
-
-ee_cart.setRef(goal_vec)
 q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')
+a = ti.prb.getVariables('a')
 
-
-# fk_tcp = cs.Function.deserialize(ti.kd.fk('arm_1_tcp'))
-# ee_pos = fk_tcp(q=q)['ee_pos']
-# ee_des = [0, 0, 1]
-# ti.prb.createFinalConstraint('ee_tgt', ee_pos - ee_des)
+# TODO: being the only cost, why changing its weight changes also the solution??
+ti.prb.createIntermediateResidual('min_q', a)
 
 q.setBounds(ti.q0, ti.q0, nodes=0)
 v.setBounds(ti.v0, ti.v0, nodes=0)
@@ -97,13 +142,12 @@ opts = {'ipopt.tol': 0.001,
         'ipopt.linear_solver': 'ma57',
         }
 
-
 solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
 
 try:
-        solver_bs.set_iteration_callback()
+    solver_bs.set_iteration_callback()
 except:
-        pass
+    pass
 
 solver_bs.solve()
 solution = solver_bs.getSolutionDict()

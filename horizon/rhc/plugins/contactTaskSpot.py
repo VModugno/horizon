@@ -22,7 +22,7 @@ class ContactTaskSpot(Task):
         super().__init__(*args, **kwargs)
 
         self.force = self.interaction_task.f
-        self.frame = self.cartesian_task.frame
+        self.frame = self.cartesian_task.distal_link
 
         # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force
         # self.force = self.prb.getVariables('f_' + self.frame)

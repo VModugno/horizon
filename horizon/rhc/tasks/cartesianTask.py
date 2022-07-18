@@ -6,10 +6,11 @@ from scipy.spatial.transform import Rotation as scipy_rot
 
 # todo name is useless
 class CartesianTask(Task):
-    def __init__(self, frame, cartesian_type=None, *args, **kwargs):
+    def __init__(self, distal_link, base_link=None, cartesian_type=None, *args, **kwargs):
 
-        self.frame = frame
+        self.distal_link = distal_link
 
+        self.base_link = 'world' if base_link is None else base_link
         self.cartesian_type = 'position' if cartesian_type is None else cartesian_type
 
         super().__init__(*args, **kwargs)
@@ -120,7 +121,8 @@ class CartesianTask(Task):
         R_err = R_0 @ R_1.T
         M_err = np.eye(3) - R_err
 
-        rot_err = cs.trace(M_err)
+        # rot_err = cs.trace(M_err)
+        rot_err =cs.vertcat(M_err[0, 0], M_err[1, 1], M_err[2, 2])
 
         return rot_err
 
@@ -145,12 +147,23 @@ class CartesianTask(Task):
         # todo the indices here represent the position and the orientation error
         # kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
         if self.cartesian_type == 'position':
-            fk = cs.Function.deserialize(self.kin_dyn.fk(self.frame))
-            ee_p = fk(q=q)
-            ee_p_t = ee_p['ee_pos']
-            ee_p_r = ee_p['ee_rot']
 
-            frame_name = f'{self.name}_{self.frame}_pos'
+            # TODO: make this automatic
+            fk_distal = cs.Function.deserialize(self.kin_dyn.fk(self.distal_link))
+            ee_p_distal = fk_distal(q=q)
+            ee_p_distal_t = ee_p_distal['ee_pos']
+            ee_p_distal_r = ee_p_distal['ee_rot']
+
+            fk_base = cs.Function.deserialize(self.kin_dyn.fk(self.base_link))
+            ee_p_base = fk_base(q=q)
+            ee_p_base_t = ee_p_base['ee_pos']
+            ee_p_base_r = ee_p_base['ee_rot']
+
+            ee_p_rel = ee_p_distal_t - ee_p_base_t
+            ee_r_rel = ee_p_base_r.T @ ee_p_distal_r
+
+
+            frame_name = f'{self.name}_{self.distal_link}_pos'
             # TODO: right now this is slightly unintuitive:
             #  if the function is receding, there are two important concepts to stress:
             #    - function EXISTS: the function exists only on the nodes where ALL the variables and parameters of the function are defined.
@@ -162,36 +175,42 @@ class CartesianTask(Task):
 
             self.ref = self.pose_tgt
 
-            fun_trans = ee_p_t - self.pose_tgt[:3]
+            fun_trans = ee_p_rel - self.pose_tgt[:3]
             # todo check norm_2 with _compute_orientation_error2
 
             # fun_lin = cs.norm_2(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pose_tgt[3:])))
-            fun_lin = self._compute_orientation_error2(ee_p_r, self._quat_to_rot(self.pose_tgt[3:]))
-            # ee_p_r_component = ee_p_r[:, [0,1]]
-            # ee_tgt_component = self._quat_to_rot(self.pose_tgt[3:])[:, [0,1]]
-            # fun_lin = self._compute_orientation_error(ee_p_r_component, ee_tgt_component)
+            fun_lin = self._compute_orientation_error2(ee_r_rel, self._quat_to_rot(self.pose_tgt[3:]))
+            # fun_lin = self._compute_orientation_error(ee_r_rel, self._quat_to_rot(self.pose_tgt[3:]))
 
             # todo this is ugly, but for now keep it
             #   find a way to check if also rotation is involved
             fun = cs.vertcat(fun_trans, fun_lin)[self.indices]
 
         elif self.cartesian_type == 'velocity':
-            dfk = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.frame, self.kd_frame))
-            ee_v_t = dfk(q=q, qdot=v)['ee_vel_linear']
-            ee_v_r = dfk(q=q, qdot=v)['ee_vel_angular']
-            ee_v = cs.vertcat(ee_v_t, ee_v_r)
+            dfk_distal = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.distal_link, self.kd_frame))
+            ee_v_distal_t = dfk_distal(q=q, qdot=v)['ee_vel_linear']
+            ee_v_distal_r = dfk_distal(q=q, qdot=v)['ee_vel_angular']
 
-            frame_name = f'{self.name}_{self.frame}_vel'
+            dfk_base = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.base_link, self.kd_frame))
+            ee_v_base_t = dfk_base(q=q, qdot=v)['ee_vel_linear']
+            ee_v_base_r = dfk_base(q=q, qdot=v)['ee_vel_angular']
+
+            ee_v_distal = cs.vertcat(ee_v_distal_t, ee_v_distal_r)
+            ee_v_base = cs.vertcat(ee_v_base_t, ee_v_base_r)
+
+            ee_rel = ee_v_distal - ee_v_base
+
+            frame_name = f'{self.name}_{self.distal_link}_vel'
             self.vel_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
             self.ref = self.vel_tgt
-            fun = ee_v[self.indices] - self.vel_tgt
+            fun = ee_rel[self.indices] - self.vel_tgt
 
         elif self.cartesian_type == 'acceleration':
-            ddfk = cs.Function.deserialize(self.kin_dyn.frameAcceleration(self.frame, self.kd_frame))
+            ddfk = cs.Function.deserialize(self.kin_dyn.frameAcceleration(self.distal_link, self.kd_frame))
             ee_a_t = ddfk(q=q, qdot=v)['ee_acc_linear']
             ee_a_r = ddfk(q=q, qdot=v)['ee_acc_angular']
             ee_a = cs.vertcat(ee_a_t, ee_a_r)
-            frame_name = f'{self.name}_{self.frame}_acc'
+            frame_name = f'{self.name}_{self.distal_link}_acc'
             self.acc_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
             self.ref = self.acc_tgt
             fun = ee_a[self.indices] - self.acc_tgt

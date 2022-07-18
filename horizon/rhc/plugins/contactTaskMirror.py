@@ -18,7 +18,7 @@ class ContactTaskMirror(Task):
         super().__init__(*args, **kwargs)
 
         # getForce() getFrame()
-        self.frame = self._zero_vel_constr.frame
+        self.frame = self._zero_vel_constr.distal_link
         self.force = self._force.f
 
 
