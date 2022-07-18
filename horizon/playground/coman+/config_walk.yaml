@@ -4,15 +4,16 @@ solver:
   constr_viol_tol: 0.001
   max_iter: 2000
 
-constraints: [final_base_x,
-              foot_contact_l_sole,
-              foot_contact_r_sole,
-              foot_z_l_sole,
-              foot_xy_l_sole,
-              foot_z_r_sole,
-              foot_xy_r_sole,
-              rot_l_sole,
-              rot_r_sole
+constraints: [final_base_x,           # required to set x-target for the walk
+#              final_base_y,
+              foot_contact_l_sole,    # required from the ActionManager
+              foot_contact_r_sole,    # required from the ActionManager
+              foot_z_l_sole,          # required from the ActionManager
+              foot_xy_l_sole,         # required from the ActionManager
+              foot_z_r_sole,          # required from the ActionManager
+              foot_xy_r_sole,         # required from the ActionManager
+              rot_l_sole,              # keep the sole straight
+              rot_r_sole               # keep the sole straight
               ]
               # task_base_x,
               # final_x,
@@ -97,8 +98,8 @@ joint_regularization:
   type: Regularization
   nodes: all
   weight:
-    velocity: 1.
-    acceleration: 0.1 # 0.01
+#    velocity: 1.
+    acceleration: .1 # 0.01
     force: 0.01 # todo <----- how to do? if there are more forces...
 
 foot_z_l_sole:
