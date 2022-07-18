@@ -2,6 +2,7 @@ import os
 import numpy as np
 from horizon.rhc.taskInterface import TaskInterface
 from horizon.transcriptions.transcriptor import Transcriptor
+import random
 from horizon.utils.actionManager import ActionManager
 # set up problem
 ns = 50
@@ -20,7 +21,11 @@ os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
 urdf = open(urdffile, 'r').read()
 
-contacts = ['l_sole', 'r_sole']
+# contacts = ['l_sole', 'r_sole']
+contacts = ['l_foot_upper_right_link', 'l_foot_upper_left_link',
+            'l_foot_lower_right_link',  # 'l_foot_lower_left_link',
+            'r_foot_upper_right_link', 'r_foot_upper_left_link',
+            'r_foot_lower_right_link'] # 'r_foot_lower_left_link'
 
 base_init = np.array([0., 0., 0.96, 0., 0.0, 0.0, 1.])
 
@@ -56,15 +61,21 @@ q_init = {"LHipLat":       -0.0,
 problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 
 model_description = 'whole_body'
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=True, is_receding=True)
+ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=False, is_receding=True)
 
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
-ti.setTaskFromYaml('config_walk.yaml')
+ti.setTaskFromYaml('config_walk_forces.yaml')
 
-f0 = np.array([0, 0, 315, 0, 0, 0])
+f0 = np.array([0, 0, 75])
 init_force = ti.getTask('joint_regularization')
 init_force.setRef(1, f0)
 init_force.setRef(2, f0)
+init_force.setRef(3, f0)
+init_force.setRef(4, f0)
+init_force.setRef(5, f0)
+init_force.setRef(6, f0)
+# init_force.setRef(7, f0)
+# init_force.setRef(8, f0)
 
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
@@ -74,32 +85,54 @@ if solver_type != 'ilqr':
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
+def compute_n_forces(contacts, fixed_point=0, ignored_point=4):
+    n_c = 4
+    c_0 = contacts[fixed_point]
+    c_ignored = contacts[ignored_point]
+
+    # generate cartesian Tasks for each contact frame
+    for c_i in contacts:
+        c_task = {'type': 'Cartesian',
+                  'name': f'rel_vel_{c_i}',
+                  'indices': [0, 1],
+                  'frame': c_i}
+
+        ti.setTaskFromDict(c_task)
+
+    c_0_task = ti.getTask(f'rel_vel_{c_0}')
+
+    c_rel_list = contacts.copy()
+    c_rel_list.remove(c_0)
+    c_rel_list.remove(c_ignored)
+
+    print(c_rel_list)
+
+    for c_rel in c_rel_list:
+        c_rel_task = ti.getTask(f'rel_vel_{c_rel}')
+        c_rel_task.setRef(c_0_task.)
 
 
-opts = dict()
-am = ActionManager(ti, opts)
-am._walk([10, 40], [0, 1])
+compute_n_forces(contacts)
+exit()
+# for contact in contacts:
+print(ti.prb.getVariables().keys())
+# f_l_foot_upper_right_link
+# f_l_foot_upper_left_link
+# f_l_foot_lower_right_link
+# f_r_foot_upper_right_link
+# f_r_foot_upper_left_link
+# f_r_foot_lower_right_link
+ti.prb.getVariables('f_l_foot_upper_right_link')
 
-# todo: horrible API
-# l_contact.setNodes(list(range(5)) + list(range(15, 50)))
-# r_contact.setNodes(list(range(0, 25)) + list(range(35, 50)))
+for contact in contacts:
+    ti.prb.getVariables()
+exit()
+# opts = dict()
+# am = ActionManager(ti, opts)
+# am._walk([10, 40], [0, 1])
 
-def compute_cop(frame, xmin, xmax, ymin, ymax):
-    wrench = ti.model.fmap[frame]
 
-    M_cop = np.zeros([4, 6])
-    M_cop[:, 2] = [xmin, -xmax, ymin, -ymax]
-    M_cop[[0, 1], 4] = [1, -1]
-    M_cop[[2, 3], 3] = [-1, 1]
-    f_cop = M_cop @ wrench
 
-    cop_cnsrt = ti.prb.createIntermediateConstraint(f'cop_{frame}', f_cop)
-    cop_cnsrt.setLowerBounds(-np.inf * np.ones(4))
-
-sole_dim = [-0.2, 0.2, -0.1, 0.1]
-# sole_dim = [-0.05, 0.05, -0.02, 0.02]
-compute_cop('l_sole', sole_dim[0], sole_dim[1], sole_dim[2], sole_dim[3])
-compute_cop('r_sole', sole_dim[0], sole_dim[1], sole_dim[2], sole_dim[3])
 # ===============================================================
 # ===============================================================
 # ===============================================================
@@ -118,7 +151,7 @@ for f in forces:
     f.setInitialGuess(f0)
 
 
-replay_motion = False
+replay_motion = True
 plot_sol = not replay_motion
 
 # todo how to add?
@@ -163,7 +196,7 @@ if plot_sol:
     # some custom plots to visualize the robot motion
     fig = plt.figure()
     fig.suptitle('Contacts')
-    gs = gridspec.GridSpec(1, 2)
+    gs = gridspec.GridSpec(2, 4)
     i = 0
     for contact in contacts:
         ax = fig.add_subplot(gs[i])

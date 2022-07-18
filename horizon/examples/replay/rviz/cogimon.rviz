@@ -6,7 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /WrenchStamped2
+        - /WrenchStamped5
+        - /WrenchStamped6
+        - /WrenchStamped8
       Splitter Ratio: 0.5
     Tree Height: 746
   - Class: rviz/Selection
@@ -373,7 +375,7 @@ Visualization Manager:
       History Length: 1
       Name: WrenchStamped
       Queue Size: 10
-      Topic: /r_sole_forces
+      Topic: /l_foot_lower_left_link_forces
       Torque Arrow Scale: 2
       Torque Color: 204; 204; 51
       Unreliable: false
@@ -388,7 +390,97 @@ Visualization Manager:
       History Length: 1
       Name: WrenchStamped
       Queue Size: 10
-      Topic: /l_sole_forces
+      Topic: /l_foot_lower_right_link_forces
+      Torque Arrow Scale: 2
+      Torque Color: 204; 204; 51
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Arrow Width: 0.5
+      Class: rviz/WrenchStamped
+      Enabled: true
+      Force Arrow Scale: 0.03999999910593033
+      Force Color: 204; 51; 51
+      Hide Small Values: true
+      History Length: 1
+      Name: WrenchStamped
+      Queue Size: 10
+      Topic: /l_foot_upper_left_link_forces
+      Torque Arrow Scale: 2
+      Torque Color: 204; 204; 51
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Arrow Width: 0.5
+      Class: rviz/WrenchStamped
+      Enabled: true
+      Force Arrow Scale: 0.03999999910593033
+      Force Color: 204; 51; 51
+      Hide Small Values: true
+      History Length: 1
+      Name: WrenchStamped
+      Queue Size: 10
+      Topic: /l_foot_upper_right_link_forces
+      Torque Arrow Scale: 2
+      Torque Color: 204; 204; 51
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Arrow Width: 0.5
+      Class: rviz/WrenchStamped
+      Enabled: true
+      Force Arrow Scale: 0.03999999910593033
+      Force Color: 204; 51; 51
+      Hide Small Values: true
+      History Length: 1
+      Name: WrenchStamped
+      Queue Size: 10
+      Topic: /r_foot_lower_left_link_forces
+      Torque Arrow Scale: 2
+      Torque Color: 204; 204; 51
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Arrow Width: 0.5
+      Class: rviz/WrenchStamped
+      Enabled: true
+      Force Arrow Scale: 0.03999999910593033
+      Force Color: 204; 51; 51
+      Hide Small Values: true
+      History Length: 1
+      Name: WrenchStamped
+      Queue Size: 10
+      Topic: /r_foot_lower_right_link_forces
+      Torque Arrow Scale: 2
+      Torque Color: 204; 204; 51
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Arrow Width: 0.5
+      Class: rviz/WrenchStamped
+      Enabled: true
+      Force Arrow Scale: 0.03999999910593033
+      Force Color: 204; 51; 51
+      Hide Small Values: true
+      History Length: 1
+      Name: WrenchStamped
+      Queue Size: 10
+      Topic: /r_foot_upper_left_link_forces
+      Torque Arrow Scale: 2
+      Torque Color: 204; 204; 51
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Arrow Width: 0.5
+      Class: rviz/WrenchStamped
+      Enabled: true
+      Force Arrow Scale: 0.03999999910593033
+      Force Color: 204; 51; 51
+      Hide Small Values: true
+      History Length: 1
+      Name: WrenchStamped
+      Queue Size: 10
+      Topic: /r_foot_upper_right_link_forces
       Torque Arrow Scale: 2
       Torque Color: 204; 204; 51
       Unreliable: false
@@ -437,9 +529,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.05039868503808975
+      Pitch: 0.2853987216949463
       Target Frame: <Fixed Frame>
-      Yaw: 6.168588638305664
+      Yaw: 5.093585014343262
     Saved: ~
 Window Geometry:
   Displays:
