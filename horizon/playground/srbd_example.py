@@ -373,7 +373,7 @@ Creates HORIZON problem.
 These parameters can not be tuned at the moment.
 """
 ns = 20
-prb = problem.Problem(ns)
+prb = problem.Problem(ns, casadi_type=cs.SX)
 T = 1.
 
 
