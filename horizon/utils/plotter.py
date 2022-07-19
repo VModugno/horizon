@@ -35,13 +35,14 @@ class PlotterHorizon:
 
     def _plotVar(self, val, ax, abstract_var, markers, show_bounds, legend, dim):
         var_dim_select = set(range(val.shape[0]))
+        nodes_var = val.shape[1]
         if dim is not None:
             if not set(dim).issubset(var_dim_select):
                 raise Exception('Wrong selected dimension.')
             else:
                 var_dim_select = dim
 
-        if val.shape[1] == 1:
+        if nodes_var == 1:
             markers = True
 
         baseline = None
@@ -54,22 +55,20 @@ class PlotterHorizon:
                 g = random.random()
                 color = (r, g, b)
 
-                for j in range(val.shape[1]-1):
+                for j in range(nodes_var-1):
                     # ax.plot(np.array(range(val.shape[1])), val[i, :], linewidth=0.1, color=color)
-                    ax.plot(range(val.shape[1])[j:j + 2], [val[i, j]] * 2, color=color)
-                    ax.plot(np.array(range(val.shape[1])), val[i, :], linewidth=0.1, color=color, label='_nolegend_')
+                    # ax.plot(range(val.shape[1])[j:j + 2], [val[i, j]] * 2, color=color)
+                    ax.step(np.array(range(nodes_var)), val[i, range(nodes_var)], linewidth=0.1, color=color, label='_nolegend_')
 
                     if show_bounds:
                         lb, ub = abstract_var.getBounds()
-                        lb_mat = np.reshape(lb, (abstract_var.getDim(), len(abstract_var.getNodes())), order='F')
-                        ub_mat = np.reshape(ub, (abstract_var.getDim(), len(abstract_var.getNodes())), order='F')
 
                         if markers:
-                            ax.plot(range(val.shape[1]), lb_mat[i, :], marker="x", markersize=3, linestyle='dotted',linewidth=1, color=color)
-                            ax.plot(range(val.shape[1]), ub_mat[i, :], marker="x", markersize=3, linestyle='dotted',linewidth=1, color=color)
+                            ax.plot(range(nodes_var), lb[i, range(nodes_var)], marker="x", markersize=3, linestyle='dotted',linewidth=1, color=color)
+                            ax.plot(range(nodes_var), ub[i, range(nodes_var)], marker="x", markersize=3, linestyle='dotted',linewidth=1, color=color)
                         else:
-                            ax.plot(range(val.shape[1]), lb_mat[i, :], linestyle='dotted')
-                            ax.plot(range(val.shape[1]), ub_mat[i, :], linestyle='dotted')
+                            ax.plot(range(nodes_var), lb[i, range(nodes_var)], linestyle='dotted')
+                            ax.plot(range(nodes_var), ub[i, range(nodes_var)], linestyle='dotted')
 
                 if legend:
                     legend_list.append(f'{abstract_var.getName()}_{i}')
@@ -79,10 +78,10 @@ class PlotterHorizon:
         else:
             for i in var_dim_select:
                 if markers:
-                    baseline, = ax.plot(range(val.shape[1]), val[i, :], marker="o", markersize=2)
+                    baseline, = ax.plot(range(nodes_var), val[i, :], marker="o", markersize=2)
 
                 else:
-                    baseline, = ax.plot(range(val.shape[1]), val[i, :])
+                    baseline, = ax.plot(range(nodes_var), val[i, :])
 
                 if show_bounds:
                     lb, ub = abstract_var.getBounds()
@@ -90,11 +89,11 @@ class PlotterHorizon:
                     ub_mat = np.reshape(ub, (abstract_var.getDim(), len(abstract_var.getNodes())), order='F')
 
                     if markers:
-                        ax.plot(range(val.shape[1]), lb_mat[i, :], marker="x", markersize=3, linestyle='dotted', linewidth=1, color=baseline.get_color())
-                        ax.plot(range(val.shape[1]), ub_mat[i, :], marker="x", markersize=3, linestyle='dotted', linewidth=1, color=baseline.get_color())
+                        ax.plot(range(nodes_var), lb_mat[i, :], marker="x", markersize=3, linestyle='dotted', linewidth=1, color=baseline.get_color())
+                        ax.plot(range(nodes_var), ub_mat[i, :], marker="x", markersize=3, linestyle='dotted', linewidth=1, color=baseline.get_color())
                     else:
-                        ax.plot(range(val.shape[1]), lb_mat[i, :], linestyle='dotted')
-                        ax.plot(range(val.shape[1]), ub_mat[i, :], linestyle='dotted')
+                        ax.plot(range(nodes_var), lb_mat[i, :], linestyle='dotted')
+                        ax.plot(range(nodes_var), ub_mat[i, :], linestyle='dotted')
 
                     if legend:
                         legend_list.append(f'{abstract_var.getName()}_{i}')

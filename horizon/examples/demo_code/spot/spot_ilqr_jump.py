@@ -15,6 +15,10 @@ path_to_examples = os.path.abspath(__file__ + "/../../../")
 
 # mat storer
 file_name = os.path.splitext(os.path.basename(__file__))[0]
+# if the folder /mat_files does not exist, create it
+save_dir = path_to_examples + '/mat_files'
+if not os.path.isdir(save_dir):
+    os.makedirs(save_dir)
 ms = mat_storer.matStorer(path_to_examples + f'/mat_files/{file_name}.mat')
 
 # options
@@ -22,7 +26,7 @@ resampling = True
 rviz_replay = True
 plot_sol = True
 
-solver_type = 'gnsqp'
+solver_type = 'ilqr'
 transcription_method = 'multiple_shooting'
 transcription_opts = dict(integrator='RK4')
 load_initial_guess = False

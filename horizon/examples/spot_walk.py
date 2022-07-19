@@ -6,6 +6,7 @@ from horizon import problem
 from horizon.utils import utils, kin_dyn, plotter, mat_storer
 from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
 from horizon.solvers import solver
+from horizon.transcriptions.transcriptor import Transcriptor
 import os, argparse
 import numpy as np
 import casadi as cs
@@ -24,7 +25,7 @@ def main(args):
     if codegen:
         input("code for ilqr will be generated in: '/tmp/ilqr_walk'. Press a key to resume. \n")
 
-    solver_type = 'ilqr'
+    solver_type = 'ipopt'
     resampling = False
     load_initial_guess = False
 
@@ -79,7 +80,7 @@ def main(args):
     contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
 
     # define dynamics
-    prb = problem.Problem(n_nodes)
+    prb = problem.Problem(n_nodes, receding=True)
     q = prb.createStateVariable('q', n_q)
     q_dot = prb.createStateVariable('q_dot', n_v)
     q_ddot = prb.createInputVariable('q_ddot', n_v)
@@ -106,6 +107,10 @@ def main(args):
     for f in f_list:
         f.setInitialGuess([0, 0, 55])
 
+    # transcription method
+    if solver_type != 'ilqr':
+        Transcriptor.make_method(transcription_method, prb, transcription_opts)
+
     # dynamic feasibility
     id_fn = kin_dyn.InverseDynamics(kindyn, contact_map.keys(), cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
     tau = id_fn.call(q, q_dot, q_ddot, contact_map)
@@ -118,7 +123,7 @@ def main(args):
     # base link vreg
     vref = prb.createParameter('vref', 3)
     v = cs.vertcat(q_dot[0], q_dot[1], q_dot[5])
-    prb.createCost('vref', 2 * residual_to_cost(v - vref), nodes=range(1, n_nodes + 1))
+    prb.createCost('vref_cost', 2 * residual_to_cost(v - vref), nodes=range(1, n_nodes + 1))
 
 
     # barrier function
@@ -191,8 +196,10 @@ def main(args):
             'ilqr.constr_decomp_type': 'qr',
             'ilqr.codegen_enabled': codegen,
             'ilqr.codegen_workdir': '/tmp/ilqr_walk',
+            'ipopt.tol': 0.001,
+            'ipopt.constr_viol_tol': n_nodes * 1e-3,
+            'ipopt.max_iter': 500,
             }
-
     solv = solver.Solver.make_solver(solver_type, prb, opts)
 
     try:
@@ -289,7 +296,6 @@ def main(args):
             clea_constr[i].setNodes(clea_nodes[i], erasing=True)
             contact_y[i].setNodes(contact_k[i], erasing=True)
 
-
     def set_initial_guess():
         xig = np.roll(solv.x_opt, -1, axis=1)
         xig[:, -1] = solv.x_opt[:, -1]
@@ -333,6 +339,26 @@ def main(args):
                                  kindyn)
 
         solv.max_iter = 1
+
+        # todo this is very sad. Apparently the option of the ipopt solver cannot be changed after building the problem
+        #  therefore, I have to create another problem, but doing so I lose the initial guess
+        #  solution: embed the recreation of the problem inside 'solver'
+        prev_x_opt = solv.x_opt
+        prev_u_opt = solv.u_opt
+        # rebuild problem with max_iter = 1 if ipopt (ilqr does not require to rebuild)
+        opts['ipopt.max_iter'] = 2
+        # opts['ipopt.print_level'] = 0
+        # opts['print_time'] = 0
+        # opts['sb'] = 'yes'
+        opts['ipopt.warm_start_init_point'] = 'yes'
+        # opts['ipopt.warm_start_same_structure'] = 'yes'
+        # opts['ipopt.warm_start_entire_iterate'] = 'yes'
+        opts['ipopt.linear_solver'] = 'ma27'
+
+        solv = solver.Solver.make_solver(solver_type, prb, opts)
+        solv.x_opt = prev_x_opt
+        solv.u_opt = prev_u_opt
+
         while True:
             vref.assign([0.05, 0, 0])
             k0 += 1
@@ -345,6 +371,7 @@ def main(args):
             print(f'solved in {elapsed} s')
 
             solution = solv.getSolutionDict()
+
             repl.frame_force_mapping = {contacts_name[i]: solution[f_list[i].getName()][:, 0:1] for i in range(n_c)}
             repl.publish_joints(solution['q'][:, 0])
             repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
@@ -417,7 +444,7 @@ if __name__ == '__main__':
     parser.add_argument('--action', '-a', help='choose which action spot will perform', choices=spot_actions,
                         default=spot_actions[0])
     parser.add_argument('--replay', '-r', help='visualize the robot trajectory in rviz', action='store_true',
-                        default=False)
+                        default=True)
     parser.add_argument("--codegen", '-c', type=str2bool, nargs='?', const=True, default=False,
                         help="generate c++ code for faster solving")
     parser.add_argument("--warmstart", '-w', type=str2bool, nargs='?', const=True, default=False,

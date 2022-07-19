@@ -1,14 +1,10 @@
-import time
-
 from horizon import problem
 from horizon.variables import Variable, SingleVariable, Parameter, SingleParameter
-from horizon.utils import utils, kin_dyn, resampler_trajectory, plotter, mat_storer
-from horizon.transcriptions import integrators
+from horizon.utils import utils, kin_dyn, resampler_trajectory, mat_storer
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.ros.replay_trajectory import *
 from horizon.solvers import solver
 import matplotlib.pyplot as plt
-import os
 from horizon.solvers import Solver
 from itertools import groupby
 from operator import itemgetter
@@ -503,30 +499,28 @@ if __name__ == '__main__':
     n_f = 3
 
     # SET PROBLEM STATE AND INPUT VARIABLES
-    prb = problem.Problem(n_nodes)
+    prb = problem.Problem(n_nodes, receding=True)
     q = prb.createStateVariable('q', n_q)
     q_dot = prb.createStateVariable('q_dot', n_v)
     q_ddot = prb.createInputVariable('q_ddot', n_v)
 
-    f_list = list()
-    for i in range(n_c):
-        f_list.append(prb.createInputVariable(f'f{i}', n_f))
+    contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
+    f_list = [prb.createInputVariable(f'force_{i}', n_f) for i in contacts_name]
 
     # SET CONTACTS MAP
-    contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
     contact_map = dict(zip(contacts_name, f_list))
 
     load_initial_guess = True
     # import initial guess if present
     if load_initial_guess:
-        ms = mat_storer.matStorer('../playground/spot/spot_jump.mat')
+        ms = mat_storer.matStorer('../playground/mesh_refiner/refining_mat/spot_jump.mat')
         prev_solution = ms.load()
         q_ig = prev_solution['q']
         q_dot_ig = prev_solution['q_dot']
         q_ddot_ig = prev_solution['q_ddot']
-        f_ig_list = list()
+        f_ig_list = [prev_solution[f.getName()] for f in f_list]
         for i in range(n_c):
-            f_ig_list.append(prev_solution[f'f{i}'])
+            [f.setInitialGuess(f_ig) for f, f_ig in zip(f_list, f_ig_list)]
 
         dt_ig = prev_solution['dt']
 
@@ -709,10 +703,7 @@ if __name__ == '__main__':
     prev_q = prev_solution['q']
     prev_q_dot = prev_solution['q_dot']
     prev_q_ddot = prev_solution['q_ddot']
-
-    prev_f_list = list()
-    for i in range(n_c):
-        prev_f_list.append(prev_solution[f'f{i}'])
+    prev_f_list = [prev_solution[f.getName()] for f in f_list]
 
 
     contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
@@ -786,13 +777,13 @@ if __name__ == '__main__':
 
     ref = Refiner(prb, nodes_vec_augmented, solver)
 
-    nodes_aug = ref.findExceedingValues(tau_sol_base, threshold)
-
-    if nodes_vec_augmented == nodes_aug:
-        print('yes')
-    else:
-        print('not')
-    exit()
+    # nodes_aug = ref.findExceedingValues(tau_sol_base, threshold)
+    #
+    # if nodes_vec_augmented == nodes_aug:
+    #     print('yes')
+    # else:
+    #     print('not')
+    # exit()
 
     plot_nodes = False
     if plot_nodes:
@@ -826,11 +817,6 @@ if __name__ == '__main__':
 
     info_dict = dict(n_nodes=new_prb.getNNodes(), times=nodes_vec_augmented, dt=sol_dt)
     ms.store({**sol_var, **sol_cnsrt_dict, **info_dict})
-
-
-    import vis_refiner_local
-
-
 
 # refine_solution = True
 # if refine_solution:

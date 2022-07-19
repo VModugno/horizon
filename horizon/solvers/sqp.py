@@ -7,6 +7,7 @@ from horizon.solvers.pyilqr import IterativeLQR
 
 from .solver import Solver
 from horizon.problem import Problem
+from horizon.functions import Cost, RecedingCost, Residual, RecedingResidual
 from typing import Dict
 import numpy as np
 import casadi as cs
@@ -17,7 +18,11 @@ class GNSQPSolver(Solver):
 
     def __init__(self, prb: Problem, opts: Dict, qp_solver_plugin: str) -> None:
 
-        super().__init__(prb, opts=opts)
+        filtered_opts = None 
+        if opts is not None:
+            filtered_opts = {k[6:]: opts[k] for k in opts.keys() if k.startswith('gnsqp.')}
+
+        super().__init__(prb, opts=filtered_opts)
 
         self.prb = prb
 
@@ -29,40 +34,41 @@ class GNSQPSolver(Solver):
         var_list = list()
         for var in prb.var_container.getVarList(offset=False):
             var_list.append(var.getImpl())
-        w = cs.vertcat(*var_list)  #
+        w = cs.veccat(*var_list)  #
 
         fun_list = list()
         for fun in prb.function_container.getCnstr().values():
             fun_list.append(fun.getImpl())
-        g = cs.vertcat(*fun_list)
+        g = cs.veccat(*fun_list)
 
-        # build cost functions list
-        cost_list = list()
-        for fun in prb.function_container.getCost().values():
-            cost_list.append(fun.getImpl())
-        f = cs.vertcat(cs.vertcat(*cost_list))
-
+        # todo: residual, recedingResidual should be the same class
+        # sqp only supports residuals, warn the user otherwise
+        fun_list = list()
+        for fun in self.fun_container.getCost().values():
+            fun_to_append = fun.getImpl()
+            if fun_to_append is not None:
+                if type(fun) in (Cost, RecedingCost):
+                    print('warning: sqp solver does not support costs that are not residuals')
+                    fun_list.append(fun_to_append[:])
+                elif type(fun) in (Residual, RecedingResidual):
+                    fun_list.append(fun_to_append[:])
+                else:
+                    raise Exception('wrong type of function found in fun_container')
+        
+        f = cs.veccat(*fun_list)
+        
         # build parameters
-        f_par_list = []
-        for name in prb.function_container.getCost():
-            f_par_list.append(prb.function_container.getCost()[name].getParameters())
-
-        f_par_name_list = [pp.getName() for p in f_par_list for pp in p]
-        f_input_str = ['x'] + f_par_name_list
-        f_input = [w] + [pp.getImpl() for p in f_par_list for pp in p]
-
-        g_par_list = []
-        for name in prb.function_container.getCnstr():
-            g_par_list.append(prb.function_container.getCnstr()[name].getParameters())
-
-        g_par_name_list = [pp.getName() for p in g_par_list for pp in p]
-        g_input_str = ['x'] + g_par_name_list
-        g_input = [w] + [pp.getImpl() for p in g_par_list for pp in p]
+        par_list = list()
+        for par in self.var_container.getParList(offset=False):
+            par_list.append(par.getImpl())
+        p = cs.veccat(*par_list)
 
         # create solver from prob
-        F = cs.Function('f', f_input, [f], f_input_str, ['f'])
-        G = cs.Function('g', g_input, [g], g_input_str, ['g'])
+        F = cs.Function('f', [w, p], [f], ['w', 'p'], ['f'])
+        G = cs.Function('g', [w, p], [g], ['w', 'p'], ['g'])
 
+        # create solver
+        print(self.opts)
         self.solver = SQPGaussNewtonSX('gnsqp', qp_solver_plugin, F, G, self.opts)
 
 
@@ -74,38 +80,40 @@ class GNSQPSolver(Solver):
 
     def _iter_callback(self, fpres):
             if not fpres.accepted:
-                return
+                pass
             fmt = ' <#09.3e'
             fmtf = ' <#04.2f'
             star = '*' if fpres.accepted else ' '
             fpres.print()
 
-    def _set_param_values(self):
-        params = self.prb.var_container.getParList()
-        for p in params:
-            self.solver.setParameterValue(p.getName(), cs.vertcat(*p.getValues()))
 
     def solve(self) -> bool:
-        # update bounds and initial guess
+        
         # update lower/upper bounds of variables
         lbw = self._getVarList('lb')
         ubw = self._getVarList('ub')
+        
         # update initial guess of variables
         w0 = self._getVarList('ig')
+        
         # update lower/upper bounds of constraints
         lbg = self._getFunList('lb')
         ubg = self._getFunList('ub')
 
         # update parameters
-        self._set_param_values()
+        p = self._getParList()
+        if p.size1() == 0:
+            p = cs.DM([])
 
         # solve
-        sol = self.solver.solve(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+        sol = self.solver.solve(x0=w0, p=p, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
 
         # self.cnstr_solution = self._createCnsrtSolDict(sol)
 
         # get solution dict
         self.var_solution = self._createVarSolDict(sol)
+        self.var_solution['x_opt'] = self.x_opt
+        self.var_solution['u_opt'] = self.u_opt
 
         # get solution as state/input
         self._createVarSolAsInOut(sol)

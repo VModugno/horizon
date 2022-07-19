@@ -19,69 +19,6 @@ namespace horizon{
 typedef Eigen::Ref<const Eigen::VectorXd> VecConstRef;
 typedef Eigen::Ref<const Eigen::MatrixXd> MatConstRef;
 
-template <typename T>
-using ParameterMap = std::map<std::string, T>;
-
-template <typename T>
-using ParameterMapPtr = std::shared_ptr<ParameterMap<T> >;
-
-class ParamsHandler
-{
-public:
-    typedef std::shared_ptr<ParamsHandler> Ptr;
-
-    ParamsHandler()
-    {
-
-    }
-
-    void addParam(const std::string& name, const Eigen::MatrixXd& p)
-    {
-        if(_params.find(name) == _params.end()) //params does not exists
-        {
-            std::pair<casadi::DM, Eigen::MatrixXd> param;
-            param.second = p;
-
-            casadi_utils::toCasadiMatrix(param.second, param.first);
-            _params[name] = param;
-        }
-        else
-        {
-            _params[name].second = p;
-            casadi_utils::toCasadiMatrix(_params[name].second, _params[name].first);
-        }
-    }
-
-    const Eigen::MatrixXd& getEigenParam(const std::string& name) const
-    {
-        return _params.at(name).second;
-    }
-
-    const casadi::DM& getCasadiParam(const std::string& name) const
-    {
-        return _params.at(name).first;
-    }
-
-    unsigned int count(const std::string& key)
-    {
-        return _params.count(key);
-    }
-
-    const ParameterMap< std::pair<casadi::DM, Eigen::MatrixXd> >& getMap() const
-    {
-        return _params;
-    }
-
-    ~ParamsHandler()
-    {
-
-    }
-
-private:
-    ParameterMap< std::pair<casadi::DM, Eigen::MatrixXd> > _params;
-
-};
-
 
 template <class CASADI_TYPE> ///casadi::SX or casadi::MX
 class SQPGaussNewton
@@ -132,7 +69,9 @@ public:
      *          "solution_convergence": iteration are stoped if solution does not change under this threshold
      */
     SQPGaussNewton(const std::string& name, const std::string& qp_solver,
-                   const casadi::Function& f, const casadi::Function& g, const casadi::Dict& opts = casadi::Dict()):
+                   const casadi::Function& f,
+                   const casadi::Function& g,
+                   const casadi::Dict& opts = casadi::Dict()):
         _name(name), _qp_solver(qp_solver),
         _max_iter(1000),
         _reinitialize_qp_solver(false),
@@ -140,10 +79,8 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6),_alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _has_param(false)
+        _merit_eps(1e-6)
     {
-
-        _param_map = std::make_shared<ParamsHandler>();
 
         _f = f;
         _df = f.factory("df", {f.name_in()}, {"jac:" + f.name_out(0) +":" + f.name_in(0)});
@@ -166,38 +103,6 @@ public:
         _line_search_time.reserve(_max_iter);
     }
 
-    void setParameterValue(const std::string& pname, const Eigen::MatrixXd& value)
-    {
-        _param_map->addParam(pname, value);
-        _has_param = true;
-
-//        std::cout << "setting parameter '" << pname << "', " <<
-//                     "value = " << _param_map->getEigenParam(pname) << "\n";
-    }
-
-    void set_param_inputs(const ParamsHandler& params, casadi_utils::WrappedFunction& f)
-
-    {
-        for(unsigned int i = 1; i < f.function().name_in().size(); ++i)
-        {
-            f.setInput(i, params.getEigenParam(f.function().name_in()[i]));
-        }
-    }
-
-    void set_param_inputs(const ParamsHandler& params, casadi::DMDict& f_dict)
-
-    {
-        for(auto & el : params.getMap())
-        {
-            if(f_dict.find(el.first) != f_dict.end())
-            {
-                f_dict[el.first] = params.getCasadiParam(el.first);
-            }
-        }
-    }
-
-
-
     /**
      * @brief SQPGaussNewton SQP method with Gauss-Newton approximaiton (Hessian = J'J)
      * @param name solver name
@@ -219,7 +124,7 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6), _alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _has_param(false)
+        _merit_eps(1e-6)
     {
         _f = casadi::Function("f", {x}, {f}, {"x"}, {"f"});
         _df = _f.function().factory("df", {"x"}, {"jac:f:x"});
@@ -243,6 +148,12 @@ public:
         {
             _beta = _qp_opts.at("beta");
             _qp_opts.erase("beta");
+        }
+
+        if(_qp_opts.count("eps_regularization"))
+        {
+            _eps_regularization = _qp_opts.at("eps_regularization");
+            _qp_opts.erase("eps_regularization");
         }
 
         if(_qp_opts.count("alpha_min"))
@@ -287,6 +198,12 @@ public:
             _qp_opts.erase("use_golden_ratio_update");
         }
 
+        if(_qp_opts.count("merit_eps"))
+        {
+            _merit_eps = _qp_opts.at("merit_eps");
+            _qp_opts.erase("merit_eps");
+        }
+
     }
 
     void printConicOptions(std::ostream &stream=casadi::uout()) const
@@ -319,163 +236,10 @@ public:
      * @param ubg upper constraints bound
      * @return solution dictionary containing: "x" solution, "f" 0.5*norm2 cost function, "g" norm2 constraints vector
      */
-    const casadi::DMDict& solve(const casadi::DM& initial_guess_x, const casadi::DM& lbx, const casadi::DM& ubx,
-                                const casadi::DM& lbg, const casadi::DM& ubg)
-    {
-        _hessian_computation_time.clear();
-        _qp_computation_time.clear();
-        _line_search_time.clear();
-
-        x0_ = initial_guess_x;
-        casadi_utils::toEigen(x0_, _sol);
-        _variable_trj[0] = x0_;
-        _iteration_to_solve = 0;
-
-        if(_has_param)
-        {
-            set_param_inputs(*_param_map, _f);
-            set_param_inputs(*_param_map, _df);
-            set_param_inputs(*_param_map, _g_dict.input);
-            set_param_inputs(*_param_map, _A_dict.input);
-        }
-
-        for(unsigned int k = 0; k < _max_iter; ++k) ///BREAK CRITERIA #1
-        {
-            //1. Cost function is linearized around actual x0
-            eval(_f, 0, _sol, false); // cost function
-            eval(_df,0, _sol, true); // cost function Jacobian
-            _J = _df.getSparseOutput(0);
-
-            //2. Constraints are linearized around actual x0
-            _g_dict.input[_g.name_in(0)] = x0_;
-            _A_dict.input[_dg.name_in(0)] = x0_;
-            eval(_g, _g_dict);
-            eval(_dg, _A_dict);
-            g_ = _g_dict.output[_g.name_out(0)];
-            A_ = _A_dict.output[_dg.name_out(0)];
-
-            //2. We compute Gauss-Newton Hessian approximation and gradient function
-            auto tic = std::chrono::high_resolution_clock::now();
-            _H.resize(_J.cols(), _J.cols());
-            _I.resize(_H.rows(), _H.cols());
-            _I.setIdentity();
-//            _H.selfadjointView<Eigen::Lower>().rankUpdate(_J.transpose());
-            double initial_reg = 1e-6;
-            _fpr.hxx_reg = initial_reg;
-            _H = _J.transpose() * _J + _fpr.hxx_reg*_I;
-
-
-            auto toc = std::chrono::high_resolution_clock::now();
-            _hessian_computation_time.push_back((toc-tic).count()*1E-9);
-
-            _grad = _J.transpose()*_f.getOutput(0);
-
-            //3. Setup QP
-            casadi_utils::toCasadiMatrix(_grad, grad_);
-
-            if(!H_.is_init())
-                H_ = casadi_utils::WrappedSparseMatrix<double>(_H);
-            else
-                H_.update_values(_H);
-
-            if(!_conic || _reinitialize_qp_solver)
-            {
-                _conic_init_input["h"] = H_.get().sparsity();
-                _conic_init_input["a"] = A_.sparsity();
-                _conic = std::make_unique<casadi::Function>(casadi::conic("qp_solver",
-                                                                          _qp_solver,
-                                                                          _conic_init_input,
-                                                                          _qp_opts));
-            }
-
-            _conic_dict.input["h"] = H_.get();
-            _conic_dict.input["g"] = grad_;
-            _conic_dict.input["a"] = A_;
-            _conic_dict.input["lba"] = lbg - g_;
-            _conic_dict.input["uba"] = ubg - g_;
-            _conic_dict.input["lbx"] = lbx - x0_;
-            _conic_dict.input["ubx"] = ubx - x0_;
-            _conic_dict.input["x0"] = x0_;
-            if(_lam_a.size() > 0)
-            {
-                casadi::DM lama;
-                casadi_utils::toCasadiMatrix(_lam_a, lama);
-                _conic_dict.input["lam_a0"] = lama;
-            }
-            if(_lam_x.size() > 0)
-            {
-                casadi::DM lamx;
-                casadi_utils::toCasadiMatrix(_lam_x, lamx);
-                _conic_dict.input["lam_x0"] = lamx;
-            }
-
-            tic = std::chrono::high_resolution_clock::now();
-            _conic->call(_conic_dict.input, _conic_dict.output);
-            toc = std::chrono::high_resolution_clock::now();
-            _qp_computation_time.push_back((toc-tic).count()*1E-9);
-
-            casadi_utils::toEigen(_conic_dict.output["x"], _dx);
-            casadi_utils::toEigen(_conic_dict.output["lam_a"], _lam_a);
-            casadi_utils::toEigen(_conic_dict.output["lam_x"], _lam_x);
-
-
-            casadi_utils::toEigen(x0_, _sol);
-            tic = std::chrono::high_resolution_clock::now();
-            bool success = lineSearch(_sol, _dx, _lam_x, _lam_a, lbg, ubg, lbx, ubx);
-            toc = std::chrono::high_resolution_clock::now();
-            _line_search_time.push_back((toc-tic).count()*1E-9);
-            if(success)
-            {
-                casadi_utils::toCasadiMatrix(_sol, x0_);
-                // store trajectory
-                _variable_trj[k+1] = x0_;
-
-                _iteration_to_solve++;
-                _fpr.iter = _iteration_to_solve;
-                _fpr.hxx_reg = initial_reg;
-
-            }
-            else
-            {
-                _sol += _dx;
-
-                casadi_utils::toCasadiMatrix(_sol, x0_);
-                // store trajectory
-                _variable_trj[k+1] = x0_;
-
-                _iteration_to_solve++;
-                _fpr.iter = _iteration_to_solve;
-
-
-                //throw std::runtime_error("Linesearch failed, unable to solve");
-                std::cout<<"Linesearch failed, increasing regularisation"<<std::endl;
-                _fpr.hxx_reg *= 1e1;
-            }
-
-            if(_iter_cb)
-            {
-                _iter_cb(_fpr);
-            }
-
-            ///BREAK CRITERIA #2
-            if(fabs(_fpr.constraint_violation) <= _constraint_violation_tolerance &&
-               fabs(_fpr.merit_der/_fpr.merit) <= _merit_derivative_tolerance)
-                break;
-
-            /// BREAK CRITERIA #3
-            if(_dx.norm() <= _solution_convergence)
-                break;
-
-        }
-
-
-        _solution["x"] = x0_;
-        double norm_f = _f.getOutput(0).norm();
-        _solution["f"] = 0.5*norm_f*norm_f;
-        _solution["g"] = casadi::norm_2(_g_dict.output[_g.name_out(0)].get_elements());
-
-        return _solution;
-    }
+    const casadi::DMDict& solve(const casadi::DM& initial_guess_x,
+                                const casadi::DM& p,
+                                const casadi::DM& lbx, const casadi::DM& ubx,
+                                const casadi::DM& lbg, const casadi::DM& ubg);
 
     double computeCost(const casadi_utils::WrappedFunction& f)
     {
@@ -495,113 +259,10 @@ public:
                (lbx-x).cwiseMax(0.).lpNorm<1>() + (ubx-x).cwiseMin(0.).lpNorm<1>();
     }
 
-    std::pair<double, double> compute_merit_weights(const Eigen::VectorXd& lam_x, const Eigen::VectorXd& lam_g)
-    {
-        double lam_x_max = lam_x.cwiseAbs().maxCoeff();
-        double lam_g_max = lam_g.cwiseAbs().maxCoeff();
 
-        const double merit_safety_factor = 2.0;
-        double mu_f = lam_x_max * merit_safety_factor;
-        double mu_c = std::max(lam_g_max * merit_safety_factor, 0.0);
-
-        return {mu_f, mu_c};
-    }
-
-    double compute_merit_value(double mu_f, double mu_c,
-                               double cost, double defect_norm, double constr_viol)
-    {
-        return cost + mu_f*defect_norm + mu_c*constr_viol;
-    }
-
-    double compute_merit_slope(double mu_f, double mu_c, double der,
-                               double defect_norm, double constr_viol)
-    {
-        // see Nocedal and Wright, Theorem 18.2, pg. 541
-        // available online http://www.apmath.spbu.ru/cnsa/pdf/monograf/Numerical_Optimization2006.pdf
-
-        return der - mu_f*defect_norm - mu_c*constr_viol;
-    }
-
-
-    bool lineSearch(Eigen::VectorXd& x, const Eigen::VectorXd& dx,
-                    const Eigen::VectorXd& lam_x, const Eigen::VectorXd& lam_a,
+    bool lineSearch(Eigen::VectorXd& x, const Eigen::VectorXd& dx, const Eigen::VectorXd& lam_x, const Eigen::VectorXd& lam_a,
                     const casadi::DM& lbg, const casadi::DM& ubg,
-                    const casadi::DM& lbx, const casadi::DM& ubx)
-    {
-        casadi_utils::toEigen(lbg, _lbg_);
-        casadi_utils::toEigen(ubg, _ubg_);
-        casadi_utils::toEigen(lbx, _lbx_);
-        casadi_utils::toEigen(ubx, _ubx_);
-
-        _x0_ = x;
-
-        auto [mu_f, mu_c] = compute_merit_weights(lam_x, lam_a);
-
-        casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], _g_);
-        double constraint_violation = computeConstraintViolation(_g_, _x0_, _lbg_, _ubg_, _lbx_, _ubx_);
-        double merit = compute_merit_value(mu_f, mu_c,
-                        computeCost(_f),
-                        0.0, // defect norm
-                        constraint_violation);
-
-        double merit_der = compute_merit_slope(mu_f, mu_c, computeCostDerivative(dx, _grad),
-                                                0.0, // defect norm
-                                                constraint_violation);
-
-
-        _alpha = 1.0;
-        bool accepted = false;
-        while( _alpha > _alpha_min)
-        {
-            x = _x0_ + _alpha*dx;
-
-            eval(_f, 0, x, false);
-
-            casadi_utils::toCasadiMatrix(x, _x_);
-            _g_dict.input[_g.name_in(0)] = _x_;
-            eval(_g, _g_dict);
-            casadi_utils::toEigen(_g_dict.output[_g.name_out(0)], _g_);
-
-            // compute merit
-            double candidate_merit = compute_merit_value(mu_f, mu_c,
-                                     computeCost(_f),
-                                     0.0, // defect norm
-                                     computeConstraintViolation(_g_, _x0_, _lbg_, _ubg_, _lbx_, _ubx_));
-            // evaluate Armijo's condition
-            double armijo_merit = merit + _beta*_alpha*merit_der;
-            accepted = candidate_merit <= armijo_merit;// <= _merit_eps;
-
-            _fpr.alpha = _alpha;
-            _fpr.cost = computeCost(_f);
-            _fpr.constraint_violation = computeConstraintViolation(_g_, _x0_, _lbg_, _ubg_, _lbx_, _ubx_);
-            _fpr.merit = candidate_merit;
-            _fpr.armijo_merit = armijo_merit;
-            _fpr.step_length = _alpha * dx.norm();
-            _fpr.accepted = accepted;
-            _fpr.defect_norm = NAN;
-            _fpr.hxx_reg = 0.0;
-            _fpr.merit_der = merit_der;
-            _fpr.mu_c = mu_c;
-            _fpr.mu_f = mu_f;
-
-            if(accepted)
-                break;
-
-
-            if(_use_gr)
-                _alpha *= 1./GR;
-            else
-                _alpha *= 0.5;
-        }
-
-        if(!accepted)
-        {
-            x = _x0_;
-            return false;
-        }
-
-        return true;
-    }
+                    const casadi::DM& lbx, const casadi::DM& ubx);
 
     void f(const CASADI_TYPE& f, const CASADI_TYPE& x, bool reinitialize_qp_solver = true)
     {
@@ -844,16 +505,16 @@ private:
     double _constraint_violation_tolerance;
     double _merit_derivative_tolerance;
 
-    bool _use_gr;
+    double _eps_regularization = 0.0;
 
-    ParamsHandler::Ptr _param_map;
-    bool _has_param;
+    bool _use_gr;
 
     //line search
     Eigen::VectorXd _lbg_, _ubg_, _lbx_, _ubx_;
     Eigen::VectorXd _x0_;
     casadi::DM _x_;
     Eigen::VectorXd _g_;
+    double _merit_eps;
 
 
 };

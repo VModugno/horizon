@@ -28,12 +28,14 @@ add_library(ilqr STATIC
     src/wrapped_function.cpp
     src/profiling.cpp
     src/codegen_function.cpp
+    src/iterate_filter.cpp
 )
 
 # sqp library
 add_library(sqp STATIC
     src/wrapped_function.cpp
     src/profiling.cpp
+    src/sqp.cpp
 )
 
 
@@ -66,16 +68,25 @@ add_custom_command(TARGET pysqp POST_BUILD
     COMMENT "Copying $<TARGET_FILE:pysqp> to pkg dir"
 )
 
-# python package deployment
-add_custom_target(generate_python_package
-    COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pyilqr> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
-    COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pysqp> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
-    COMMAND ./copy_external_dependencies.py libcasadi_conic_osqp.so -c -f -d horizon/external_libs
-    DEPENDS pysqp pyilqr
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../..
-    COMMENT "Generating package ${MODULE_NAME}"
+IF(NOT DEFINED ENV{CONDA_DEFAULT_ENV})
+    add_custom_target(generate_python_package
+        COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pyilqr> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
+        COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pysqp> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
+        COMMAND ./copy_external_dependencies.py libcasadi_conic_osqp.so -c -f -d horizon/external_libs
+        DEPENDS pysqp pyilqr
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../..
+        COMMENT "Generating package ${MODULE_NAME}"
+        )
+ELSE()
+    add_custom_target(generate_python_package
+        COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pyilqr> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
+        COMMAND ./copy_external_dependencies.py $<TARGET_FILE:pysqp> -c -d horizon/external_libs --solib-dst horizon/solvers --solib-rpath ../external_libs
+        DEPENDS pysqp pyilqr
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../..
+        COMMENT "Generating package ${MODULE_NAME}"
     )
-    
+ENDIF()
+
 add_custom_target(upload_python_package
     COMMAND twine upload dist/*
     DEPENDS generate_python_package

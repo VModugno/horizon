@@ -6,6 +6,7 @@
 # The underlying idea is LOCALLY refining the trajectory by injecting more nodes so that, when resampling, less errors pop up.
 #to visualize the trajectory use vis_refiner_local.py and to resample + send it to gazebo use send_to_gazebo.py
 ##################
+import time
 
 import horizon.variables
 from horizon import problem
@@ -23,7 +24,8 @@ import matplotlib.pyplot as plt
 transcription_method = 'multiple_shooting'  # direct_collocation
 transcription_opts = dict(integrator='RK4')
 
-urdffile = '../urdf/spot.urdf'
+path_to_examples = '../../examples/'
+urdffile = path_to_examples + 'urdf/spot.urdf'
 urdf = open(urdffile, 'r').read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
 
@@ -32,7 +34,7 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer('../spot/spot_jump.mat')
+ms = mat_storer.matStorer('spot_jump_refined_local_first.mat')
 prev_solution = ms.load()
 
 n_nodes = prev_solution['n_nodes'][0][0]
@@ -92,64 +94,105 @@ nodes_vec_res = np.zeros([num_samples + 1])
 for i in range(1, num_samples + 1):
     nodes_vec_res[i] = nodes_vec_res[i - 1] + dt_res
 
-plot_flag = False
+plot_flag = True
 
 if plot_flag:
+    import matplotlib.pyplot as plt
+    from matplotlib import gridspec
+    from matplotlib.ticker import FormatStrFormatter
+    w = 7195
+    h = 3841
+    fig_size = [19.20, 10.80]
 
-    for i_f in range(len(f_res_list)):
-        plt.figure()
-        for dim in range(f_res_list[i_f].shape[0]):
-            plt.plot(nodes_vec_res[:-1], np.array(f_res_list[i_f][dim, :]))
+    plt.rcParams['text.usetex'] = True
+    plt.rcParams["mathtext.fontset"] = 'cm'
+    plt.rcParams["legend.fontsize"] = 14
+    plt.rcParams["axes.titlesize"] = 15
+    plt.rcParams["axes.labelsize"] = 15
+    plt.rcParams['font.family'] = 'Arial'
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
 
-        for dim in range(prev_f_list[i_f].shape[0]):
-            plt.scatter(nodes_vec[:-1], np.array(prev_f_list[i_f][dim, :]))
+    # for i_f in range(len(f_res_list)):
+    #     plt.figure()
+    #     for dim in range(f_res_list[i_f].shape[0]):
+    #         plt.plot(nodes_vec_res[:-1], np.array(f_res_list[i_f][dim, :]))
+    #
+    #     for dim in range(prev_f_list[i_f].shape[0]):
+    #         plt.scatter(nodes_vec[:-1], np.array(prev_f_list[i_f][dim, :]))
+    #
+    # plt.figure()
+    # for dim in range(q_res.shape[0]):
+    #     plt.plot(nodes_vec_res, np.array(q_res[dim, :]))
+    #
+    # for dim in range(prev_q.shape[0]):
+    #     plt.scatter(nodes_vec, np.array(prev_q[dim, :]))
+    # plt.title('q')
+    #
+    # plt.figure()
+    # for dim in range(qdot_res.shape[0]):
+    #     plt.plot(nodes_vec_res, np.array(qdot_res[dim, :]))
+    #
+    # for dim in range(prev_q_dot.shape[0]):
+    #     plt.scatter(nodes_vec, np.array(prev_q_dot[dim, :]))
+    # plt.title('qdot')
+    #
+    # plt.figure()
+    # for dim in range(qddot_res.shape[0]):
+    #     plt.plot(nodes_vec_res[:-1], np.array(qddot_res[dim, :]))
+    #
+    # for dim in range(prev_q_ddot.shape[0]):
+    #     plt.scatter(nodes_vec[:-1], np.array(prev_q_ddot[dim, :]))
+    # plt.title('q_ddot')
 
-    plt.figure()
-    for dim in range(q_res.shape[0]):
-        plt.plot(nodes_vec_res, np.array(q_res[dim, :]))
 
-    for dim in range(prev_q.shape[0]):
-        plt.scatter(nodes_vec, np.array(prev_q[dim, :]))
-    plt.title('q')
-
-    plt.figure()
-    for dim in range(qdot_res.shape[0]):
-        plt.plot(nodes_vec_res, np.array(qdot_res[dim, :]))
-
-    for dim in range(prev_q_dot.shape[0]):
-        plt.scatter(nodes_vec, np.array(prev_q_dot[dim, :]))
-    plt.title('qdot')
-
-    plt.figure()
-    for dim in range(qddot_res.shape[0]):
-        plt.plot(nodes_vec_res[:-1], np.array(qddot_res[dim, :]))
-
-    for dim in range(prev_q_ddot.shape[0]):
-        plt.scatter(nodes_vec[:-1], np.array(prev_q_ddot[dim, :]))
-    plt.title('q_ddot')
-
-    plt.figure()
+    fig, ax = plt.subplots()
+    fig.set_size_inches(fig_size[0], fig_size[1])
     for dim in range(6):
-        plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[dim, :]))
-    for dim in range(6):
-        plt.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]))
-    plt.title('tau on base')
+        ax.plot(nodes_vec_res[:-1], np.array(tau_sol_res[dim, :]), linewidth=1)
+        ax.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]), s=30, facecolors='none', edgecolors='#d62728', zorder=3)
 
-    plt.figure()
-    for dim in range(tau_sol_res.shape[0] - 6):
-        plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[6 + dim, :]))
-    for dim in range(prev_tau.shape[0] - 6):
-        plt.scatter(nodes_vec[:-1], np.array(prev_tau[6 + dim, :]))
-    plt.title('tau')
+    ax.set_xticks(nodes_vec[:-1])
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    ax.grid(alpha=0.4)
+
+    ax.yaxis.set_major_locator(plt.MultipleLocator(2))
+
+    wanted_time_label = {0, 20, 40, 49}
+    label_list = list(range(nodes_vec[:-1].shape[0]))
+    label_list = [e for e in label_list if e not in wanted_time_label]
+    xticks = ax.xaxis.get_major_ticks()
+    for i_hide in label_list:
+        xticks[i_hide].label1.set_visible(False)
+
+    plt.xlim([0, nodes_vec[-1]])
+
+    # for dim in range(6):
+    #     ax.plot(nodes_vec[:-1], np.array(prev_tau[dim, :]))
+    # plt.title('tau on base')
+
+    # ax.yaxis.set_major_locator(plt.MultipleLocator(0.25))
+    # x
+
+
+    # plt.figure()
+    # for dim in range(tau_sol_res.shape[0] - 6):
+    #     plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[6 + dim, :]))
+    # for dim in range(prev_tau.shape[0] - 6):
+    #     plt.scatter(nodes_vec[:-1], np.array(prev_tau[6 + dim, :]))
+    # plt.title('tau')
     plt.show()
+
 
 tau_sol_base = tau_sol_res[:6, :]
 
-threshold = 5
+threshold = 4.
 ## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
 indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
 # these indices corresponds to some nodes ..
 values_exceed = nodes_vec_res[indices_exceed]
+
+
 
 ## search for duplicates and remove them, both in indices_exceed and values_exceed
 indices_duplicates = np.where(np.in1d(values_exceed, nodes_vec))
@@ -157,6 +200,8 @@ value_duplicates = values_exceed[indices_duplicates]
 
 values_exceed = np.delete(values_exceed, np.where(np.in1d(values_exceed, value_duplicates)))
 indices_exceed = np.delete(indices_exceed, indices_duplicates)
+
+print('number of supplementary nodes:', len(indices_exceed))
 
 ## base vector nodes augmented with new nodes + sort
 nodes_vec_augmented = np.concatenate((nodes_vec, values_exceed))
@@ -240,7 +285,7 @@ ms = mat_storer.matStorer(f'{os.path.splitext(os.path.basename(__file__))[0]}.ma
 
 n_nodes = new_n_nodes - 1  # in new_n_nodes the last node is there already
 
-plot_nodes = False
+plot_nodes = True
 if plot_nodes:
     plt.figure()
     # nodes old
@@ -265,6 +310,7 @@ if plot_nodes:
     #     plt.scatter(nodes_vec[:-1], np.array(prev_tau[dim, :]))
     # plt.title('tau on base')
     plt.show()
+
 
 print('old_node_start_step', old_node_start_step)
 print('old_node_end_step', old_node_end_step)
@@ -526,35 +572,40 @@ for f in f_list:
 prb.createIntermediateCost("min_qddot", 1 * cs.sumsqr(q_ddot))
 
 ######################################## proximal auxiliary cost function #######################################
+weight = 1e9
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
-        prb.createCost(f"q_close_to_old_node_{node}", 1e5 * cs.sumsqr(q - prev_q[:, k]), nodes=node)
+        prb.createCost(f"q_close_to_old_node_{node}", weight * cs.sumsqr(q - prev_q[:, k]), nodes=node)
         k = k+1
     if node in zip_indices_new.keys():
-        prb.createCost(f"q_close_to_res_node_{node}", 1e5 * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
+        prb.createCost(f"q_close_to_res_node_{node}", weight * cs.sumsqr(q - q_res[:, zip_indices_new[node]]), nodes=node)
 
 k = 0
 for node in range(n_nodes):
     if node in base_indices:
-        prb.createCost(f"qdot_close_to_old_node_{node}", 1e5 * cs.sumsqr(q_dot - prev_q_dot[:, k]), nodes=node)
+        prb.createCost(f"qdot_close_to_old_node_{node}", weight * cs.sumsqr(q_dot - prev_q_dot[:, k]), nodes=node)
         k = k+1
     if node in zip_indices_new.keys():
-        prb.createCost(f"qdot_close_to_res_node_{node}", 1e5 * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
+        prb.createCost(f"qdot_close_to_res_node_{node}", weight * cs.sumsqr(q_dot - qdot_res[:, zip_indices_new[node]]), nodes=node)
 
 # =============
 # SOLVE PROBLEM
 # =============
-opts = {'ipopt.tol': 0.001,
-        'ipopt.constr_viol_tol': 0.001,
-        'ipopt.max_iter': 2000,
+opts = {'ipopt.tol': 0.01,
+        'ipopt.warm_start_init_point': 'yes',
+        'ipopt.constr_viol_tol': 0.01,
+        'ipopt.max_iter': 4000,
         'ipopt.linear_solver': 'ma57'}
 
 for i in range(len(new_dt_vec)):
     dt.assign(new_dt_vec[i], nodes=i)
 
 sol = Solver.make_solver('ipopt', prb, opts)
+tic = time.time()
 sol.solve()
+toc = time.time() - tic
+print('time elapsed solving:', toc)
 
 solution = sol.getSolutionDict()
 solution_constraints = sol.getConstraintSolutionDict()
@@ -566,15 +617,43 @@ for name, item in prb.getConstraints().items():
     ub_mat = np.reshape(ub, (item.getDim(), len(item.getNodes())), order='F')
     solution_constraints_dict[name] = dict(val=solution_constraints[name], lb=lb_mat, ub=ub_mat, nodes=item.getNodes())
 
+# ================================== resample refined trajectory ==================================
+f_list = list()
+for i in range(n_c):
+    f_list.append(solution[f'f{i}'])
+contact_map = dict(zip(contacts_name, f_list))
+
+q_sym = cs.SX.sym('q', n_q)
+q_dot_sym = cs.SX.sym('q_dot', n_v)
+q_ddot_sym = cs.SX.sym('q_ddot', n_v)
+x, x_dot = utils.double_integrator_with_floating_base(q_sym, q_dot_sym, q_ddot_sym)
+
+dae = {'x': x, 'p': q_ddot_sym, 'ode': x_dot, 'quad': 1}
+q_res, qdot_res, qddot_res, contact_map_res, tau_sol_res = resampler_trajectory.resample_torques(
+    solution['q'], solution['q_dot'], solution['q_ddot'], new_dt_vec, dt_res, dae, contact_map,
+    kindyn,
+    cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
+
+f_res_list = list()
+for f in prev_f_list:
+    f_res_list.append(resampler_trajectory.resample_input(f, new_dt_vec, dt_res))
+
+solution_resampled = dict()
+solution_resampled['q_res'] = q_res
+solution_resampled['tau_sol_res'] = tau_sol_res
+solution_resampled['f_res_list'] = f_res_list
 
 from horizon.variables import Variable, SingleVariable, Parameter, SingleParameter
 
 info_dict = dict(n_nodes=n_nodes, times=nodes_vec_augmented, node_start_step=node_start_step, node_end_step=node_end_step, node_peak=node_peak, jump_height=jump_height)
 if isinstance(dt, Variable) or isinstance(dt, SingleVariable):
-    ms.store({**solution, **solution_constraints_dict, **info_dict})
+    ms.store({**solution, **solution_constraints_dict, **solution_resampled, **info_dict})
 elif isinstance(dt, Parameter) or isinstance(dt, SingleParameter):
     dt_dict = dict(param_dt=new_dt_vec)
-    ms.store({**solution, **solution_constraints_dict, **info_dict, **dt_dict})
+    ms.store({**solution, **solution_constraints_dict, **solution_resampled, **info_dict, **dt_dict})
 else:
     dt_dict = dict(constant_dt=dt)
-    ms.store({**solution, **solution_constraints_dict, **info_dict, **dt_dict})
+    ms.store({**solution, **solution_constraints_dict, **solution_resampled, **info_dict, **dt_dict})
+
+
+

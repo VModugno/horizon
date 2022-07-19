@@ -79,15 +79,24 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _constraint_to_go(std::make_unique<ConstraintToGo>(_nx, _nu)),
     _fp_res(std::make_unique<ForwardPassResult>(_nx, _nu, _N)),
     _lam_g(_N+1),
-    _tmp(_N)
+    _tmp(_N),
+    _fp_accepted(0)
 {
-    // set options
+    // set options _hxx_reg_base
     _verbose = value_or(opt, "ilqr.verbose", 0);
+    _log = value_or(opt, "ilqr.log", 0);
     _step_length = value_or(opt, "ilqr.step_length", 1.0);
+
+    _rho_base = value_or(opt, "ilqr.rho_base", 0.0);
+    _rho = _rho_base;
+    _rho_growth_factor = value_or(opt, "ilqr.rho_growth_factor", 10.0);
+    _enable_auglag = value_or(opt, "ilqr.enable_auglag", 0);
+
     _hxx_reg = value_or(opt, "ilqr.hxx_reg", 0.0);
+    _hxx_reg_base = value_or(opt, "ilqr.hxx_reg_base", 0.0);
+    _hxx_reg_growth_factor = value_or(opt, "ilqr.hxx_reg_growth_factor", 1e3);
     _huu_reg = value_or(opt, "ilqr.huu_reg", 0.0);
     _kkt_reg = value_or(opt, "ilqr.kkt_reg", 0.0);
-    _hxx_reg_growth_factor = value_or(opt, "ilqr.hxx_reg_growth_factor", 1e3);
     _line_search_accept_ratio = value_or(opt, "ilqr.line_search_accept_ratio", 1e-4);
     _alpha_min = value_or(opt, "ilqr.alpha_min", 1e-3);
     _svd_threshold = value_or(opt, "ilqr.svd_threshold", 1e-6);
@@ -98,12 +107,20 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _closed_loop_forward_pass = value_or(opt, "ilqr.closed_loop_forward_pass", 1);
     _codegen_workdir = value_or<std::string>(opt, "ilqr.codegen_workdir", "/tmp");
     _codegen_enabled = value_or(opt, "ilqr.codegen_enabled", 0);
+    _enable_line_search = value_or(opt, "ilqr.enable_line_search", 1);
+
+    _it_filt.beta = value_or(opt, "ilqr.filter_beta", 0.99);
+    _it_filt.gamma = value_or(opt, "ilqr.filter_gamma", 0.20);
+    _use_it_filter = value_or(opt, "ilqr.use_filter", 0);
 
     auto decomp_type_str = value_or<std::string>(opt, "ilqr.constr_decomp_type", "qr");
     _constr_decomp_type = str_to_decomp_type(decomp_type_str);
 
     decomp_type_str = value_or<std::string>(opt, "ilqr.kkt_decomp_type", "lu");
     _kkt_decomp_type = str_to_decomp_type(decomp_type_str);
+
+    // initialize hxx from base value
+    _hxx_reg = std::max(_hxx_reg_base, _hxx_reg);
 
     // set timer callback
     on_timer_toc = [this](const char * name, double usec)
@@ -137,7 +154,9 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     // initialize trajectories
     _xtrj.setZero(_nx, _N+1);
     _utrj.setZero(_nu, _N);
-    _lam_x.setZero(_nx, _N);
+    _lam_x.setZero(_nx, _N+1);
+    _lam_bound_x.setZero(_nx, _N+1);
+    _lam_bound_u.setZero(_nu, _N);
 
     // initialize bounds
     _x_lb.setConstant(_nx, _N+1, -inf);
@@ -149,24 +168,43 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     //  *) default intermediate cost -> l(x, u) = eps*|u|^2
     //  *) default final cost        -> lf(x)   = eps*|xf|^2
     set_default_cost();
+
+    // add auglag cost
+    for(int i = 0; i < _N+1; i++)
+    {
+        auto al = std::make_shared<BoundAuglagCostEntity>(
+                    _N,
+                    _x_lb.col(i), _x_ub.col(i),
+                    _u_lb.col(i), _u_ub.col(i));
+
+        al->setRho(_rho);
+
+        _auglag_cost.push_back(al);
+
+        _cost[i].addCost(al);
+
+    }
 }
 
 void IterativeLQR::setStateBounds(const Eigen::MatrixXd& lb, const Eigen::MatrixXd& ub)
 {
-    if(_x_lb.rows() != lb.rows() || _x_lb.cols() != lb.cols() || 
+    if(_x_lb.rows() != lb.rows() || _x_lb.cols() != lb.cols() ||
         _x_ub.rows() != ub.rows() || _x_ub.cols() != ub.cols()
         )
     {
         throw std::invalid_argument("state bound size mismatch");
     }
 
+    TIC(setStateBounds);
+
     _x_lb = lb;
     _x_ub = ub;
+
 }
-    
+
 void IterativeLQR::setInputBounds(const Eigen::MatrixXd& lb, const Eigen::MatrixXd& ub)
 {
-    if(_u_lb.rows() != lb.rows() || _u_lb.cols() != lb.cols() || 
+    if(_u_lb.rows() != lb.rows() || _u_lb.cols() != lb.cols() ||
         _u_ub.rows() != ub.rows() || _u_ub.cols() != ub.cols()
         )
     {
@@ -212,6 +250,55 @@ void IterativeLQR::setCost(std::vector<int> indices, const casadi::Function& int
                hess);
 
     if(_verbose) std::cout << "adding cost '" << inter_cost << "' at k = ";
+
+    for(int k : indices)
+    {
+        if(k > _N || k < 0)
+        {
+            throw std::invalid_argument("wrong intermediate cost node index");
+        }
+
+        if(_verbose) std::cout << k << " ";
+
+        _cost[k].addCost(c);
+    }
+
+    if(_verbose) std::cout << "\n";
+}
+
+void IterativeLQR::setResidual(std::vector<int> indices,
+                               const casadi::Function& residual)
+{
+
+    // add parameters to param_map
+    add_param_to_map(residual);
+
+    // create cost entity
+    auto c = std::make_shared<IntermediateResidualEntity>();
+
+    // add to map
+    _cost_map[residual.name()] = c;
+
+    // set param map
+    c->param = _param_map;
+
+    // set indices
+    c->indices = indices;
+
+    // set cost and derivatives
+    auto cost = residual;
+    auto jac = IntermediateResidualEntity::Jacobian(cost);
+
+    // codegen if required (we skip it for quadratic costs)
+    if(_codegen_enabled)
+    {
+        cost = utils::codegen(cost, _codegen_workdir);
+        jac = utils::codegen(jac, _codegen_workdir);
+    }
+
+    c->setResidual(cost, jac);
+
+    if(_verbose) std::cout << "adding residual '" << cost << "' at k = ";
 
     for(int k : indices)
     {
@@ -295,6 +382,16 @@ void IterativeLQR::setFinalConstraint(const casadi::Function &final_constraint)
 
 void IterativeLQR::setIndices(const std::string& f_name, const std::vector<int>& indices)
 {
+    if(_log)
+    {
+        std::cout << "setting new indices to " << f_name << ": \n";
+        for(auto i : indices)
+        {
+            std::cout << i << " ";
+        }
+        std::cout << "\n";
+    }
+
     auto cost_it = _cost_map.find(f_name);
 
     if(cost_it != _cost_map.end())
@@ -332,6 +429,12 @@ void IterativeLQR::updateIndices()
         }
     }
 
+    // add auglag
+    for(int i = 0; i < _N + 1; i++)
+    {
+        _cost[i].addCost(_auglag_cost[i]);
+    }
+
     // clear constraints;
     for(auto& c : _constraint)
     {
@@ -354,7 +457,8 @@ void IterativeLQR::setParameterValue(const std::string& pname, const Eigen::Matr
 
     if(it == _param_map->end())
     {
-        throw std::invalid_argument("undefined parameter name '" + pname + "'");
+        std::cout << "undefined parameter name '" << pname << "' \n";
+        return;
     }
 
     if(it->second.rows() != value.rows() ||
@@ -433,6 +537,13 @@ bool IterativeLQR::solve(int max_iter)
     _fp_res->cost = compute_cost(_xtrj, _utrj);
     _fp_res->constraint_violation = compute_constr(_xtrj, _utrj);
     _fp_res->defect_norm = compute_defect(_xtrj, _utrj);
+    _fp_res->bound_violation = compute_bound_penalty(_xtrj, _utrj);
+
+    // clear filter
+    _it_filt.clear();
+
+    // reset counters
+    _fp_accepted = 0;
 
     // solve
     for(int i = 0; i < max_iter; i++)
@@ -441,15 +552,35 @@ bool IterativeLQR::solve(int max_iter)
 
         _fp_res->iter = i;
 
+        // compute linear-quadratic mdoel
         linearize_quadratize();
-        backward_pass();
-        line_search(i);
 
+        // solve kkt
+        backward_pass();
+
+        // if line search failed, go directly
+        // to next iteration
+        if(!line_search(i))
+        {
+            continue;
+        }
+
+        // if the auglag approximation needs to be
+        // updated, skip termination conditions
+        if(auglag_update())
+        {
+            continue;
+        }
+
+        // if termination criteria fulfilled,
+        // exit and report success
         if(should_stop())
         {
             return true;
         }
     }
+
+    std::cout << "max iteration reached \n";
 
     return false;
 }
@@ -484,6 +615,7 @@ void IterativeLQR::linearize_quadratize()
         THROW_NAN(_cost[i].P());
         THROW_NAN(_cost[i].r());
         THROW_NAN(_cost[i].q());
+
     }
 
     // handle final cost and constraint
@@ -525,6 +657,13 @@ void IterativeLQR::set_default_cost()
 
     setCost(all_indices, l);
     setFinalCost(lf);
+}
+
+bool IterativeLQR::fixed_initial_state()
+{
+    return _x_lb.col(0).allFinite() &&
+            _x_ub.col(0).allFinite() &&
+            _x_lb.col(0).isApprox(_x_ub.col(0));
 }
 
 IterativeLQR::DecompositionType IterativeLQR::str_to_decomp_type(const std::string &dt_str)
@@ -658,6 +797,106 @@ casadi::Function IterativeLQR::Dynamics::Jacobian(const casadi::Function &f)
     return df;
 }
 
+IterativeLQR::BoundAuglagCostEntity::BoundAuglagCostEntity(int N,
+                                                           VecConstRef xlb,
+                                                           VecConstRef xub,
+                                                           VecConstRef ulb,
+                                                           VecConstRef uub):
+    _xlb(xlb), _xub(xub), _ulb(ulb), _uub(uub), _N(N)
+{
+    _Q.setZero(xlb.size(), xlb.size());
+    _R.setZero(ulb.size(), ulb.size());
+    _P.setZero(ulb.size(), xlb.size());
+    _r.setZero(ulb.size());
+    _q.setZero(xlb.size());
+    _xlam.setZero(xlb.size());
+    _ulam.setZero(ulb.size());
+}
+
+void IterativeLQR::BoundAuglagCostEntity::setRho(double rho)
+{
+    _rho = rho;
+}
+
+double IterativeLQR::BoundAuglagCostEntity::evaluate(VecConstRef x,
+                                                     VecConstRef u,
+                                                     int k)
+{
+    double value = 0.0;
+
+    // positive if ub violated, negtive if lb violated
+    _x_violation = (x - _xub).cwiseMax(0) + (x - _xlb).cwiseMin(0);
+    value += 0.5 * _rho * _x_violation.squaredNorm();
+    value += _xlam.dot(_x_violation);
+
+    if(k < _N)
+    {
+        _u_violation = (u - _uub).cwiseMax(0) + (u - _ulb).cwiseMin(0);
+        value += 0.5 * _rho * _u_violation.squaredNorm();
+        value += _ulam.dot(_u_violation);
+    }
+
+    return value;
+}
+
+void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
+                                                     VecConstRef u,
+                                                     int k)
+{
+    evaluate(x, u, k);
+
+    _q = _xlam + _rho * _x_violation;
+
+    for(int i = 0; i < x.size(); i++)
+    {
+        _Q(i, i) = _x_violation(i) != 0.0 ? _rho : 0.0;
+    }
+
+    if(k < _N)
+    {
+        _r = _ulam + _rho * _u_violation;
+
+        for(int i = 0; i < u.size(); i++)
+        {
+            _R(i, i) = _u_violation(i) != 0.0 ? _rho : 0.0;
+        }
+    }
+}
+
+void IterativeLQR::BoundAuglagCostEntity::update_lam(VecConstRef x, VecConstRef u, int k)
+{
+    evaluate(x, u, k);
+
+    _xlam += _rho * _x_violation;
+
+    if(k < _N)
+    {
+        _ulam += _rho * _u_violation;
+
+//        std::cout << "u_err[" << k << "] = " << _u_violation.transpose().format(3) << ",  ";
+//        std::cout << "u_lam[" << k << "] = " << _ulam.transpose().format(3) << "\n";
+    }
+}
+
+VecConstRef IterativeLQR::BoundAuglagCostEntity::getStateMultiplier() const
+{
+    return _xlam;
+}
+
+VecConstRef IterativeLQR::BoundAuglagCostEntity::getInputMultiplier() const
+{
+    return _ulam;
+}
+
+void IterativeLQR::IntermediateCostEntity::setCost(casadi::Function _l,
+                                                   casadi::Function _dl,
+                                                   casadi::Function _ddl)
+{
+    l = _l;
+    dl = _dl;
+    ddl = _ddl;
+}
+
 const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::Q() const
 {
     return ddl.getOutput(0);
@@ -681,22 +920,6 @@ Eigen::Ref<const Eigen::VectorXd> IterativeLQR::IntermediateCostEntity::r() cons
 const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::P() const
 {
     return ddl.getOutput(2);
-}
-
-void IterativeLQR::IntermediateCostEntity::setCost(const casadi::Function &cost)
-{
-    l = cost;
-    dl = Gradient(cost);  // note: use grad to obtain a column vector!
-    ddl = Hessian(dl.function());
-}
-
-void IterativeLQR::IntermediateCostEntity::setCost(const casadi::Function &f,
-                                                   const casadi::Function &df,
-                                                   const casadi::Function &ddf)
-{
-    l = f;
-    dl = df;
-    ddl = ddf;
 }
 
 double IterativeLQR::IntermediateCostEntity::evaluate(VecConstRef x,
@@ -742,6 +965,72 @@ casadi::Function IterativeLQR::IntermediateCostEntity::Hessian(const casadi::Fun
     return df.factory(df.name() + "_hess",
                       df.name_in(),
                       {"jac:grad_l_x:x", "jac:grad_l_u:u", "jac:grad_l_u:x"});
+}
+
+void IterativeLQR::IntermediateResidualEntity::setResidual(casadi::Function _res,
+                                                           casadi::Function _dres)
+{
+    res = _res;
+    dres = _dres;
+
+    int nx = _res.size1_in(0);
+    int nu = _res.size1_in(1);
+
+    _Q.setZero(nx, nx);
+    _R.setZero(nu, nu);
+    _P.setZero(nu, nx);
+    _q.setZero(nx);
+    _r.setZero(nu);
+}
+
+double IterativeLQR::IntermediateResidualEntity::evaluate(VecConstRef x,
+                                                          VecConstRef u,
+                                                          int k)
+{
+    res.setInput(0, x);
+    res.setInput(1, u);
+    set_param_inputs(param, k, res);
+    res.call();
+
+    return res.getOutput(0).squaredNorm();
+}
+
+void IterativeLQR::IntermediateResidualEntity::quadratize(VecConstRef x,
+                                                          VecConstRef u,
+                                                          int k)
+{
+    evaluate(x, u, k);
+
+    // compute residual jacobian
+    dres.setInput(0, x);
+    dres.setInput(1, u);
+    set_param_inputs(param, k, dres);
+    dres.call();
+
+    // dres -> Jx, Ju
+    // q = 2*Jx'*res
+    // r = 2*Ju'*res
+    // Q = 2*Jx'*Jx
+    // R = 2*Ju'*Ju
+    // P = 2*Ju'*Jx
+
+    // |r(x, u)|^2
+    // Jx'*r
+
+    const auto& Jx = dres.getOutput(0);
+    const auto& Ju = dres.getOutput(1);
+    const auto& r = res.getOutput(0);
+
+    _q.noalias() = 2.0 * Jx.transpose()*r;
+    _r.noalias() = 2.0 * Ju.transpose()*r;
+    _Q.noalias() = 2.0 * Jx.transpose()*Jx;
+    _R.noalias() = 2.0 * Ju.transpose()*Ju;
+    _P.noalias() = 2.0 * Ju.transpose()*Jx;
+}
+
+casadi::Function IterativeLQR::IntermediateResidualEntity::Jacobian(const casadi::Function &f)
+{
+    return f.factory(f.name() + "_jac", f.name_in(), {"jac:res:x", "jac:res:u"});
 }
 
 const Eigen::MatrixXd& IterativeLQR::IntermediateCost::Q() const
@@ -827,7 +1116,7 @@ void IterativeLQR::IntermediateCost::clear()
     items.clear();
 }
 
-void IterativeLQR::IntermediateCost::addCost(IntermediateCostEntity::Ptr cost)
+void IterativeLQR::IntermediateCost::addCost(CostEntityBase::Ptr cost)
 {
     items.emplace_back(cost);
 }
@@ -856,12 +1145,14 @@ IterativeLQR::ForwardPassResult::ForwardPassResult(int nx, int nu, int N):
     step_length = 0.0;
     constraint_values.setZero(N+1);
     defect_values.setZero(nx, N);
+
+    mu_b = 0;
 }
 
 void IterativeLQR::ForwardPassResult::print() const
 {
-    printf("%2.2d alpha=%.3e  reg=%.3e armijo_merit=%.3e merit=%.3e  dm=%.3e  mu_f=%.3e  mu_c=%.3e  cost=%.3e  delta_u=%.3e  constr=%.3e  gap=%.3e \n",
-           iter, alpha, hxx_reg, armijo_merit, merit, merit_der, mu_f, mu_c, cost, step_length, constraint_violation, defect_norm);
+    printf("%2.2d al=%.3e  reg=%.1e  rho=%.1e  m=%.3e  dm=%.3e  mu_f=%.1e  mu_c=%.1e  mu_b=%.1e  cost=%.3e  du=%.3e  con=%.3e  bound=%.3e  gap=%.3e \n",
+           iter, alpha, hxx_reg, rho, merit, merit_der, mu_f, mu_c, mu_b, cost, step_length, constraint_violation, bound_violation, defect_norm);
 }
 
 IterativeLQR::ConstraintToGo::ConstraintToGo(int nx, int nu):
@@ -893,6 +1184,22 @@ void IterativeLQR::ConstraintToGo::add(MatConstRef C, MatConstRef D, VecConstRef
 
     _C.middleRows(_dim, constr_size) = C;
     _D.middleRows(_dim, constr_size) = D;
+    _h.segment(_dim, constr_size) = h;
+    _dim += constr_size;
+}
+
+void IterativeLQR::ConstraintToGo::add(MatConstRef C, VecConstRef h)
+{
+    const int constr_size = h.size();
+
+    if(_dim + constr_size >= _h.size())
+    {
+        throw std::runtime_error("maximum constraint-to-go dimension "
+            "exceeded: try reducing the svd_threshold parameter");
+    }
+
+    _C.middleRows(_dim, constr_size) = C;
+    _D.middleRows(_dim, constr_size).setZero();
     _h.segment(_dim, constr_size) = h;
     _dim += constr_size;
 }
@@ -1079,8 +1386,6 @@ void IterativeLQR::Constraint::linearize(VecConstRef x, VecConstRef u, int k)
 {
     TIC(linearize_constraint_inner);
 
-    evaluate(x, u, k);
-
     int i = 0;
     for(auto& it : items)
     {
@@ -1103,6 +1408,9 @@ void IterativeLQR::Constraint::evaluate(VecConstRef x, VecConstRef u, int k)
         it->evaluate(x, u, k);
         _h.segment(i, nc) = it->h();
         i += nc;
+
+//        std::cout << "constr[" << k << "]: " << it->f.function().name() <<
+//                     "[" << nc << "] \n";
     }
 }
 

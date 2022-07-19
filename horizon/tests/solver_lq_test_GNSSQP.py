@@ -66,10 +66,10 @@ def make_problem(solver_type, A11, A13, A21, A32, B21, B32):
     prob.setDynamics(xdot)
 
     # a random cost
-    prob.createIntermediateCost('c12', x1 + x2)
-    prob.createIntermediateCost('c23', x2 + x3)
-    prob.createIntermediateCost('c13', x1 + x3)
-    prob.createIntermediateCost('u', cs.vertcat(u1 + u2))
+    prob.createIntermediateResidual('c12', x1 + x2)
+    prob.createIntermediateResidual('c23', x2 + x3)
+    prob.createIntermediateResidual('c13', x1 + x3)
+    prob.createIntermediateResidual('u', cs.vertcat(u1 + u2))
 
     # a final constraint
     xtgt = np.array([1, 1, 2, 2, 3, 3])

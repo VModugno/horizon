@@ -62,6 +62,7 @@ bool checkOptions(const std::string& key, py::handle& value, casadi::Dict& dict)
 {
     // -- sqp options --//
     if(setOption    <double>        (key,   "beta",                             value, dict)) return true;
+    if(setOption    <double>        (key,   "eps_regularization",               value, dict)) return true;
     if(setOption    <double>        (key,   "alpha_min",                        value, dict)) return true;
     if(setOption    <int>           (key,   "max_iter",                         value, dict)) return true;
     if(setOption    <bool>          (key,   "reinitialize_qpsolver",            value, dict)) return true;
@@ -186,17 +187,20 @@ bool gSX(SQPGaussNewton<casadi::SX>& self, py::object g, bool reinitialize_qp_so
     return self.f(to_cpp(g), reinitialize_qp_solver);
 }
 
-auto callMX(SQPGaussNewton<casadi::MX>& self, const Eigen::VectorXd& x0,
-                            const Eigen::VectorXd& lbx, const Eigen::VectorXd& ubx,
-                            const Eigen::VectorXd& lbg, const Eigen::VectorXd& ubg)
+auto callMX(SQPGaussNewton<casadi::MX>& self,
+            const Eigen::VectorXd& x0,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& lbx, const Eigen::VectorXd& ubx,
+            const Eigen::VectorXd& lbg, const Eigen::VectorXd& ubg)
 {
-    casadi::DM _x0_, _lbx_, _ubx_, _lbg_, _ubg_;
+    casadi::DM _x0_, _p_, _lbx_, _ubx_, _lbg_, _ubg_;
     casadi_utils::toCasadiMatrix(x0, _x0_);
+    casadi_utils::toCasadiMatrix(p, _p_);
     casadi_utils::toCasadiMatrix(lbx, _lbx_);
     casadi_utils::toCasadiMatrix(ubx, _ubx_);
     casadi_utils::toCasadiMatrix(lbg, _lbg_);
     casadi_utils::toCasadiMatrix(ubg, _ubg_);
-    casadi::DMDict tmp = self.solve(_x0_, _lbx_, _ubx_, _lbg_, _ubg_);
+    casadi::DMDict tmp = self.solve(_x0_, _p_, _lbx_, _ubx_, _lbg_, _ubg_);
 
     py::dict solution;
     Eigen::VectorXd x;
@@ -208,17 +212,22 @@ auto callMX(SQPGaussNewton<casadi::MX>& self, const Eigen::VectorXd& x0,
 }
 
 
-auto callSX(SQPGaussNewton<casadi::SX>& self, const Eigen::VectorXd& x0,
-                            const Eigen::VectorXd& lbx, const Eigen::VectorXd& ubx,
-                            const Eigen::VectorXd& lbg, const Eigen::VectorXd& ubg)
+auto callSX(SQPGaussNewton<casadi::SX>& self,
+            const Eigen::VectorXd& x0,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& lbx,
+            const Eigen::VectorXd& ubx,
+            const Eigen::VectorXd& lbg,
+            const Eigen::VectorXd& ubg)
 {
-    casadi::DM _x0_, _lbx_, _ubx_, _lbg_, _ubg_;
+    casadi::DM _x0_, _p_, _lbx_, _ubx_, _lbg_, _ubg_;
     casadi_utils::toCasadiMatrix(x0, _x0_);
+    casadi_utils::toCasadiMatrix(p, _p_);
     casadi_utils::toCasadiMatrix(lbx, _lbx_);
     casadi_utils::toCasadiMatrix(ubx, _ubx_);
     casadi_utils::toCasadiMatrix(lbg, _lbg_);
     casadi_utils::toCasadiMatrix(ubg, _ubg_);
-    casadi::DMDict tmp = self.solve(_x0_, _lbx_, _ubx_, _lbg_, _ubg_);
+    casadi::DMDict tmp = self.solve(_x0_, _p_, _lbx_, _ubx_, _lbg_, _ubg_);
 
     py::dict solution;
     Eigen::VectorXd x;

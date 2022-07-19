@@ -15,7 +15,7 @@ PYBIND11_MODULE(pyilqr, m) {
             .def_readonly("cost", &IterativeLQR::ForwardPassResult::cost)
             .def_readonly("defect_norm", &IterativeLQR::ForwardPassResult::defect_norm)
             .def_readonly("merit", &IterativeLQR::ForwardPassResult::merit)
-            .def_readonly("armijo_merit", &IterativeLQR::ForwardPassResult::armijo_merit)
+//            .def_readonly("armijo_merit", &IterativeLQR::ForwardPassResult::armijo_merit)
             .def_readonly("merit_der", &IterativeLQR::ForwardPassResult::merit_der)
             .def_readonly("mu_f", &IterativeLQR::ForwardPassResult::mu_f)
             .def_readonly("mu_c", &IterativeLQR::ForwardPassResult::mu_c)
@@ -28,6 +28,7 @@ PYBIND11_MODULE(pyilqr, m) {
     py::class_<IterativeLQR>(m, "IterativeLQR")
             .def(py::init(&construct))
             .def("setIntermediateCost", set_inter_cost_wrapper_single)
+            .def("setIntermediateResidual", set_residual_wrapper_single)
             .def("setIntermediateConstraint",
                  set_inter_constraint_wrapper_single,
                  py::arg("indices"), py::arg("h"), py::arg("target") = py::list())

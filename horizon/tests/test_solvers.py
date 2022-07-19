@@ -15,7 +15,7 @@ class TestSolvers(unittest.TestCase):
         self.mu = 0.2
         self.grav = 9.81
 
-        self.prb = Problem(self.nodes, crash_if_suboptimal=True)
+        self.prb = Problem(self.nodes)
 
         p = self.prb.createStateVariable('pos', dim=2)
         v = self.prb.createStateVariable('vel', dim=2)

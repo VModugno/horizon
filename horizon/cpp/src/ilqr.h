@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "profiling.h"
+#include "iterate_filter.h"
 
 namespace horizon
 {
@@ -70,6 +71,8 @@ public:
      */
     void setCost(std::vector<int> indices, const casadi::Function& inter_cost);
 
+    void setResidual(std::vector<int> indices, const casadi::Function& inter_cost);
+
     /**
      * @brief set the final cost
      * @param final_cost: a function with required signature (x, u) -> (l),
@@ -128,16 +131,19 @@ public:
         Eigen::MatrixXd xtrj;
         Eigen::MatrixXd utrj;
         double hxx_reg;
+        double rho;
         double alpha;
         double cost;
+        double bound_violation;
         double merit;
+        double armijo_merit;
         double mu_f;
         double mu_c;
+        double mu_b;
         double merit_der;
         double step_length;
         double constraint_violation;
         double defect_norm;
-        double armijo_merit;
         int iter;
         bool accepted;
 
@@ -147,6 +153,7 @@ public:
         ForwardPassResult(int nx, int nu, int N);
         void print() const;
     };
+
 
 
 
@@ -163,7 +170,10 @@ private:
     struct Constraint;
     struct IntermediateCost;
     struct ConstraintEntity;
+    struct CostEntityBase;
+    struct BoundAuglagCostEntity;
     struct IntermediateCostEntity;
+    struct IntermediateResidualEntity;
     struct Temporaries;
     struct ConstraintToGo;
     struct BackwardPassResult;
@@ -175,7 +185,7 @@ private:
     typedef std::shared_ptr<std::map<std::string, Eigen::MatrixXd>>
         ParameterMapPtr;
 
-    typedef std::map<std::string, std::shared_ptr<IntermediateCostEntity>>
+    typedef std::map<std::string, std::shared_ptr<CostEntityBase>>
         CostPtrMap;
 
     typedef std::map<std::string, std::shared_ptr<ConstraintEntity>>
@@ -186,10 +196,12 @@ private:
     void report_result(const ForwardPassResult& fpres);
     void backward_pass();
     void backward_pass_iter(int i);
+    void optimize_initial_state();
     void increase_regularization();
     void reduce_regularization();
     FeasibleConstraint handle_constraints(int i);
-    void add_bounds(int i);
+    void add_bound_constraint(int k);
+    bool auglag_update();
     void compute_constrained_input(Temporaries& tmp, BackwardPassResult& res);
     void compute_constrained_input_svd(Temporaries& tmp, BackwardPassResult& res);
     void compute_constrained_input_qr(Temporaries& tmp, BackwardPassResult& res);
@@ -197,13 +209,15 @@ private:
     double compute_merit_slope(double mu_f, double mu_c, double defect_norm, double constr_viol);
     std::pair<double, double> compute_merit_weights();
     double compute_cost(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
+    double compute_bound_penalty(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
     double compute_constr(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
     double compute_defect(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
     bool forward_pass(double alpha);
     void forward_pass_iter(int i, double alpha);
-    void line_search(int iter);
+    bool line_search(int iter);
     bool should_stop();
     void set_default_cost();
+    bool fixed_initial_state();
 
     enum DecompositionType
     {
@@ -213,13 +227,18 @@ private:
     static DecompositionType str_to_decomp_type(const std::string& dt_str);
 
     bool _verbose;
+    bool _log;
 
     const int _nx;
     const int _nu;
     const int _N;
 
     double _step_length;
+    double _rho_base;
+    double _rho;
+    double _rho_growth_factor;
     double _hxx_reg;
+    double _hxx_reg_base;
     double _hxx_reg_growth_factor;
     double _huu_reg;
     double _kkt_reg;
@@ -230,6 +249,8 @@ private:
     double _defect_norm_threshold;
     double _merit_der_threshold;
     double _step_length_threshold;
+    bool _enable_line_search;
+    bool _enable_auglag;
 
     bool _closed_loop_forward_pass;
     std::string _codegen_workdir;
@@ -241,6 +262,7 @@ private:
     CostPtrMap _cost_map;
     ConstraintPtrMap _constr_map;
 
+    std::vector<std::shared_ptr<BoundAuglagCostEntity>> _auglag_cost;
     std::vector<IntermediateCost> _cost;
     std::vector<Constraint> _constraint;
     Eigen::MatrixXd _x_lb, _x_ub;
@@ -251,11 +273,18 @@ private:
     std::vector<BackwardPassResult> _bp_res;
     std::unique_ptr<ConstraintToGo> _constraint_to_go;
     std::unique_ptr<ForwardPassResult> _fp_res;
+    int _fp_accepted;
+
+    IterateFilter _it_filt;
+    bool _use_it_filter;
 
     Eigen::MatrixXd _xtrj;
     Eigen::MatrixXd _utrj;
     std::vector<Eigen::VectorXd> _lam_g;
     Eigen::MatrixXd _lam_x;
+
+    Eigen::MatrixXd _lam_bound_x;
+    Eigen::MatrixXd _lam_bound_u;
 
     std::vector<Temporaries> _tmp;
 
