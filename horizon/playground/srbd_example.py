@@ -22,7 +22,7 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 from scipy.spatial.transform import Rotation as R
 
-SOLVER = lambda: 'gnsqp'
+SOLVER = lambda: 'ipopt'
 
 def cost(K, fun):
     if SOLVER() == 'gnsqp':
@@ -786,7 +786,7 @@ opts = {
 }
 if SOLVER() == 'gnsqp':
     opts = {"gnsqp.qp_solver": "osqp",
-            "max_iter": 1,
+            "max_iter": 5,
             "alpha_min": 1e-9,
             #'beta': 1.,
             "use_golden_ratio_update": True,
