@@ -23,12 +23,15 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
     _iteration_to_solve = 0;
 
     // set parameters as second input of f and df
-    _f.setInput(1, Eigen::VectorXd::Map(p->data(), p.size1()));
-    _df.setInput(1, Eigen::VectorXd::Map(p->data(), p.size1()));
+    if(p.size1() > 0)
+    {
+        _f.setInput(1, Eigen::VectorXd::Map(p->data(), p.size1()));
+        _df.setInput(1, Eigen::VectorXd::Map(p->data(), p.size1()));
 
-    // do the same on g and A (i.e., dg)
-    _g_dict.input[_g.name_in(1)] = p;
-    _A_dict.input[_g.name_in(1)] = p;
+        // do the same on g and A (i.e., dg)
+        _g_dict.input[_g.name_in(1)] = p;
+        _A_dict.input[_g.name_in(1)] = p;
+    }
 
     for(unsigned int k = 0; k < _max_iter; ++k) ///BREAK CRITERIA #1
     {
