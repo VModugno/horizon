@@ -29,14 +29,14 @@ def add_cartesian_tasks_vel():
                   'cartesian_type': 'velocity'}
 
     ti.setTaskFromDict(cart_vel_1)
-    ti.setTaskFromDict(cart_vel_2)
     ee_cart_1 = ti.getTask('arm_1_tcp_ee_vel_world')
-    ee_cart_2 = ti.getTask('arm_2_tcp_ee_vel_rel')
-
-    goal_vec_1 = [0., 0., 0.1, 0, 0, 0]
-    goal_vec_2 = [0, 0., 0, 0, 0, 0]
-
+    goal_vec_1 = [0., 0., 0., 0., 0., 0.]
     ee_cart_1.setRef(goal_vec_1)
+
+
+    ti.setTaskFromDict(cart_vel_2)
+    ee_cart_2 = ti.getTask('arm_2_tcp_ee_vel_rel')
+    goal_vec_2 = [0., 0., 0.0, 0.1, 0., 0.]
     ee_cart_2.setRef(goal_vec_2)
 
 
