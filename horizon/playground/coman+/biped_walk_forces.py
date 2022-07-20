@@ -4,6 +4,7 @@ from horizon.rhc.taskInterface import TaskInterface
 from horizon.transcriptions.transcriptor import Transcriptor
 import random
 from horizon.utils.actionManager import ActionManager
+
 # set up problem
 ns = 50
 tf = 10.0  # 10s
@@ -21,47 +22,64 @@ os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
 urdf = open(urdffile, 'r').read()
 
-# contacts = ['l_sole', 'r_sole']
-contacts = ['l_foot_upper_right_link', 'l_foot_upper_left_link',
-            'l_foot_lower_right_link',  # 'l_foot_lower_left_link',
-            'r_foot_upper_right_link', 'r_foot_upper_left_link',
-            'r_foot_lower_right_link'] # 'r_foot_lower_left_link'
+contact_left = ['l_foot_upper_right_link', 'l_foot_upper_left_link', 'l_foot_lower_right_link',
+                'l_foot_lower_left_link']
+
+contact_right = ['r_foot_upper_right_link', 'r_foot_upper_left_link', 'r_foot_lower_right_link',
+                 'r_foot_lower_left_link']
+
+
+def get_optimization_points(contact, ignored_point=3):
+    c_ignored = contact[ignored_point]
+
+    # todo: getting the relative points
+    c_rel_list = contact.copy()
+    c_rel_list.remove(c_ignored)
+
+    return c_rel_list
+
+
+contact_1 = get_optimization_points(contact_left)
+contact_2 = get_optimization_points(contact_right)
+
+contacts = contact_1 + contact_2
 
 base_init = np.array([0., 0., 0.96, 0., 0.0, 0.0, 1.])
 
-q_init = {"LHipLat":       -0.0,
-          "LHipSag":       -0.363826,
-          "LHipYaw":       0.0,
-          "LKneePitch":    0.731245,
-          "LAnklePitch":   -0.307420,
-          "LAnkleRoll":    0.0,
-          "RHipLat":       0.0,
-          "RHipSag":       -0.363826,
-          "RHipYaw":       0.0,
-          "RKneePitch":    0.731245,
-          "RAnklePitch":   -0.307420,
-          "RAnkleRoll":    -0.0,
-          "WaistLat":      0.0,
-          "WaistYaw":      0.0,
-          "LShSag":        1.1717860 ,    #0.959931,   #   1.1717860
-          "LShLat":        -0.059091562,    #0.007266,   #   -0.059091562
-          "LShYaw":        -5.18150657e-02,    #-0.0,       #   -5.18150657e-02
-          "LElbj":         -1.85118,    #-1.919862,  #  -1.85118
+q_init = {"LHipLat": -0.0,
+          "LHipSag": -0.363826,
+          "LHipYaw": 0.0,
+          "LKneePitch": 0.731245,
+          "LAnklePitch": -0.307420,
+          "LAnkleRoll": 0.0,
+          "RHipLat": 0.0,
+          "RHipSag": -0.363826,
+          "RHipYaw": 0.0,
+          "RKneePitch": 0.731245,
+          "RAnklePitch": -0.307420,
+          "RAnkleRoll": -0.0,
+          "WaistLat": 0.0,
+          "WaistYaw": 0.0,
+          "LShSag": 1.1717860,  # 0.959931,   #   1.1717860
+          "LShLat": -0.059091562,  # 0.007266,   #   -0.059091562
+          "LShYaw": -5.18150657e-02,  # -0.0,       #   -5.18150657e-02
+          "LElbj": -1.85118,  # -1.919862,  #  -1.85118
           "LForearmPlate": 0.0,
-          "LWrj1":         -0.523599,
-          "LWrj2":         -0.0,
-          "RShSag":        1.17128697,  #0.959931,    #   1.17128697
-          "RShLat":        6.01664139e-02,  #-0.007266,   #   6.01664139e-02
-          "RShYaw":        0.052782481,  #-0.0,        #   0.052782481
-          "RElbj":         -1.8513760,  #-1.919862,   #   -1.8513760
+          "LWrj1": -0.523599,
+          "LWrj2": -0.0,
+          "RShSag": 1.17128697,  # 0.959931,    #   1.17128697
+          "RShLat": 6.01664139e-02,  # -0.007266,   #   6.01664139e-02
+          "RShYaw": 0.052782481,  # -0.0,        #   0.052782481
+          "RElbj": -1.8513760,  # -1.919862,   #   -1.8513760
           "RForearmPlate": 0.0,
-          "RWrj1":         -0.523599,
-          "RWrj2":         -0.0}
+          "RWrj1": -0.523599,
+          "RWrj2": -0.0}
 
 problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 
 model_description = 'whole_body'
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=False, is_receding=True)
+ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=False,
+                   is_receding=True)
 
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 ti.setTaskFromYaml('config_walk_forces.yaml')
@@ -80,58 +98,52 @@ init_force.setRef(6, f0)
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
+
 # final_base_x = ti.getTask('final_base_x')
 # final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
-def compute_n_forces(contacts, fixed_point=0, ignored_point=4):
-    n_c = 4
-    c_0 = contacts[fixed_point]
-    c_ignored = contacts[ignored_point]
+
+def compute_n_forces(contact, name, fixed_point=0):
+    c_0 = contact[fixed_point]
+
+    # todo: getting the relative points
+    c_rel_list = contact.copy()
+    c_rel_list.remove(c_0)
+
+    c_0_task = {'type': 'Cartesian',
+                'distal_link': c_0,
+                'name': name
+                }
+
+    ti.setTaskFromDict(c_0_task)
 
     # generate cartesian Tasks for each contact frame
-    for c_i in contacts:
-        c_task = {'type': 'Cartesian',
-                  'name': f'rel_vel_{c_i}',
-                  'indices': [0, 1],
-                  'frame': c_i}
+    for c_i in c_rel_list:
+        c_rel_task = {'type': 'Cartesian',
+                      'distal_link': c_i,
+                      'base_link': c_0,
+                      'name': f'vel_{c_i}_T_{c_0}',
+                      'indices': [0, 1],
+                      'cartesian_type': 'velocity'
+                      }
 
-        ti.setTaskFromDict(c_task)
-
-    c_0_task = ti.getTask(f'rel_vel_{c_0}')
-
-    c_rel_list = contacts.copy()
-    c_rel_list.remove(c_0)
-    c_rel_list.remove(c_ignored)
-
-    print(c_rel_list)
-
-    for c_rel in c_rel_list:
-        c_rel_task = ti.getTask(f'rel_vel_{c_rel}')
-        c_rel_task.setRef(c_0_task.)
+        ti.setTaskFromDict(c_rel_task)
 
 
-compute_n_forces(contacts)
-exit()
-# for contact in contacts:
-print(ti.prb.getVariables().keys())
-# f_l_foot_upper_right_link
-# f_l_foot_upper_left_link
-# f_l_foot_lower_right_link
-# f_r_foot_upper_right_link
-# f_r_foot_upper_left_link
-# f_r_foot_lower_right_link
-ti.prb.getVariables('f_l_foot_upper_right_link')
+compute_n_forces(contact_1, 'l_sole')
+compute_n_forces(contact_2, 'r_sole')
 
-for contact in contacts:
-    ti.prb.getVariables()
-exit()
 # opts = dict()
 # am = ActionManager(ti, opts)
 # am._walk([10, 40], [0, 1])
 
+l_sole_task = ti.getTask('l_sole')
+r_sole_task = ti.getTask('r_sole')
 
+# l_sole_task.setNodes(list(range(5)) + list(range(15, 50)))
+# r_contact.setNodes(list(range(0, 25)) + list(range(35, 50)))
 
 # ===============================================================
 # ===============================================================
@@ -149,7 +161,6 @@ forces = [ti.prb.getVariables('f_' + c) for c in contacts]
 
 for f in forces:
     f.setInitialGuess(f0)
-
 
 replay_motion = True
 plot_sol = not replay_motion
@@ -176,7 +187,8 @@ if replay_motion:
     # single replay
     q_sol = solution['q']
     frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(len(contacts))}
-    repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.kd_frame, ti.kd)
+    repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.kd_frame,
+                                               ti.kd)
     repl.sleep(1.)
     repl.replay(is_floating_base=True)
 # =========================================================================
@@ -225,7 +237,6 @@ if plot_sol:
 
     plt.show()
 
-
 # repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], np.array([]), {k: None for k in contacts},
 #                                            ti.kd_frame, ti.kd)
 # iteration = 0
@@ -247,8 +258,6 @@ if plot_sol:
 #     repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
 #     repl.publish_joints(solution['q'][:, 0])
 #     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
-
-
 
 
 # todo this is important: what if I want to get the current position of a CartesianTask? do it!

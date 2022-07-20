@@ -1,8 +1,11 @@
 solver:
-  type: ipopt
-  tol: 0.001
-  constr_viol_tol: 0.001
-  max_iter: 2000
+  type: ilqr
+#  tol: 0.001
+#  constr_viol_tol: 0.001
+#  max_iter: 2000
+  enable_gn: True
+  verbose: True
+
 
 constraints: [final_base_x,           # required to set x-target for the walk
 #              final_base_y,
@@ -24,28 +27,28 @@ costs: [joint_posture, joint_regularization] # final_base_y, min_rot # final_y
 
 final_base_x:
   type: Cartesian
-  frame: base_link
+  distal_link: base_link
   indices: [0]
   nodes: final
   weight: 1000
 #
 final_base_y:
   type: Cartesian
-  frame: base_link
+  distal_link: base_link
   indices: [1]
   nodes: final
   weight: 1000
 
 rot_l_sole:
   type: Cartesian
-  frame: l_sole
+  distal_link: l_sole
   indices: [3, 4, 5]
   nodes: all
   cartesian_type: velocity
 
 rot_r_sole:
   type: Cartesian
-  frame: r_sole
+  distal_link: r_sole
   indices: [3, 4, 5]
   nodes: all
   cartesian_type: velocity
@@ -58,7 +61,7 @@ interaction_l_foot:
 
 zero_velocity_l_foot:
   type: Cartesian
-  frame: l_sole
+  distal_link: l_sole
   indices: [0, 1, 2]
   nodes: all
   cartesian_type: velocity
@@ -69,7 +72,7 @@ interaction_r_foot:
 
 zero_velocity_r_foot:
   type: Cartesian
-  frame: r_sole
+  distal_link: r_sole
   indices: [0, 1, 2]
   nodes: all
   cartesian_type: velocity
@@ -91,7 +94,7 @@ min_rot:
 #
 joint_posture:
   type: Postural
-  weight: 10.
+  weight: 1. # 10
 
 # todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they wont get considered.
 joint_regularization:
@@ -104,24 +107,24 @@ joint_regularization:
 
 foot_z_l_sole:
   type: Cartesian
-  frame: l_sole
+  distal_link: l_sole
   indices: [2]
   cartesian_type: position
 
 foot_z_r_sole:
   type: Cartesian
-  frame: r_sole
+  distal_link: r_sole
   indices: [2]
   cartesian_type: position
 
 foot_xy_l_sole:
   type: Cartesian
-  frame: l_sole
+  distal_link: l_sole
   indices: [0, 1]
   cartesian_type: position
 
 foot_xy_r_sole:
   type: Cartesian
-  frame: r_sole
+  distal_link: r_sole
   indices: [0, 1]
   cartesian_type: position

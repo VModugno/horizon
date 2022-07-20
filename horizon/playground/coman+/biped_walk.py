@@ -3,13 +3,15 @@ import numpy as np
 from horizon.rhc.taskInterface import TaskInterface
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.utils.actionManager import ActionManager
+import casadi as cs
+
 # set up problem
 ns = 50
 tf = 10.0  # 10s
 dt = tf / ns
 
 # set up solver
-solver_type = 'ipopt'
+solver_type = 'ilqr'
 transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
 transcription_opts = dict(integrator='RK4')  # integrator used by the multiple_shooting
 
@@ -69,11 +71,12 @@ init_force.setRef(2, f0)
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
-# final_base_x = ti.getTask('final_base_x')
-# final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
+final_base_x = ti.getTask('final_base_x')
+final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
+
 
 
 opts = dict()
@@ -85,14 +88,26 @@ am._walk([10, 40], [0, 1])
 # r_contact.setNodes(list(range(0, 25)) + list(range(35, 50)))
 
 def compute_cop(frame, xmin, xmax, ymin, ymax):
-    wrench = ti.model.fmap[frame]
 
-    M_cop = np.zeros([4, 6])
+    # world wrench
+    world_wrench = ti.model.fmap[frame]
+
+    M_cop = cs.SX(4, 6)
     M_cop[:, 2] = [xmin, -xmax, ymin, -ymax]
     M_cop[[0, 1], 4] = [1, -1]
     M_cop[[2, 3], 3] = [-1, 1]
-    f_cop = M_cop @ wrench
 
+    fk = cs.Function.deserialize(ti.kd.fk(frame))
+
+    R = cs.inv(fk(q=ti.prb.getVariables('q'))['ee_rot'])
+    R_adj = cs.SX(6, 6)
+
+    R_adj[[0, 1, 2], [0, 1, 2]] = R
+    R_adj[[3, 4, 5], [3, 4, 5]] = R
+
+    rot_M_cop = M_cop @ R_adj
+
+    f_cop = rot_M_cop @ world_wrench
     cop_cnsrt = ti.prb.createIntermediateConstraint(f'cop_{frame}', f_cop)
     cop_cnsrt.setLowerBounds(-np.inf * np.ones(4))
 
@@ -107,6 +122,13 @@ q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')
 a = ti.prb.getVariables('a')
 
+import casadi as cs
+cd_fun = cs.Function.deserialize(ti.kd.computeCentroidalDynamics())
+
+# adding minimization of angular momentum
+h_lin, h_ang, dh_lin, dh_ang = cd_fun(q, v, a)
+ti.prb.createIntermediateResidual('min_angular_mom', 0.1 * dh_ang)
+
 q.setBounds(ti.q0, ti.q0, nodes=0)
 v.setBounds(ti.v0, ti.v0, nodes=0)
 
@@ -118,7 +140,7 @@ for f in forces:
     f.setInitialGuess(f0)
 
 
-replay_motion = False
+replay_motion = True
 plot_sol = not replay_motion
 
 # todo how to add?
