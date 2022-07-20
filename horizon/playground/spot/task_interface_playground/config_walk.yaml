@@ -38,21 +38,21 @@ costs: ['final_base_y', 'joint_posture', 'joint_regularization', 'final_y'] # 'm
 # todo to cartesian
 final_base_x:
   type: 'Cartesian'
-  frame: 'base_link'
+  distal_link: 'base_link'
   indices: [0]
   nodes: 'final'
   weight: 1000
 #
 final_base_y:
   type: 'Cartesian'
-  frame: 'base_link'
+  distal_link: 'base_link'
   indices: [1]
   nodes: 'final'
   weight: 1000
 #
 min_rot:
   type: 'Cartesian'
-  frame: 'base_link'
+  distal_link: 'base_link'
   indices: [3,4]
   nodes: 'all'
   weight: 0.001
@@ -64,13 +64,13 @@ joint_posture:
 
 final_x:
   type: "Cartesian"
-  frame: 'base_link'
+  distal_link: 'base_link'
   indices: [0]
   nodes: 'final'
 
 final_y:
   type: "Cartesian"
-  frame: 'base_link'
+  distal_link: 'base_link'
   indices: [1]
   weight: 1000
   nodes: 'final'
@@ -81,7 +81,7 @@ contact_lf_foot:
   frame: 'lf_foot'
 zero_velocity_lf_foot:
   type: 'Cartesian'
-  frame: 'lf_foot'
+  distal_link: 'lf_foot'
   indices: [0, 1, 2]
   cartesian_type: 'velocity'
 
@@ -90,7 +90,7 @@ contact_rf_foot:
   frame: 'rf_foot'
 zero_velocity_rf_foot:
   type: 'Cartesian'
-  frame: 'rf_foot'
+  distal_link: 'rf_foot'
   indices: [0, 1, 2]
   cartesian_type: 'velocity'
 
@@ -99,7 +99,7 @@ contact_lh_foot:
   frame: 'lh_foot'
 zero_velocity_lh_foot:
   type: 'Cartesian'
-  frame: 'lh_foot'
+  distal_link: 'lh_foot'
   indices: [0, 1, 2]
   cartesian_type: 'velocity'
 
@@ -109,7 +109,7 @@ contact_rh_foot:
 
 zero_velocity_rh_foot:
   type: 'Cartesian'
-  frame: 'rh_foot'
+  distal_link: 'rh_foot'
   indices: [0, 1, 2]
   cartesian_type: 'velocity'
 # ==========================================================================
@@ -131,49 +131,49 @@ foot_contact_rh_foot:
 
 foot_z_lf_foot:
   type: 'Cartesian'
-  frame: 'lf_foot'
+  distal_link: 'lf_foot'
   indices: [2]
   cartesian_type: 'position'
 
 foot_z_rf_foot:
   type: 'Cartesian'
-  frame: 'rf_foot'
+  distal_link: 'rf_foot'
   indices: [2]
   cartesian_type: 'position'
 
 foot_z_lh_foot:
   type: 'Cartesian'
-  frame: 'lh_foot'
+  distal_link: 'lh_foot'
   indices: [2]
   cartesian_type: 'position'
 
 foot_z_rh_foot:
   type: 'Cartesian'
-  frame: 'rh_foot'
+  distal_link: 'rh_foot'
   indices: [2]
   cartesian_type: 'position'
 
 foot_xy_lf_foot:
   type: 'Cartesian'
-  frame: 'lf_foot'
+  distal_link: 'lf_foot'
   indices: [0, 1]
   cartesian_type: 'position'
 
 foot_xy_rf_foot:
   type: 'Cartesian'
-  frame: 'rf_foot'
+  distal_link: 'rf_foot'
   indices: [0, 1]
   cartesian_type: 'position'
 
 foot_xy_lh_foot:
   type: 'Cartesian'
-  frame: 'lh_foot'
+  distal_link: 'lh_foot'
   indices: [0, 1]
   cartesian_type: 'position'
 
 foot_xy_rh_foot:
   type: 'Cartesian'
-  frame: 'rh_foot'
+  distal_link: 'rh_foot'
   indices: [0, 1]
   cartesian_type: 'position'
 

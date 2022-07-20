@@ -537,7 +537,7 @@ if __name__ == '__main__':
 
         subtask_cartesian = {'type': 'Cartesian',
                              'name': f'zero_velocity_{frame}',
-                             'frame': frame,
+                             'distal_link': frame,
                              'indices': [0, 1, 2],
                              'cartesian_type': 'velocity'}
 
@@ -547,14 +547,14 @@ if __name__ == '__main__':
 
         z_task_node = {'type': 'Cartesian',
                        'name': f'foot_z_{frame}',
-                       'frame': frame,
+                       'distal_link': frame,
                        'indices': [2],
                        'fun_type': 'constraint',
                        'cartesian_type': 'position'}
 
         foot_tgt_task_node = {'type': 'Cartesian',
                               'name': f'foot_xy_{frame}',
-                              'frame': frame,
+                              'distal_link': frame,
                               'indices': [0, 1],
                               'fun_type': 'constraint',
                               'cartesian_type': 'position'}

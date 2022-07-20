@@ -75,14 +75,14 @@ class HorizonWpg:
 
         # goalx = self.ti.prb.createFinalConstraint("final_x", self.ti.model.q[0] - self.ptgt[0])
         goalx = {'type': 'Cartesian',
-                 'frame': 'base_link',
+                 'distal_link': 'base_link',
                  'name': 'final_base_x',
                  'indices': [0],
                  'nodes': [self.N]}
 
         # goaly = self.ti.prb.createFinalResidual("final_y", 1e3 * (self.ti.model.q[1] - self.ptgt[1]))
         goaly = {'type': 'Cartesian',
-                 'frame': 'base_link',
+                 'distal_link': 'base_link',
                  'name': 'final_base_y',
                  'indices': [1],
                  'nodes': [self.N],
@@ -93,7 +93,7 @@ class HorizonWpg:
         # TODO this does not work
         goalrz = {'type': 'Cartesian',
                   'name': 'final_base_rz',
-                  'frame': 'base_link',
+                  'distal_link': 'base_link',
                   'indices': [5],
                   'nodes': [self.N],
                   'fun_type': 'residual',
@@ -126,7 +126,7 @@ class HorizonWpg:
         # self.ti.prb.createResidual("min_rot", 1e-4 * (self.ti.model.q[3:5] - q0[3:5]))
 
         minrot = {'type': 'Cartesian',
-                  'frame': 'base_link',
+                  'distal_link': 'base_link',
                   'name': 'min_rot',
                   'indices': [3, 4],
                   'nodes': list(range(self.N+1)),
@@ -221,7 +221,7 @@ class HorizonWpg:
 
             subtask_cartesian = {'type': 'Cartesian',
                                  'name': 'zero_velocity',
-                                 'frame': frame,
+                                 'distal_link': frame,
                                  'indices': [0, 1, 2, 3, 4, 5],
                                  'cartesian_type': 'velocity'}
 
@@ -235,7 +235,7 @@ class HorizonWpg:
 
             z_task_dict = {'type': 'Cartesian',
                            'name': f'{frame}_z_task',
-                           'frame': frame,
+                           'distal_link': frame,
                            'indices': [2],
                            'weight': 1.,
                            'fun_type': 'constraint',
@@ -245,7 +245,7 @@ class HorizonWpg:
 
             task_node = {'type': 'Cartesian',
                          'name': f'{frame}_foot_tgt_constr',
-                         'frame': frame,
+                         'distal_link': frame,
                          'indices': [0, 1],
                          'weight': 1.,
                          'cartesian_type': 'position'}

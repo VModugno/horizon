@@ -43,14 +43,14 @@ ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
 ptgt_final = base_init.copy()
 
 task_base_x = {'type': 'Cartesian',
-               'frame': 'base_link',
+               'distal_link': 'base_link',
                'name': 'final_base_x',
                'indices': [0],
                'nodes': [ns],
                'weight': 1e3}
 #
 task_base_y = {'type': 'Cartesian',
-               'frame': 'base_link',
+               'distal_link': 'base_link',
                'name': 'final_base_y',
                'indices': [1],
                'nodes': [ns],
@@ -157,7 +157,7 @@ for contact in contacts:
 
     subtask_cartesian = {'type': 'Cartesian',
                        'name': 'zero_velocity',
-                       'frame': contact,
+                       'distal_link': contact,
                        'indices': [0, 1, 2, 3, 4, 5],
                        'cartesian_type': 'velocity'}
 

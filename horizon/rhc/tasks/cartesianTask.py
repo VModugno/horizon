@@ -187,6 +187,22 @@ class CartesianTask(Task):
             fun = cs.vertcat(fun_trans, fun_lin)[self.indices]
 
         elif self.cartesian_type == 'velocity':
+
+            # pose info
+            fk_distal = cs.Function.deserialize(self.kin_dyn.fk(self.distal_link))
+            ee_p_distal = fk_distal(q=q)
+            ee_p_distal_t = ee_p_distal['ee_pos']
+            ee_p_distal_r = ee_p_distal['ee_rot']
+
+            fk_base = cs.Function.deserialize(self.kin_dyn.fk(self.base_link))
+            ee_p_base = fk_base(q=q)
+            ee_p_base_t = ee_p_base['ee_pos']
+            ee_p_base_r = ee_p_base['ee_rot']
+
+            ee_p_rel = ee_p_distal_t - ee_p_base_t
+            ee_r_rel = ee_p_base_r.T @ ee_p_distal_r
+            # ========================================================================
+            # vel info
             dfk_distal = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.distal_link, self.kd_frame))
             ee_v_distal_t = dfk_distal(q=q, qdot=v)['ee_vel_linear']
             ee_v_distal_r = dfk_distal(q=q, qdot=v)['ee_vel_angular']
@@ -195,10 +211,33 @@ class CartesianTask(Task):
             ee_v_base_t = dfk_base(q=q, qdot=v)['ee_vel_linear']
             ee_v_base_r = dfk_base(q=q, qdot=v)['ee_vel_angular']
 
+            r_used = ee_p_base_r.T # e_p_base_r # np.eye(3) # ee_r_rel.T  # ee_p_distal_r.T
+
+
+            # these are twists expressed in world, so I can subtract them --> self.kd_frame if this is LOCAL_WORLD_ALIGNED
             ee_v_distal = cs.vertcat(ee_v_distal_t, ee_v_distal_r)
             ee_v_base = cs.vertcat(ee_v_base_t, ee_v_base_r)
 
-            ee_rel = ee_v_distal - ee_v_base
+            # express this velocity from world to base
+
+            r_adj = cs.SX(6, 6)
+            r_adj[[0, 1, 2], [0, 1, 2]] = r_used
+            r_adj[[3, 4, 5], [3, 4, 5]] = r_used
+
+            r_adj_ll = -r_used @ cs.skew(ee_p_rel)
+            r_adj[[0, 1, 2], [3, 4, 5]] = r_adj_ll
+
+            # ee_base_distal = r_adj @ ee_v_base
+            # ee_rel = ee_v_distal - ee_base_distal
+            ee_rel = r_adj @ (ee_v_distal - ee_v_base)
+
+            # ee_rel = ee_v_distal - ee_v_base_in_distal
+            # =========================================
+            # r_adj = cs.SX(6, 6)
+            # r_adj[[0, 1, 2], [0, 1, 2]] = r_used
+            # r_adj[[3, 4, 5], [3, 4, 5]] = r_used
+            #
+            # ee_rel = r_adj @ (ee_v_distal - ee_v_base)
 
             frame_name = f'{self.name}_{self.distal_link}_vel'
             self.vel_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)

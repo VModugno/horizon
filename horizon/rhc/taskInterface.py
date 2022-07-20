@@ -304,6 +304,10 @@ class TaskInterface:
         # todo if receding is true ....
         scoped_opts = dict(zip([f"{self.si.type}.{key}" for key in self.si.opts.keys()], list(self.si.opts.values())))
         solver_bs = Solver.make_solver(self.si.type, self.prb, scoped_opts)
+        try:
+            solver_bs.set_iteration_callback()
+        except:
+            pass
 
         scoped_opts_rti = scoped_opts.copy()
         scoped_opts_rti['ilqr.enable_line_search'] = False
