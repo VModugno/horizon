@@ -57,7 +57,7 @@ rot_r_sole:
 # ============= l_ur =================
 interaction_l_foot_ur:
   type: Force
-  distal_link: l_foot_upper_right_link
+  frame: l_foot_upper_right_link
   indices: [0, 1, 2]
 
 zero_velocity_l_foot_ur:
@@ -74,7 +74,7 @@ interaction_l_foot_ul:
 
 zero_velocity_l_foot_ul:
   type: Cartesian
-  frame: l_foot_upper_left_link
+  distal_link: l_foot_upper_left_link
   indices: [0, 1, 2]
   nodes: all
   cartesian_type: velocity
@@ -86,7 +86,7 @@ interaction_l_foot_lr:
 
 zero_velocity_l_foot_lr:
   type: Cartesian
-  frame: l_foot_lower_right_link
+  distal_link: l_foot_lower_right_link
   indices: [0, 1, 2]
   nodes: all
   cartesian_type: velocity
@@ -112,14 +112,14 @@ interaction_r_foot_ur:
 
 zero_velocity_r_foot_ur:
   type: Cartesian
-  frame: r_foot_upper_right_link
+  distal_link: r_foot_upper_right_link
   indices: [0, 1, 2]
   nodes: all
   cartesian_type: velocity
 # ============= r_ul =================
 interaction_r_foot_ul:
   type: Force
-  distal_link: r_foot_upper_left_link
+  frame: r_foot_upper_left_link
   indices: [0, 1, 2]
 
 zero_velocity_r_foot_ul:
