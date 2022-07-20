@@ -1,25 +1,28 @@
 from urdf_parser_py import urdf
 import casadi as cs
 from scipy.spatial.transform import Rotation as R
+from srdfdom.srdf import SRDF
 
 class CollisionHandler:
 
-    def __init__(self, urdfstr, kindyn) -> None:
+    def __init__(self, urdfstr, kindyn, srdfstr=None) -> None:
         self.urdf = urdf.Robot.from_xml_string(urdfstr)
         self.capsules = dict()
         self.world = dict()
         self.kindyn = kindyn
         self.fk = dict()
+        self.srdf = SRDF.from_xml_string(srdfstr) if srdfstr is not None else None
+        self.cs_t = cs.SX
 
         for l in self.urdf.links:
             caps = CollisionHandler.collision_to_capsule(l)
             if caps is not None:
                 print(f'found capsule for link {l.name}')
                 self.capsules[l.name] = caps
-                self.fk[l.name] = cs.Function.deserialize(self.kindyn.fk(l.name))
+                self.fk[l.name] = self.kindyn.fk(l.name)
 
     def get_function(self):
-        q = cs.SX.sym('q', self.kindyn.nq())
+        q = self.cs_t.sym('q', self.kindyn.nq())
         d = self.compute_distances(q)
         return cs.Function('collision', [q], [d], ['q'], ['d'])
     
@@ -30,7 +33,7 @@ class CollisionHandler:
         # loop over body collision
         for bname, bc in self.capsules.items():
             ee_pos, ee_rot = self.fk[bname](q)
-            Tb = cs.SX.eye(4)
+            Tb = self.cs_t.eye(4)
             Tb[0:3, 0:3] = ee_rot 
             Tb[0:3, 3] = ee_pos
 
@@ -38,8 +41,42 @@ class CollisionHandler:
             for wcname, wc in self.world.items():
                 d = CollisionHandler.dist_capsule_capsule(bc, Tb, wc, cs.DM.eye(4))
                 dlist.append(d)
+
+            # loop over body collisions
+            for b2name, bc2 in self.capsules.items():
+                if self.is_collision_disabled(bname, b2name):
+                    continue
+                print(f'adding pair {bname} {b2name}')
+                ee_pos2, ee_rot2 = self.fk[b2name](q)
+                Tb2 = self.cs_t.eye(4)
+                Tb2[0:3, 0:3] = ee_rot2 
+                Tb2[0:3, 3] = ee_pos2
+                d = CollisionHandler.dist_capsule_capsule(bc, Tb, bc2, Tb2)
+                dlist.append(d)
             
-        return cs.SX(cs.vertcat(*dlist))
+        return self.cs_t(cs.vertcat(*dlist))
+
+    
+    def is_collision_disabled(self, link_1, link_2):
+        
+        # links are the same
+        if link_1 == link_2:
+            return True
+
+        # links are disabled in srdf
+        if self.srdf is None:
+            return False
+
+        # note the SS
+        for dc in self.srdf.disable_collisionss:
+            if dc.link1 == link_1 and dc.link2 == link_2:
+                return True
+            if dc.link1 == link_2 and dc.link2 == link_1:
+                return True
+
+        return False
+            
+            
     
 
     @classmethod
