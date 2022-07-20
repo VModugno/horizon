@@ -47,13 +47,13 @@ class steps_phase:
         self.jump_c = []
         self.jump_cdot_bounds = []
         self.jump_f_bounds = []
-        sin = 0.1 * np.sin(np.linspace(0, np.pi, 8))
+        sin = 0.1 * np.sin(np.linspace(0, np.pi, 10))
         for k in range(0, 7):  # 7 nodes down
             self.jump_c.append(c_init_z)
             self.jump_cdot_bounds.append([0., 0., 0.])
             self.jump_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes jump
-            self.jump_c.append(c_init_z + sin[k])
+            self.jump_c.append(c_init_z + sin[k + 1])
             self.jump_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
             self.jump_f_bounds.append([0., 0., 0.])
         for k in range(0, 7):  # 6 nodes down
@@ -74,7 +74,7 @@ class steps_phase:
 
 
         #STEP
-        sin = 0.1 * np.sin(np.linspace(0, np.pi, 8))
+        sin = 0.1 * np.sin(np.linspace(0, np.pi, 10))
         #left step cycle
         self.l_cycle = []
         self.l_cdot_bounds = []
@@ -84,7 +84,7 @@ class steps_phase:
             self.l_cdot_bounds.append([0., 0., 0.])
             self.l_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes step
-            self.l_cycle.append(c_init_z + sin[k])
+            self.l_cycle.append(c_init_z + sin[k + 1])
             self.l_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
             self.l_f_bounds.append([0., 0., 0.])
         for k in range(0, 2):  # 2 nodes down
@@ -116,7 +116,7 @@ class steps_phase:
             self.r_cdot_bounds.append([0., 0., 0.])
             self.r_f_bounds.append([max_force, max_force, max_force])
         for k in range(0, 8):  # 8 nodes step
-            self.r_cycle.append(c_init_z + sin[k])
+            self.r_cycle.append(c_init_z + sin[k + 1])
             self.r_cdot_bounds.append([max_velocity, max_velocity, max_velocity])
             self.r_f_bounds.append([0., 0., 0.])
         self.r_cycle.append(c_init_z)  # last node down
@@ -788,7 +788,7 @@ if SOLVER() == 'gnsqp':
     opts = {"gnsqp.qp_solver": "osqp",
             "max_iter": 5,
             "alpha_min": 1e-9,
-            #'beta': 1.,
+            'beta': 1.,
             "use_golden_ratio_update": True,
             'solution_convergence': 1e-3,
             'merit_derivative_tolerance': 1e-4,
