@@ -3,7 +3,6 @@
 
 #include "ilqr.h"
 #include "wrapped_function.h"
-#include <eigen3/unsupported/Eigen/CXX11/Tensor>
 
 using namespace horizon;
 using namespace casadi_utils;
@@ -11,27 +10,6 @@ using namespace casadi_utils;
 namespace cs = casadi;
 
 extern utils::Timer::TocCallback on_timer_toc;
-
-typedef Eigen::Tensor<double, 1> Tensor1d;
-typedef Eigen::TensorMap<Tensor1d> TensorMap1d;
-typedef Eigen::TensorMap<Eigen::Tensor<const double, 1>> TensorConstMap1d;
-typedef Eigen::TensorRef<const Tensor1d> TensorConstRef1d;
-
-typedef Eigen::Tensor<double, 2> Tensor2d;
-typedef Eigen::TensorMap<Tensor2d> TensorMap2d;
-typedef Eigen::TensorRef<const Tensor2d> TensorConstRef2d;
-
-typedef Eigen::Tensor<double, 3> Tensor3d;
-typedef Eigen::TensorMap<Tensor3d> TensorMap3d;
-typedef Eigen::TensorMap<Eigen::Tensor<const double, 3>> TensorConstMap3d;
-typedef Eigen::TensorRef<const Tensor3d> TensorConstRef3d;
-
-namespace horizon {
-namespace tensor {
-    void s_transpose_H(const Eigen::VectorXd& s,
-                       TensorConstMap3d H,
-                       Eigen::MatrixXd& res);
-} }
 
 struct IterativeLQR::Dynamics
 {
@@ -44,9 +22,6 @@ public:
     // dynamics jacobian
     casadi_utils::WrappedFunction df;
 
-    // dynamics hessian
-    casadi_utils::WrappedFunction ddf;
-
     // parameters
     ParameterMapPtr param;
 
@@ -56,15 +31,6 @@ public:
     // df/du
     const Eigen::MatrixXd& B() const;
 
-    // ddf/ddx
-    TensorConstMap3d Fxx() const;
-
-    // ddf/ddu
-    TensorConstMap3d Fuu() const;
-
-    // ddf/dudx
-    TensorConstMap3d Fux() const;
-
     // defect (or gap)
     Eigen::VectorXd d;
 
@@ -73,10 +39,6 @@ public:
     VecConstRef integrate(VecConstRef x,
                           VecConstRef u,
                           int k);
-
-    void quadratize(VecConstRef x,
-                    VecConstRef u,
-                    int k);
 
     void linearize(VecConstRef x,
                    VecConstRef u,
@@ -88,13 +50,9 @@ public:
                        int k,
                        Eigen::VectorXd& d);
 
+    void setDynamics(casadi::Function f);
+
     static casadi::Function Jacobian(const casadi::Function& f);
-
-    static casadi::Function Hessian(const casadi::Function& df);
-
-private:
-
-    const int _nx, _nu;
 
 };
 
@@ -107,9 +65,6 @@ struct IterativeLQR::ConstraintEntity
 
     // constraint jacobian
     casadi_utils::WrappedFunction df;
-
-    // constraint hessian
-    casadi_utils::WrappedFunction ddf;
 
     // parameter map
     ParameterMapPtr param;
@@ -131,8 +86,6 @@ struct IterativeLQR::ConstraintEntity
 
     ConstraintEntity();
 
-    void quadratize(VecConstRef x, VecConstRef u, int k);
-
     void linearize(VecConstRef x, VecConstRef u, int k);
 
     void evaluate(VecConstRef x, VecConstRef u, int k);
@@ -141,11 +94,14 @@ struct IterativeLQR::ConstraintEntity
 
     void setConstraint(casadi::Function h, casadi::Function dh);
 
+    void setTargetValue(const Eigen::VectorXd& hdes);
+
     static casadi::Function Jacobian(const casadi::Function& h);
 
-    static casadi::Function Hessian(const casadi::Function& dh);
-
 private:
+
+    // desired value
+    Eigen::VectorXd _hdes;
 
     // computed value
     Eigen::VectorXd _hvalue;
@@ -188,9 +144,91 @@ private:
 
 };
 
-struct IterativeLQR::IntermediateCostEntity
+struct IterativeLQR::CostEntityBase
+{
+    typedef std::shared_ptr<CostEntityBase> Ptr;
+
+    // parameters
+    ParameterMapPtr param;
+
+    // indices
+    std::vector<int> indices;
+
+    /* Quadratized cost */
+    virtual const Eigen::MatrixXd& Q() const { return _Q; }
+    virtual VecConstRef q() const { return _q; }
+    virtual const Eigen::MatrixXd& R() const { return _R; }
+    virtual VecConstRef r() const { return _r; }
+    virtual const Eigen::MatrixXd& P() const { return _P; }
+
+    virtual double evaluate(VecConstRef x, VecConstRef u, int k) = 0;
+    virtual void quadratize(VecConstRef x, VecConstRef u, int k) = 0;
+
+    virtual ~CostEntityBase() = default;
+
+protected:
+
+    Eigen::MatrixXd _Q, _R, _P;
+    Eigen::VectorXd _q, _r;
+};
+
+struct IterativeLQR::BoundAuglagCostEntity : CostEntityBase
+{
+    typedef std::shared_ptr<BoundAuglagCostEntity> Ptr;
+
+    BoundAuglagCostEntity(int N,
+                          VecConstRef xlb, VecConstRef xub,
+                          VecConstRef ulb, VecConstRef uub);
+
+    void setRho(double rho);
+
+    double evaluate(VecConstRef x, VecConstRef u, int k) override;
+
+    void quadratize(VecConstRef x, VecConstRef u, int k) override;
+
+    void update_lam(VecConstRef x, VecConstRef u, int k);
+
+    VecConstRef getStateMultiplier() const;
+
+    VecConstRef getInputMultiplier() const;
+
+private:
+
+    VecConstRef _xlb, _xub;
+    VecConstRef _ulb, _uub;
+
+    Eigen::VectorXd _x_violation;
+    Eigen::VectorXd _u_violation;
+
+    Eigen::VectorXd _xlam, _ulam;
+    double _rho;
+
+    const int _N;
+};
+
+
+struct IterativeLQR::IntermediateCostEntity : CostEntityBase
 {
     typedef std::shared_ptr<IntermediateCostEntity> Ptr;
+
+    // set cost
+    void setCost(casadi::Function l,
+                 casadi::Function dl,
+                 casadi::Function ddl);
+
+    const Eigen::MatrixXd& Q() const override;
+    VecConstRef q() const override;
+    const Eigen::MatrixXd& R() const override;
+    VecConstRef r() const override;
+    const Eigen::MatrixXd& P() const override;
+
+    double evaluate(VecConstRef x, VecConstRef u, int k) override;
+    void quadratize(VecConstRef x, VecConstRef u, int k) override;
+
+    static casadi::Function Gradient(const casadi::Function& f);
+    static casadi::Function Hessian(const casadi::Function& df);
+
+private:
 
     // original cost
     casadi_utils::WrappedFunction l;
@@ -200,31 +238,30 @@ struct IterativeLQR::IntermediateCostEntity
 
     // cost hessian
     casadi_utils::WrappedFunction ddl;
+};
 
-    // parameters
-    ParameterMapPtr param;
+struct IterativeLQR::IntermediateResidualEntity : CostEntityBase
+{
+    typedef std::shared_ptr<IntermediateResidualEntity> Ptr;
 
-    // indices
-    std::vector<int> indices;
+    void setResidual(casadi::Function res,
+                     casadi::Function dres);
 
-    /* Quadratized cost */
-    const Eigen::MatrixXd& Q() const;
-    VecConstRef q() const;
-    const Eigen::MatrixXd& R() const;
-    VecConstRef r() const;
-    const Eigen::MatrixXd& P() const;
+    double evaluate(VecConstRef x, VecConstRef u, int k) override;
 
-    void setCost(const casadi::Function& cost);
+    void quadratize(VecConstRef x, VecConstRef u, int k) override;
 
-    void setCost(const casadi::Function& f,
-                 const casadi::Function& df,
-                 const casadi::Function& ddf);
+    static casadi::Function Jacobian(const casadi::Function& f);
 
-    double evaluate(VecConstRef x, VecConstRef u, int k);
-    void quadratize(VecConstRef x, VecConstRef u, int k);
+private:
 
-    static casadi::Function Gradient(const casadi::Function& f);
-    static casadi::Function Hessian(const casadi::Function& df);
+    // original residual
+    casadi_utils::WrappedFunction res;
+
+    // residual jacobian
+    casadi_utils::WrappedFunction dres;
+
+
 };
 
 struct IterativeLQR::IntermediateCost
@@ -239,7 +276,7 @@ struct IterativeLQR::IntermediateCost
 
     IntermediateCost(int nx, int nu);
 
-    void addCost(IntermediateCostEntity::Ptr cost);
+    void addCost(CostEntityBase::Ptr cost);
 
     double evaluate(VecConstRef x, VecConstRef u, int k);
     void quadratize(VecConstRef x, VecConstRef u, int k);
@@ -248,7 +285,7 @@ struct IterativeLQR::IntermediateCost
 
 private:
 
-    std::vector<IntermediateCostEntity::Ptr> items;
+    std::vector<CostEntityBase::Ptr> items;
     Eigen::MatrixXd _Q, _R, _P;
     Eigen::VectorXd _q, _r;
 };
@@ -283,13 +320,11 @@ struct IterativeLQR::Temporaries
     // temporary for kkt rhs
     Eigen::MatrixXd kkt;
     Eigen::MatrixXd kx0;
-    Eigen::MatrixXd M;
 
     // lu for kkt matrix
     Eigen::PartialPivLU<Eigen::MatrixXd> lu;
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr;
-    Eigen::LDLT<Eigen::MatrixXd> llt_hess;
-    Eigen::LDLT<Eigen::MatrixXd> llt_constr;
+    Eigen::LDLT<Eigen::MatrixXd> ldlt;
 
     // kkt solution
     Eigen::MatrixXd u_lam;
@@ -302,6 +337,15 @@ struct IterativeLQR::Temporaries
     // rotated constraint according to left singular vectors of D
     Eigen::MatrixXd rotC;
     Eigen::VectorXd roth;
+
+    // optimal state computation
+    // (note: only for initial state x[0])
+    Eigen::FullPivLU<Eigen::MatrixXd> x_lu;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> x_qr;
+    Eigen::LDLT<Eigen::MatrixXd> x_ldlt;
+    Eigen::MatrixXd x_kkt;
+    Eigen::VectorXd x_k0;
+    Eigen::VectorXd dx_lam;
 
     /* Forward pass */
     Eigen::VectorXd dx;
@@ -324,6 +368,8 @@ struct IterativeLQR::ConstraintToGo
 
     void add(MatConstRef C, MatConstRef D, VecConstRef h);
 
+    void add(MatConstRef C, VecConstRef h);
+
     void clear();
 
     int dim() const;
@@ -333,6 +379,7 @@ struct IterativeLQR::ConstraintToGo
     MatConstRef D() const;
 
     VecConstRef h() const;
+
 
 private:
 
@@ -369,6 +416,11 @@ struct IterativeLQR::BackwardPassResult
     Eigen::MatrixXd Gu;
     Eigen::MatrixXd Gx;
     Eigen::VectorXd glam;
+
+    // optimal state
+    // (this is only filled at i = 0)
+    Eigen::VectorXd dx;
+    Eigen::VectorXd dx_lam;
 
     BackwardPassResult(int nx, int nu);
 };

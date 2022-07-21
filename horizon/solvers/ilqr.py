@@ -45,10 +45,10 @@ class SolverILQR(Solver):
             # integrator_opt['tf'] = self.dt
             x_int = self.int(self.x, self.u, self.dt)[0]
             dt_name = 'dt'
-            time = cs.SX.sym(dt_name, 0)
+            time = self.prb.default_casadi_type.sym(dt_name, 0)
 
         elif isinstance(self.dt, Parameter):
-            time = cs.SX.sym(self.dt.getName(), 1)
+            time = self.prb.default_casadi_type.sym(self.dt.getName(), 1)
             x_int = self.int(self.x, self.u, time)[0]
             dt_name = self.dt.getName()
             pass
@@ -62,6 +62,9 @@ class SolverILQR(Solver):
 
         # create ilqr solver
         self.ilqr = IterativeLQR(self.dyn, self.N, self.opts)
+
+        # should we use GN approx for residuals?
+        self.use_gn = self.opts.get('ilqr.enable_gn', False)
 
         # set constraints, costs, bounds
         self._set_constraint()
@@ -107,7 +110,6 @@ class SolverILQR(Solver):
         x0 = self.prb.getInitialState()
         xinit = self.prb.getState().getInitialGuess()
         uinit = self.prb.getInput().getInitialGuess()
-        xinit[:, 0] = x0.flatten()
 
         # update initial guess
         self.ilqr.setStateInitialGuess(xinit)
@@ -201,7 +203,6 @@ class SolverILQR(Solver):
         self._set_fun(container=self.prb.function_container.getCost(),
                 set_to_ilqr=self.ilqr.setIntermediateCost, 
                 outname='l')
-
     
     def _set_constraint(self):
 
@@ -228,22 +229,32 @@ class SolverILQR(Solver):
             input_list = f.getVariables()
             param_list = f.getParameters()
 
-            # save function value
-            if isinstance(f, (Residual, RecedingResidual)):
-                value = cs.sumsqr(f.getFunction()(*input_list, *param_list))
-            else:
-                value = f.getFunction()(*input_list, *param_list)
+            # fn value
+            value = f.getFunction()(*input_list, *param_list)
 
+            # set to ilqr fn could change if this is a residual
+            # and we're in gn mode
+            set_to_ilqr_actual = set_to_ilqr
+            outname_actual = outname
+
+            # save function value
+            if isinstance(f, (Residual, RecedingResidual)) and self.use_gn:
+                outname_actual = 'res'
+                set_to_ilqr_actual = self.ilqr.setIntermediateResidual
+                print('got residual')
+            elif isinstance(f, (Residual, RecedingResidual)) and not self.use_gn:
+                value = cs.sumsqr(value)
+                print('got residual disables')
+                
             # wrap function
             l = cs.Function(fname, 
                             [self.x, self.u] + param_list, [value], 
                             ['x', 'u'] + [p.getName() for p in param_list], 
-                            [outname]
+                            [outname_actual]
                             )
 
-            print(f)
-            print(l)
-            set_to_ilqr(f.getNodes(), l)
+
+            set_to_ilqr_actual(f.getNodes(), l)
         
     
     def _set_param_values(self):
@@ -256,7 +267,7 @@ class SolverILQR(Solver):
         for p in params:
             # todo small hack:
             #  the parameters inside the ilqr are defined on ALL nodes
-            #  horizon allows to define parameters also only on desired nodes
+            #  horizon allows to define parameters only on desired nodes
             #  so i'm masking the parameter values with a matrix of nan of N+1 dimension
             p_vals_temp = p.getValues()
             p_vals = np.empty((p.getDim(), self.N+1))
@@ -269,6 +280,7 @@ class SolverILQR(Solver):
 
         if not fpres.accepted:
             return
+            print('-', end='', flush=True)
         else:
             print('*', end='', flush=True)
             
@@ -307,5 +319,5 @@ class SolverILQR(Solver):
             self.dax.autoscale_view()
             self.hax.autoscale_view()
             plt.pause(0.01)
-            # plt.waitforbuttonpress()
+            plt.waitforbuttonpress()
 
