@@ -605,18 +605,18 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
 
     _constraint_to_go->clear();
 
-    for(int i = 0; i < hinf.size(); i++)
+    for(int j = 0; j < hinf.size(); j++)
     {
         // i-th infeasible constraint is in the form 0x = 0
-        if(std::fabs(hinf[i]) < 1e-9 &&
-                Cinf.row(i).lpNorm<Eigen::Infinity>() < 1e-9)
+        if(std::fabs(hinf[j]) < 1e-9 &&
+                Cinf.row(j).lpNorm<Eigen::Infinity>() < 1e-9)
         {
             std::cout << "warn at k = " << i << ": removing linearly dependent constraint \n";
             continue;
         }
 
-        _constraint_to_go->add(Cinf.row(i),
-                               hinf.row(i));
+        _constraint_to_go->add(Cinf.row(j),
+                               hinf.row(j));
     }
 
     return FeasibleConstraint{Cf, Df, hf};
