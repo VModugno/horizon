@@ -35,7 +35,6 @@ public:
     double beta = 1.0;
     double gamma = 0.0;
     double constr_tol = 1e-6;
-    int memory = 0;
 
 
 private:

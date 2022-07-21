@@ -2,5 +2,6 @@
 set -ev
 
 if [ "$DISTRIBUTION" = "python" ]; then
-    python3 horizon/tests/test_get_set.py;
+    cd $HOME
+    nosetests3 -w $HORIZON_DIR/horizon/tests
 fi

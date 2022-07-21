@@ -110,7 +110,7 @@ public:
     void call(bool sparse = false);
     const Eigen::MatrixXd& getOutput(int i) const;
     const Eigen::SparseMatrix<double>& getSparseOutput(int i) const;
-    casadi::Function& function();
+    casadi::Function& functionRef();
     const casadi::Function& function() const;
     Eigen::MatrixXd& out(int i);
 
