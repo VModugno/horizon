@@ -1,10 +1,11 @@
 solver:
-  type: ilqr
+  type: ipopt
+  ipopt.linear_solver: ma57
 #  tol: 0.001
 #  constr_viol_tol: 0.001
 #  max_iter: 2000
-  enable_gn: True
-  verbose: True
+  # enable_gn: True
+  # verbose: True
 
 
 constraints: [final_base_x,           # required to set x-target for the walk
@@ -16,7 +17,9 @@ constraints: [final_base_x,           # required to set x-target for the walk
               foot_z_r_sole,          # required from the ActionManager
               foot_xy_r_sole,         # required from the ActionManager
               rot_l_sole,              # keep the sole straight
-              rot_r_sole               # keep the sole straight
+              rot_r_sole,               # keep the sole straight
+              cop_l, 
+              cop_r
               ]
               # task_base_x,
               # final_x,
@@ -56,8 +59,13 @@ rot_r_sole:
 # ===============================
 
 interaction_l_foot:
-  type: Force
+  type: SurfaceContact
   frame: l_sole
+
+cop_l:
+  type: CopConstraint
+  subtask: [interaction_l_foot]
+  dimensions: [0.2, 0.1]
 
 zero_velocity_l_foot:
   type: Cartesian
@@ -67,8 +75,13 @@ zero_velocity_l_foot:
   cartesian_type: velocity
 
 interaction_r_foot:
-  type: Force
+  type: SurfaceContact
   frame: r_sole
+
+cop_r:
+  type: CopConstraint
+  subtask: [interaction_r_foot]
+  dimensions: [0.2, 0.1]
 
 zero_velocity_r_foot:
   type: Cartesian
@@ -94,7 +107,7 @@ min_rot:
 #
 joint_posture:
   type: Postural
-  weight: 1. # 10
+  weight: 5. # 10
 
 # todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they wont get considered.
 joint_regularization:

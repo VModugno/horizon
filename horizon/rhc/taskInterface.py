@@ -1,12 +1,14 @@
+import casadi as cs
+
 from horizon.problem import Problem
 from horizon.utils import utils, kin_dyn
 from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
-from horizon.rhc.tasks.interactionTask import InteractionTask
+from horizon.rhc.tasks.interactionTask import CopConstraint, InteractionTask, SurfaceContact
 from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
 from horizon.rhc.tasks.regularizationTask import RegularizationTask
-from typing import List, Dict
+from typing import List, Dict, Union, Tuple
 import numpy as np
 from horizon.rhc import task_factory, plugin_handler, solver_interface
 from horizon.rhc.yaml_handler import YamlParser
@@ -14,11 +16,20 @@ from horizon.solvers.solver import Solver
 
 
 class ModelDescription:
+    
     def __init__(self, problem, model):
         self.prb = problem
         self.kd = model
 
-    def generateModel(self, model_type=None, enable_torques=False, floating_base=False):
+    def fk(self, frame) -> Tuple[Union[cs.SX, cs.MX]]:
+        """
+        returns the tuple (ee_pos, ee_rot), evaluated
+        at the symbolic state variable q
+        """
+        fk_fn = self.kd.fk(frame)
+        return fk_fn(self.q)
+
+    def generateModel(self, model_type=None, floating_base=False):
 
         self.floating_base = floating_base
         self.model_type = 'whole_body' if model_type is None else model_type
@@ -33,7 +44,6 @@ class ModelDescription:
 
             # custom choices
             # todo this is ugly
-            self.nf = 3 if enable_torques is False else 6
             self.q = self.prb.createStateVariable('q', self.nq)
             self.v = self.prb.createStateVariable('v', self.nv)
             self.a = self.prb.createInputVariable('a', self.nv)
@@ -45,13 +55,12 @@ class ModelDescription:
         self.contacts = []
         self.fmap = dict()
 
-    def setContactFrame(self, contact):
+    def setContactFrame(self, contact, f_c):
 
         # todo add more guards
         if contact in self.contacts:
             raise Exception(f'{contact} frame is already a contact.')
         self.contacts.append(contact)
-        f_c = self.prb.createInputVariable('f_' + contact, self.nf)
         self.fmap[contact] = f_c
         return f_c
 
@@ -89,8 +98,6 @@ class TaskInterface:
                  problem_opts: Dict[str, any],
                  model_description: str,
                  fixed_joints: List[str] = None,
-                 contacts: List[str] = None,  # todo this is wrong, it should not be listed in the initialization
-                 enable_torques: bool = False,
                  is_receding: bool = True):
 
         # get the model
@@ -99,7 +106,8 @@ class TaskInterface:
         # here I register the the default tasks
         # todo: should I do it here?
         task_factory.register('Cartesian', CartesianTask)
-        task_factory.register('Force', InteractionTask)
+        task_factory.register('SurfaceContact', SurfaceContact)
+        task_factory.register('CopConstraint', CopConstraint)
         task_factory.register('Postural', PosturalTask)
         task_factory.register('JointLimits', JointLimitsTask)
         task_factory.register('Regularization', RegularizationTask)
@@ -110,8 +118,6 @@ class TaskInterface:
         fixed_joint_map = {k: q_init[k] for k in self.fixed_joints}
         self.kd = pycasadi_kin_dyn.CasadiKinDyn(self.urdf, fixed_joints=fixed_joint_map)
         self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-
-        self.init_contacts = contacts
 
         # number of dof
         self.nq = self.kd.nq()
@@ -141,14 +147,15 @@ class TaskInterface:
 
         # model specification (whole body, centroidal, acceleration, velocity...)
         self.model = ModelDescription(self.prb, self.kd)
-        self.model.generateModel(model_description, enable_torques=enable_torques, floating_base=floating_base)
+        self.model.generateModel(model_description, floating_base=floating_base)
 
-        if self.init_contacts is not None:
-            for c in self.init_contacts:
-                self.model.setContactFrame(c)
+        
 
+    def finalize(self):
+        """
+        to be called after all variables have been created
+        """
         self.model.setDynamics()
-
 
     def _createProblem(self, problem_opts):
 
@@ -158,7 +165,7 @@ class TaskInterface:
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
 
-        self.prb = Problem(self.N, receding=self.is_receding)
+        self.prb = Problem(self.N, receding=self.is_receding, casadi_type=cs.MX)
         self.prb.setDt(self.dt)
 
     # a possible method could read from yaml and create the task list
@@ -197,6 +204,9 @@ class TaskInterface:
 
     def generateTaskFromDict(self, task_description):
 
+        if task_description['name'] in self.task_list:
+            return None
+
         # todo this should probably go in each single task definition --> i don't have the info from the ti then
         shortcuts = {
             'nodes': {'final': self.N, 'all': range(self.N + 1)},
@@ -223,17 +233,11 @@ class TaskInterface:
         # add generic context
         task_description_mod['prb'] = self.prb
         task_description_mod['kin_dyn'] = self.kd
+        task_description_mod['model'] = self.model
 
         # add specific context
         if task_description_mod['type'] == 'Postural':
             task_description_mod['postural_ref'] = self.q0
-
-        if task_description_mod['type'] == 'Force':
-            contact_frame = task_description_mod['frame']
-            if contact_frame not in self.model.contacts:
-                self.model.setContactFrame(contact_frame)
-
-            task_description_mod['force'] = self.prb.getVariables('f_' + task_description_mod['frame'])
 
         if task_description_mod['type'] == 'TorqueLimits':
             task_description_mod['var'] = self.model.tau
@@ -269,7 +273,7 @@ class TaskInterface:
                         subtask_description[key] = value
 
                 s_t = self.generateTaskFromDict(subtask_description)
-                subtasks[s_t.getType()] = s_t
+                subtasks[s_t.name] = s_t
                 task_description_copy.update({'subtask': subtasks})
 
         return task_description_copy
@@ -280,8 +284,14 @@ class TaskInterface:
         self.task_list.append(task)
 
     def getTask(self, task_name):
-        # todo better error
-        list_1 = [t for t in self.task_list if t.getName() == task_name][0]
+        # return the task with name task_name
+        for task in self.task_list:
+            if task.name == task_name:
+                return task
+        return None
+
+    def getTaskByClass(self, task_class):
+        list_1 = [t for t in self.task_list if isinstance(t, task_class)]
         return list_1
 
     def loadPlugins(self, plugins):
@@ -302,14 +312,13 @@ class TaskInterface:
     def getSolver(self):
 
         # todo if receding is true ....
-        scoped_opts = dict(zip([f"{self.si.type}.{key}" for key in self.si.opts.keys()], list(self.si.opts.values())))
-        solver_bs = Solver.make_solver(self.si.type, self.prb, scoped_opts)
+        solver_bs = Solver.make_solver(self.si.type, self.prb, self.si.opts)
         try:
             solver_bs.set_iteration_callback()
         except:
             pass
 
-        scoped_opts_rti = scoped_opts.copy()
+        scoped_opts_rti = self.si.opts.copy()
         scoped_opts_rti['ilqr.enable_line_search'] = False
         scoped_opts_rti['ilqr.max_iter'] = 4
         solver_rti = Solver.make_solver(self.si.type, self.prb, scoped_opts_rti)
