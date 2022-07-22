@@ -1,0 +1,225 @@
+solver:
+  type: ipopt
+  tol: 0.001
+  constr_viol_tol: 0.001
+  max_iter: 2000
+
+constraints: [final_base_x,           # required to set x-target for the walk
+#              final_base_y,
+              foot_contact_l_sole_ur,
+              foot_contact_l_sole_ul,
+              foot_contact_l_sole_lr,
+#              foot_contact_l_sole_ll,
+              foot_contact_r_sole_ur,
+              foot_contact_r_sole_ul,
+              foot_contact_r_sole_lr,
+#              foot_contact_r_sole_ll,
+#              foot_z_l_sole,
+#              foot_xy_l_sole,
+#              foot_z_r_sole,
+#              foot_xy_r_sole,
+              ]
+              # task_base_x,
+              # final_x,
+              # zero_velocity_l_foot,
+              # zero_velocity_r_foot
+
+costs: [joint_posture, joint_regularization] # final_base_y, min_rot # final_y
+
+final_base_x:
+  type: Cartesian
+  distal_link: base_link
+  indices: [0]
+  nodes: final
+  weight: 1000
+#
+final_base_y:
+  type: Cartesian
+  distal_link: base_link
+  indices: [1]
+  nodes: final
+  weight: 1000
+
+rot_l_sole:
+  type: Cartesian
+  distal_link: l_sole
+  indices: [3, 4, 5]
+  nodes: all
+  cartesian_type: velocity
+
+rot_r_sole:
+  type: Cartesian
+  distal_link: r_sole
+  indices: [3, 4, 5]
+  nodes: all
+  cartesian_type: velocity
+
+# ============= l_ur =================
+interaction_l_foot_ur:
+  type: Force
+  frame: l_foot_upper_right_link
+  indices: [0, 1, 2]
+
+zero_velocity_l_foot_ur:
+  type: Cartesian
+  distal_link: l_foot_upper_right_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ============= l_ul =================
+interaction_l_foot_ul:
+  type: Force
+  frame: l_foot_upper_left_link
+  indices: [0, 1, 2]
+
+zero_velocity_l_foot_ul:
+  type: Cartesian
+  distal_link: l_foot_upper_left_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ============= l_lr =================
+interaction_l_foot_lr:
+  type: Force
+  frame: l_foot_lower_right_link
+  indices: [0, 1, 2]
+
+zero_velocity_l_foot_lr:
+  type: Cartesian
+  distal_link: l_foot_lower_right_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ============= l_ll =================
+interaction_l_foot_ll:
+  type: Force
+  frame: l_foot_lower_left_link
+  indices: [0, 1, 2]
+
+zero_velocity_l_foot_ll:
+  type: Cartesian
+  distal_link: l_foot_lower_left_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ===================================
+# -----------------------------------
+# ============= r_ur =================
+interaction_r_foot_ur:
+  type: Force
+  frame: r_foot_upper_right_link
+  indices: [0, 1, 2]
+
+zero_velocity_r_foot_ur:
+  type: Cartesian
+  distal_link: r_foot_upper_right_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ============= r_ul =================
+interaction_r_foot_ul:
+  type: Force
+  frame: r_foot_upper_left_link
+  indices: [0, 1, 2]
+
+zero_velocity_r_foot_ul:
+  type: Cartesian
+  distal_link: r_foot_upper_left_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ============= r_lr =================
+interaction_r_foot_lr:
+  type: Force
+  frame: r_foot_lower_right_link
+  indices: [0, 1, 2]
+
+zero_velocity_r_foot_lr:
+  type: Cartesian
+  distal_link: r_foot_lower_right_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ============= l_ll =================
+interaction_r_foot_ll:
+  type: Force
+  frame: r_foot_lower_left_link
+  indices: [0, 1, 2]
+
+zero_velocity_r_foot_ll:
+  type: Cartesian
+  distal_link: r_foot_lower_left_link
+  indices: [0, 1, 2]
+  nodes: all
+  cartesian_type: velocity
+# ====================================
+
+foot_contact_l_sole_ur:
+  type: Contact
+  subtask: [interaction_l_foot_ur, zero_velocity_l_foot_ur]
+
+foot_contact_l_sole_ul:
+  type: Contact
+  subtask: [interaction_l_foot_ul, zero_velocity_l_foot_ul]
+
+foot_contact_l_sole_lr:
+  type: Contact
+  subtask: [interaction_l_foot_lr, zero_velocity_l_foot_lr]
+
+foot_contact_l_sole_ll:
+  type: Contact
+  subtask: [interaction_l_foot_ll, zero_velocity_l_foot_ll]
+# =============================
+# =============================
+foot_contact_r_sole_ur:
+  type: Contact
+  subtask: [interaction_r_foot_ur, zero_velocity_r_foot_ur]
+
+foot_contact_r_sole_ul:
+  type: Contact
+  subtask: [interaction_r_foot_ul, zero_velocity_r_foot_ul]
+
+foot_contact_r_sole_lr:
+  type: Contact
+  subtask: [interaction_r_foot_lr, zero_velocity_r_foot_lr]
+
+foot_contact_r_sole_ll:
+  type: Contact
+  subtask: [interaction_r_foot_ll, zero_velocity_r_foot_ll]
+
+joint_posture:
+  type: Postural
+  weight: 10.
+
+# todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they wont get considered.
+joint_regularization:
+  type: Regularization
+  nodes: all
+  weight:
+#    velocity: 1.
+    acceleration: .1 # 0.01
+    force: 0.01 # todo <----- how to do? if there are more forces...
+
+foot_z_l_sole:
+  type: Cartesian
+  distal_link: l_sole
+  indices: [2]
+  cartesian_type: position
+
+foot_z_r_sole:
+  type: Cartesian
+  distal_link: r_sole
+  indices: [2]
+  cartesian_type: position
+
+foot_xy_l_sole:
+  type: Cartesian
+  distal_link: l_sole
+  indices: [0, 1]
+  cartesian_type: position
+
+foot_xy_r_sole:
+  type: Cartesian
+  distal_link: r_sole
+  indices: [0, 1]
+  cartesian_type: position
