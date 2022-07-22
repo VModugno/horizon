@@ -11,6 +11,18 @@ import rospkg, rospy
 
 from srdfdom.srdf import SRDF
 
+# orientation error
+def rot_error_constr(R, Rdes):
+    Re = R @ Rdes.T
+    S = (Re - Re.T)/2
+    r = cs.vec(S)
+    err = r / cs.sqrt(1 + cs.trace(Re))
+    return err
+
+def rot_error_cost(R, Rdes):
+    Re = R @ Rdes.T
+    return cs.trace(np.eye(3) - Re)  # proportional to sin(th_err/2)^2
+
 # options
 solver_type = 'ilqr'
 transcription_method = 'multiple_shooting'
@@ -89,11 +101,19 @@ frame_B = 'ee_link_B'
 FK_B = kindyn.fk(frame_B)
 DFK_B = kindyn.frameVelocity(frame_B, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 
+# initial conditions arm A
 p_A = FK_A(q=q)['ee_pos']
 p_start_A = FK_A(q=q_init)['ee_pos']
+o_A = FK_A(q=q)['ee_rot']
+o_start_A = FK_A(q=q_init)['ee_rot']
+print(o_start_A)
 
+# initial conditions arm B
 p_B = FK_B(q=q)['ee_pos']
 p_start_B = FK_B(q=q_init)['ee_pos']
+o_B = FK_B(q=q)['ee_rot']
+o_start_B = FK_B(q=q_init)['ee_rot']
+print(o_start_B)
 
 # v_A = DFK_A(q=q, qdot=q_dot)['ee_vel_linear']
 # v_B = DFK_B(q=q, qdot=q_dot)['ee_vel_linear']
@@ -101,11 +121,20 @@ p_start_B = FK_B(q=q_init)['ee_pos']
 p_tgt_A = p_start_A + np.array([0.6, -0.0, 0.0])
 p_tgt_B = p_start_B + np.array([-0.1, +0.0, 0.0])
 
-# final node constraint velocity
+o_tgt_A = o_start_A
+print(rot_error_constr(o_start_A, o_tgt_A))
+o_tgt_B = o_start_B
+print(rot_error_constr(o_start_B, o_tgt_B))
+
+# final node constraints
 final_node=n_nodes
 prb.createFinalConstraint('ee_tgt_A', p_A - p_tgt_A)
 prb.createFinalConstraint('ee_tgt_B', p_B - p_tgt_B)
 q_dot.setBounds(lb=np.zeros(nv), ub=np.zeros(nv), nodes=final_node)
+# prb.createFinalConstraint('ee_tgt_A_rot', rot_error_constr(o_A, o_tgt_A))
+# prb.createFinalConstraint('ee_tgt_B_rot', rot_error_constr(o_B, o_tgt_B))
+
+orrore = cs.Function('error', [q], [p_A - p_tgt_A, p_B - p_tgt_B, rot_error_constr(o_A, o_tgt_A), rot_error_constr(o_B, o_tgt_B)])
 
 # collision
 srdf = open(srdfpath, 'r').read()
@@ -131,6 +160,13 @@ if solver_type == 'ilqr':
     coll_weight = prb.createParameter('coll_weight', dim=1)
     prb.createResidual('collision', coll_weight*collision_barrier)
     coll_weight.assign(1e2)
+
+    # cost on orientation
+    rot_weight = prb.createParameter('rot_weight', dim=1)
+    prb.createResidual('rot_error_A', rot_weight*rot_error_cost(o_A, o_tgt_A))
+    prb.createResidual('rot_error_B', rot_weight*rot_error_cost(o_B, o_tgt_B))
+    rot_weight.assign(1)
+
 else:
     collision_const = prb.createConstraint('collision_const', collision_sx)
     collision_const.setBounds(lb=np.zeros(collision_sx.size1()), ub=np.inf*np.ones(collision_sx.size1()))
@@ -151,7 +187,7 @@ prb_solver = solver.Solver.make_solver(
     prb,
     opts={
         'ipopt.tol': 1e-4,
-        'ipopt.max_iter': 200,
+        'ipopt.max_iter': 2000,
         'ipopt.hessian_approximation': 'limited-memory',
         'ipopt.linear_solver': 'ma57',
         'ilqr.codegen_enabled': True,
@@ -172,15 +208,16 @@ except:
 tic = time.time()
 prb_solver.solve()
 
-prb.getState().setInitialGuess(prb_solver.x_opt)
-prb.getInput().setInitialGuess(prb_solver.u_opt)
-coll_threshold.assign(0.05)
-prb_solver.solve()
+if solver_type=='ilqr':
+    prb.getState().setInitialGuess(prb_solver.x_opt)
+    prb.getInput().setInitialGuess(prb_solver.u_opt)
+    coll_threshold.assign(0.05)
+    prb_solver.solve()
 
-prb.getState().setInitialGuess(prb_solver.x_opt)
-prb.getInput().setInitialGuess(prb_solver.u_opt)
-coll_threshold.assign(0.01)
-prb_solver.solve()
+    prb.getState().setInitialGuess(prb_solver.x_opt)
+    prb.getInput().setInitialGuess(prb_solver.u_opt)
+    coll_threshold.assign(0.01)
+    prb_solver.solve()
 
 toc = time.time()
 print('time elapsed solving:', toc - tic)
@@ -194,8 +231,17 @@ print(f"total trajectory time: {total_time}")
 
 collision_values = collision_fn(solution['q']).toarray().T
 
+orror_values_A = orrore(solution['q'])[2].toarray().T
+orror_values_B = orrore(solution['q'])[3].toarray().T
+
 from matplotlib import pyplot as plt
 plt.plot(collision_values)
+plt.grid()
+plt.show()
+
+plt.figure()
+plt.plot(orror_values_A)
+plt.plot(orror_values_B)
 plt.grid()
 plt.show()
 
