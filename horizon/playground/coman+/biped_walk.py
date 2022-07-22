@@ -11,7 +11,7 @@ tf = 10.0  # 10s
 dt = tf / ns
 
 # set up solver
-solver_type = 'ilqr'
+solver_type = 'ipopt'
 transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
 transcription_opts = dict(integrator='RK4')  # integrator used by the multiple_shooting
 
@@ -60,7 +60,7 @@ problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 model_description = 'whole_body'
 ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=True, is_receding=True)
 
-ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
+ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
 ti.setTaskFromYaml('config_walk.yaml')
 
 f0 = np.array([0, 0, 315, 0, 0, 0])
@@ -71,12 +71,11 @@ init_force.setRef(2, f0)
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
-final_base_x = ti.getTask('final_base_x')
-final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
+# final_base_x = ti.getTask('final_base_x')
+# final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
-
 
 
 opts = dict()
@@ -92,22 +91,18 @@ def compute_cop(frame, xmin, xmax, ymin, ymax):
     # world wrench
     world_wrench = ti.model.fmap[frame]
 
-    M_cop = cs.SX(4, 6)
+    fk = cs.Function.deserialize(ti.kd.fk(frame))
+    R = cs.transpose(fk(q=ti.prb.getVariables('q'))['ee_rot'])
+
+    local_wrench = cs.vertcat(R @ world_wrench[:3], R @ world_wrench[3:])
+
+    M_cop = cs.DM(4, 6)
     M_cop[:, 2] = [xmin, -xmax, ymin, -ymax]
     M_cop[[0, 1], 4] = [1, -1]
     M_cop[[2, 3], 3] = [-1, 1]
 
-    fk = cs.Function.deserialize(ti.kd.fk(frame))
+    f_cop = M_cop @ local_wrench
 
-    R = cs.inv(fk(q=ti.prb.getVariables('q'))['ee_rot'])
-    R_adj = cs.SX(6, 6)
-
-    R_adj[[0, 1, 2], [0, 1, 2]] = R
-    R_adj[[3, 4, 5], [3, 4, 5]] = R
-
-    rot_M_cop = M_cop @ R_adj
-
-    f_cop = rot_M_cop @ world_wrench
     cop_cnsrt = ti.prb.createIntermediateConstraint(f'cop_{frame}', f_cop)
     cop_cnsrt.setLowerBounds(-np.inf * np.ones(4))
 

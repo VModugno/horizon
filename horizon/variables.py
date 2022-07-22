@@ -126,7 +126,7 @@ class AbstractVariableView:
 
 
 class OffsetTemplate(AbstractVariable):  # note parametrize casadi type!!!
-    def __init__(self, parent_name, tag, dim, offset, nodes_array, impl, casadi_type=cs.SX):
+    def __init__(self, parent_name, tag, dim, offset, nodes_array, impl, casadi_type):
         """
         Initialize the Offset Variable.
 
@@ -893,7 +893,7 @@ class Variable(AbstractVariable):
 
         Implemented variable "x" --> x_0, x_1, ... x_N-1, x_N
     """
-    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type):
         """
         Initialize the Variable.
         The bounds of the variable are initialized to -inf/inf.
