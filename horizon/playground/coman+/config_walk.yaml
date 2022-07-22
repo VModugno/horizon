@@ -1,10 +1,10 @@
 solver:
-  type: ilqr
-#  tol: 0.001
-#  constr_viol_tol: 0.001
-#  max_iter: 2000
-  enable_gn: True
-  verbose: True
+  type: ipopt
+  tol: 0.001
+  constr_viol_tol: 0.001
+  max_iter: 2000
+#  enable_gn: True
+#  verbose: True
 
 
 constraints: [final_base_x,           # required to set x-target for the walk
@@ -88,13 +88,13 @@ foot_contact_r_sole:
 
 min_rot:
   type: Postural
-  indices: [3,4]
+  indices: [3, 4]
   nodes: all
   weight: 0.001
 #
 joint_posture:
   type: Postural
-  weight: 1. # 10
+  weight: 5. # 10
 
 # todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they wont get considered.
 joint_regularization:
