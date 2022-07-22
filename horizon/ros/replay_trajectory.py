@@ -57,7 +57,7 @@ class replay_trajectory:
             if kindyn is None:
                 raise Exception('kindyn input can not be None if force_reference_frame is LOCAL_WORLD_ALIGNED!')
             for frame in self.frame_force_mapping: # WE LOOP ON FRAMES
-                FK = cs.Function.deserialize(kindyn.fk(frame))
+                FK = kindyn.fk(frame)
                 self.frame_fk[frame] = FK
 
                 # rotate frame

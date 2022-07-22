@@ -5,6 +5,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation as scipy_rot
 
 # todo name is useless
+
+
 class CartesianTask(Task):
     def __init__(self, distal_link, base_link=None, cartesian_type=None, *args, **kwargs):
 
@@ -15,7 +17,8 @@ class CartesianTask(Task):
 
         super().__init__(*args, **kwargs)
 
-        self.indices = np.array([0, 1, 2]).astype(int) if self.indices is None else np.array(self.indices).astype(int)
+        self.indices = np.array([0, 1, 2]).astype(
+            int) if self.indices is None else np.array(self.indices).astype(int)
 
         if self.fun_type == 'constraint':
             self.instantiator = self.prb.createConstraint
@@ -36,11 +39,14 @@ class CartesianTask(Task):
 
     def _rot_to_quat(self, R):
 
-        quat = cs.SX(4, 1) # todo is this ok?
+        quat = cs.SX(4, 1)  # todo is this ok?
         quat[0] = 1 / 2 * np.sqrt(R[0, 0] + R[1, 1] + R[2, 2] + 1)
-        quat[1] = np.sign(R[2, 1] - R[1, 2] * np.sqrt(R[0, 0] - R[1, 1] - R[2, 2] + 1))
-        quat[2] = np.sign(R[0, 2] - R[2, 0] * np.sqrt(R[1, 1] - R[2, 2] - R[0, 0] + 1))
-        quat[3] = np.sign(R[1, 0] - R[0, 1] * np.sqrt(R[2, 2] - R[0, 0] - R[1, 1] + 1))
+        quat[1] = np.sign(R[2, 1] - R[1, 2] *
+                          np.sqrt(R[0, 0] - R[1, 1] - R[2, 2] + 1))
+        quat[2] = np.sign(R[0, 2] - R[2, 0] *
+                          np.sqrt(R[1, 1] - R[2, 2] - R[0, 0] + 1))
+        quat[3] = np.sign(R[1, 0] - R[0, 1] *
+                          np.sqrt(R[2, 2] - R[0, 0] - R[1, 1] + 1))
 
         return quat
 
@@ -88,7 +94,6 @@ class CartesianTask(Task):
 
         return rot_matrix
 
-
     def _skew(self, vec):
         skew_op = np.zeros([3, 3])
 
@@ -111,8 +116,8 @@ class CartesianTask(Task):
             quat_2 = val2
 
         rot_err = quat_1[3] * quat_2[0:3] - \
-                  quat_2[3] * quat_1[0:3] - \
-                  cs.mtimes(self._skew(quat_2[0:3]), quat_1[0:3])
+            quat_2[3] * quat_1[0:3] - \
+            cs.mtimes(self._skew(quat_2[0:3]), quat_1[0:3])
 
         return rot_err
 
@@ -122,7 +127,7 @@ class CartesianTask(Task):
         M_err = np.eye(3) - R_err
 
         # rot_err = cs.trace(M_err)
-        rot_err =cs.vertcat(M_err[0, 0], M_err[1, 1], M_err[2, 2])
+        rot_err = cs.vertcat(M_err[0, 0], M_err[1, 1], M_err[2, 2])
 
         return rot_err
 
@@ -149,19 +154,18 @@ class CartesianTask(Task):
         if self.cartesian_type == 'position':
 
             # TODO: make this automatic
-            fk_distal = cs.Function.deserialize(self.kin_dyn.fk(self.distal_link))
+            fk_distal = self.kin_dyn.fk(self.distal_link)
             ee_p_distal = fk_distal(q=q)
             ee_p_distal_t = ee_p_distal['ee_pos']
             ee_p_distal_r = ee_p_distal['ee_rot']
 
-            fk_base = cs.Function.deserialize(self.kin_dyn.fk(self.base_link))
+            fk_base = self.kin_dyn.fk(self.base_link)
             ee_p_base = fk_base(q=q)
             ee_p_base_t = ee_p_base['ee_pos']
             ee_p_base_r = ee_p_base['ee_rot']
 
             ee_p_rel = ee_p_distal_t - ee_p_base_t
             ee_r_rel = ee_p_base_r.T @ ee_p_distal_r
-
 
             frame_name = f'{self.name}_{self.distal_link}_pos'
             # TODO: right now this is slightly unintuitive:
@@ -171,7 +175,8 @@ class CartesianTask(Task):
             #  so, basically, given the following parameter (self.pose_tgt):
             #    - if the parameter exists only on the node n, the whole function will only exists in the node n
             #    - if the parameter exists on all the nodes, the whole function will exists on all the nodes
-            self.pose_tgt = self.prb.createParameter(f'{frame_name}_tgt', 7) # 3 position + 4 orientation
+            self.pose_tgt = self.prb.createParameter(
+                f'{frame_name}_tgt', 7)  # 3 position + 4 orientation
 
             self.ref = self.pose_tgt
 
@@ -179,7 +184,8 @@ class CartesianTask(Task):
             # todo check norm_2 with _compute_orientation_error2
 
             # fun_lin = cs.norm_2(self._compute_orientation_error(ee_p_r, self._quat_to_rot(self.pose_tgt[3:])))
-            fun_lin = self._compute_orientation_error2(ee_r_rel, self._quat_to_rot(self.pose_tgt[3:]))
+            fun_lin = self._compute_orientation_error2(
+                ee_r_rel, self._quat_to_rot(self.pose_tgt[3:]))
             # fun_lin = self._compute_orientation_error(ee_r_rel, self._quat_to_rot(self.pose_tgt[3:]))
 
             # todo this is ugly, but for now keep it
@@ -189,64 +195,75 @@ class CartesianTask(Task):
         elif self.cartesian_type == 'velocity':
 
             # pose info
-            fk_distal = cs.Function.deserialize(self.kin_dyn.fk(self.distal_link))
+            fk_distal = self.kin_dyn.fk(self.distal_link)
             ee_p_distal = fk_distal(q=q)
             ee_p_distal_t = ee_p_distal['ee_pos']
             ee_p_distal_r = ee_p_distal['ee_rot']
 
-            fk_base = cs.Function.deserialize(self.kin_dyn.fk(self.base_link))
-            ee_p_base = fk_base(q=q)
-            ee_p_base_t = ee_p_base['ee_pos']
-            ee_p_base_r = ee_p_base['ee_rot']
-
-            ee_p_rel = ee_p_distal_t - ee_p_base_t
-            # ========================================================================
-            # vel info
-            dfk_distal = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.distal_link, self.kd_frame))
+            dfk_distal = self.kin_dyn.frameVelocity(
+            self.distal_link, self.kd_frame)
             ee_v_distal_t = dfk_distal(q=q, qdot=v)['ee_vel_linear']
             ee_v_distal_r = dfk_distal(q=q, qdot=v)['ee_vel_angular']
-
-            dfk_base = cs.Function.deserialize(self.kin_dyn.frameVelocity(self.base_link, self.kd_frame))
-            ee_v_base_t = dfk_base(q=q, qdot=v)['ee_vel_linear']
-            ee_v_base_r = dfk_base(q=q, qdot=v)['ee_vel_angular']
-
             ee_v_distal = cs.vertcat(ee_v_distal_t, ee_v_distal_r)
-            ee_v_base = cs.vertcat(ee_v_base_t, ee_v_base_r)
 
-            # express this velocity from world to base
-            m_w = cs.SX.eye(6)
-            m_w[[0, 1, 2], [3, 4, 5]] = - cs.skew(ee_p_rel)
+            if self.base_link == 'world':
+                ee_rel = ee_v_distal
+            else:
 
-            r_adj = cs.SX(6, 6)
-            r_adj[[0, 1, 2], [0, 1, 2]] = ee_p_base_r.T
-            r_adj[[3, 4, 5], [3, 4, 5]] = ee_p_base_r.T
+                fk_base = self.kin_dyn.fk(self.base_link)
+                ee_p_base = fk_base(q=q)
+                ee_p_base_t = ee_p_base['ee_pos']
+                ee_p_base_r = ee_p_base['ee_rot']
 
-            # express the base velocity in the distal frame
-            ee_v_base_distal = m_w @ ee_v_base
+                ee_p_rel = ee_p_distal_t - ee_p_base_t
+                # ========================================================================
+                # vel info
 
-            # rotate in the base frame the relative velocity (ee_v_distal - ee_v_base_distal)
-            ee_rel = r_adj @ (ee_v_distal - ee_v_base_distal)
+                dfk_base = self.kin_dyn.frameVelocity(
+                    self.base_link, self.kd_frame)
+                ee_v_base_t = dfk_base(q=q, qdot=v)['ee_vel_linear']
+                ee_v_base_r = dfk_base(q=q, qdot=v)['ee_vel_angular']
+
+                
+                ee_v_base = cs.vertcat(ee_v_base_t, ee_v_base_r)
+
+                # express this velocity from world to base
+                m_w = cs.SX.eye(6)
+                m_w[[0, 1, 2], [3, 4, 5]] = - cs.skew(ee_p_rel)
+
+                r_adj = cs.SX(6, 6)
+                r_adj[[0, 1, 2], [0, 1, 2]] = ee_p_base_r.T
+                r_adj[[3, 4, 5], [3, 4, 5]] = ee_p_base_r.T
+
+                # express the base velocity in the distal frame
+                ee_v_base_distal = m_w @ ee_v_base
+
+                # rotate in the base frame the relative velocity (ee_v_distal - ee_v_base_distal)
+                ee_rel = r_adj @ (ee_v_distal - ee_v_base_distal)
 
             frame_name = f'{self.name}_{self.distal_link}_vel'
-            self.vel_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+            self.vel_tgt = self.prb.createParameter(
+                f'{frame_name}_tgt', self.indices.size)
             self.ref = self.vel_tgt
             fun = ee_rel[self.indices] - self.vel_tgt
 
         elif self.cartesian_type == 'acceleration':
-            ddfk = cs.Function.deserialize(self.kin_dyn.frameAcceleration(self.distal_link, self.kd_frame))
+            ddfk = self.kin_dyn.frameAcceleration(
+                self.distal_link, self.kd_frame)
             ee_a_t = ddfk(q=q, qdot=v)['ee_acc_linear']
             ee_a_r = ddfk(q=q, qdot=v)['ee_acc_angular']
             ee_a = cs.vertcat(ee_a_t, ee_a_r)
             frame_name = f'{self.name}_{self.distal_link}_acc'
-            self.acc_tgt = self.prb.createParameter(f'{frame_name}_tgt', self.indices.size)
+            self.acc_tgt = self.prb.createParameter(
+                f'{frame_name}_tgt', self.indices.size)
             self.ref = self.acc_tgt
             fun = ee_a[self.indices] - self.acc_tgt
 
-        self.constr = self.instantiator(f'{frame_name}_task', self.weight * fun, nodes=self.nodes)
+        self.constr = self.instantiator(
+            f'{frame_name}_task', self.weight * fun, nodes=self.nodes)
 
         # todo should I keep track of the nodes here?
         #  in other words: should be setNodes resetting?
-
 
     def getConstraint(self):
         return self.constr
@@ -264,7 +281,7 @@ class CartesianTask(Task):
         # elif ref_matrix.ndim == 1 and len(self.nodes) > 1:
         #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
 
-        self.ref.assign(ref_matrix, self.nodes) # <==== SET TARGET
+        self.ref.assign(ref_matrix, self.nodes)  # <==== SET TARGET
 
         return True
 

@@ -17,11 +17,12 @@ class ContactTaskSpot(Task):
         # todo what if I want a default value for these subtasks?
         # if 'Force' not in subtasks:
 
-        self.interaction_task = subtask['Force']
-        self.cartesian_task = subtask['Cartesian']
+        self.interaction_task: InteractionTask = Task.subtask_by_class(subtask, InteractionTask)
+        self.cartesian_task: CartesianTask = Task.subtask_by_class(subtask, CartesianTask)
+
         super().__init__(*args, **kwargs)
 
-        self.force = self.interaction_task.f
+        self.force = self.interaction_task.getWrench()
         self.frame = self.cartesian_task.distal_link
 
         # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force

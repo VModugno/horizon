@@ -1,9 +1,11 @@
 import os
 import numpy as np
 from horizon.rhc.taskInterface import TaskInterface
+from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.utils.actionManager import ActionManager
 import casadi as cs
+import rospy
 
 # set up problem
 ns = 50
@@ -11,18 +13,17 @@ tf = 10.0  # 10s
 dt = tf / ns
 
 # set up solver
-solver_type = 'ilqr'
 transcription_method = 'multiple_shooting'  # can choose between 'multiple_shooting' and 'direct_collocation'
 transcription_opts = dict(integrator='RK4')  # integrator used by the multiple_shooting
 
 # set up model
-path_to_examples = os.path.abspath(__file__ + "/../../../examples")
+path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples")
 os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
 urdf = open(urdffile, 'r').read()
+rospy.set_param('/robot_description', urdf)
 
-contacts = ['l_sole', 'r_sole']
 
 base_init = np.array([0., 0., 0.96, 0., 0.0, 0.0, 1.])
 
@@ -58,17 +59,22 @@ q_init = {"LHipLat":       -0.0,
 problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 
 model_description = 'whole_body'
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts, enable_torques=True, is_receding=True)
+ti = TaskInterface(urdf, 
+        q_init, base_init, 
+        problem_opts, 
+        model_description, 
+        is_receding=True)
 
-ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
-ti.setTaskFromYaml('config_walk.yaml')
+ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
+ti.setTaskFromYaml(os.path.dirname(__file__) + '/config_walk.yaml')
+ti.finalize()
 
 f0 = np.array([0, 0, 315, 0, 0, 0])
 init_force = ti.getTask('joint_regularization')
 init_force.setRef(1, f0)
 init_force.setRef(2, f0)
 
-if solver_type != 'ilqr':
+if ti.getSolver()[0].type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
 final_base_x = ti.getTask('final_base_x')
@@ -87,34 +93,7 @@ am._walk([10, 40], [0, 1])
 # l_contact.setNodes(list(range(5)) + list(range(15, 50)))
 # r_contact.setNodes(list(range(0, 25)) + list(range(35, 50)))
 
-def compute_cop(frame, xmin, xmax, ymin, ymax):
 
-    # world wrench
-    world_wrench = ti.model.fmap[frame]
-
-    M_cop = cs.SX(4, 6)
-    M_cop[:, 2] = [xmin, -xmax, ymin, -ymax]
-    M_cop[[0, 1], 4] = [1, -1]
-    M_cop[[2, 3], 3] = [-1, 1]
-
-    fk = cs.Function.deserialize(ti.kd.fk(frame))
-
-    R = cs.inv(fk(q=ti.prb.getVariables('q'))['ee_rot'])
-    R_adj = cs.SX(6, 6)
-
-    R_adj[[0, 1, 2], [0, 1, 2]] = R
-    R_adj[[3, 4, 5], [3, 4, 5]] = R
-
-    rot_M_cop = M_cop @ R_adj
-
-    f_cop = rot_M_cop @ world_wrench
-    cop_cnsrt = ti.prb.createIntermediateConstraint(f'cop_{frame}', f_cop)
-    cop_cnsrt.setLowerBounds(-np.inf * np.ones(4))
-
-sole_dim = [-0.2, 0.2, -0.1, 0.1]
-# sole_dim = [-0.05, 0.05, -0.02, 0.02]
-compute_cop('l_sole', sole_dim[0], sole_dim[1], sole_dim[2], sole_dim[3])
-compute_cop('r_sole', sole_dim[0], sole_dim[1], sole_dim[2], sole_dim[3])
 # ===============================================================
 # ===============================================================
 # ===============================================================
@@ -123,7 +102,7 @@ v = ti.prb.getVariables('v')
 a = ti.prb.getVariables('a')
 
 import casadi as cs
-cd_fun = cs.Function.deserialize(ti.kd.computeCentroidalDynamics())
+cd_fun = ti.kd.computeCentroidalDynamics()
 
 # adding minimization of angular momentum
 h_lin, h_ang, dh_lin, dh_ang = cd_fun(q, v, a)
@@ -134,11 +113,7 @@ v.setBounds(ti.v0, ti.v0, nodes=0)
 
 q.setInitialGuess(ti.q0)
 
-forces = [ti.prb.getVariables('f_' + c) for c in contacts]
-
-for f in forces:
-    f.setInitialGuess(f0)
-
+[c.setInitialGuess(f0) for c in ti.getTaskByClass(InteractionTask)]
 
 replay_motion = True
 plot_sol = not replay_motion
@@ -158,9 +133,6 @@ solver_bs.solve()
 solution = solver_bs.getSolutionDict()
 
 if replay_motion:
-    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
-    subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=cogimon'])
-    rospy.loginfo("'cogimon' visualization started.")
 
     # single replay
     q_sol = solution['q']
