@@ -455,7 +455,7 @@ class Parameter(AbstractVariable):
         val_checked = misc.checkValueEntry(val)
 
         if val_checked.shape[0] != indices_vec.size:
-            raise Exception(f'Wrong dimension of parameter values inserted: ({val_checked.shape[0]}) != {indices_vec.size}')
+            raise Exception(f'Wrong dimension of parameter values inserted: ({val_checked.shape[0]} != {indices_vec.size})')
 
         # if a matrix of values is being provided, check cols match len(nodes)
         multiple_vals = val_checked.ndim == 2 and val_checked.shape[1] != 1
@@ -1370,6 +1370,7 @@ class RecedingVariable(Variable):
         print(f'SHIFTED UB: {self.getUpperBounds()}')
 
 
+# TODO: should I create the parameter on all the nodes and make it active only on the active_nodes, if nodes= is specified
 class RecedingParameter(Parameter):
     def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
         super().__init__(tag, dim, nodes_array, casadi_type)

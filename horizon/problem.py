@@ -190,6 +190,19 @@ class Problem:
         par = self.var_container.setSingleParameter(name, dim, nodes_array, casadi_type)
         return par
 
+    # def setVariable(self, name, var):
+
+    # assert (isinstance(var, (cs.casadi.SX, cs.casadi.MX)))
+    # setattr(Problem, name, var)
+    # self.var_container.append(name)
+
+    # def getStateVariable(self, name):
+    #
+    #     for var in self.var_container:
+    #         if var.getName() == name:
+    #             return var
+    #     return None
+
     def getState(self) -> sv.StateAggregate:
         """
         Getter for the aggregate State defined for the problem. The State contains, in order, all the State Variables created.

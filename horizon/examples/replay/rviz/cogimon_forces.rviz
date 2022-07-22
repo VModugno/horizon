@@ -6,6 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /WrenchStamped5
+        - /WrenchStamped6
+        - /WrenchStamped8
       Splitter Ratio: 0.5
     Tree Height: 746
   - Class: rviz/Selection
@@ -482,36 +485,6 @@ Visualization Manager:
       Torque Color: 204; 204; 51
       Unreliable: false
       Value: true
-    - Alpha: 1
-      Arrow Width: 0.5
-      Class: rviz/WrenchStamped
-      Enabled: true
-      Force Arrow Scale: 0.03999999910593033
-      Force Color: 204; 51; 51
-      Hide Small Values: true
-      History Length: 1
-      Name: WrenchStamped
-      Queue Size: 10
-      Topic: /l_sole_forces
-      Torque Arrow Scale: 2
-      Torque Color: 204; 204; 51
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Arrow Width: 0.5
-      Class: rviz/WrenchStamped
-      Enabled: true
-      Force Arrow Scale: 0.03999999910593033
-      Force Color: 204; 51; 51
-      Hide Small Values: true
-      History Length: 1
-      Name: WrenchStamped
-      Queue Size: 10
-      Topic: /r_sole_forces
-      Torque Arrow Scale: 2
-      Torque Color: 204; 204; 51
-      Unreliable: false
-      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -556,9 +529,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.00039877742528915405
+      Pitch: 0.2853987216949463
       Target Frame: <Fixed Frame>
-      Yaw: 6.253591537475586
+      Yaw: 5.093585014343262
     Saved: ~
 Window Geometry:
   Displays:

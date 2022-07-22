@@ -18,7 +18,7 @@ class ContactTaskMirror(Task):
         super().__init__(*args, **kwargs)
 
         # getForce() getFrame()
-        self.frame = self._zero_vel_constr.frame
+        self.frame = self._zero_vel_constr.distal_link
         self.force = self._force.f
 
 
@@ -69,9 +69,8 @@ class ContactTaskMirror(Task):
 
         if nodes_off_x:
             nodes_ver = [nodes_off_x[0], nodes_off_x[-1]]
-            self._vertical_takeoff_nodes.extend(nodes_ver)
+            [self._vertical_takeoff_nodes.append(n) for n in nodes_ver if n not in self._vertical_takeoff_nodes]
             self._vertical_takeoff_consrt.setNodes(self._vertical_takeoff_nodes, erasing=erasing)
-
 
         print(f'contact {self.name} nodes:')
         print(f'zero_velocity: {self._zero_vel_constr.getNodes()}')

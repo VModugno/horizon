@@ -134,6 +134,9 @@ class MultipleShooting(Transcriptor):
             self.integrator = integrator
 
         # todo add support for dt that is not a variable/parameter of the problem but depends on problem variables/parameters
+        #   this could be solved by using state_next, not state:
+        #   state_next_int = self.__integrate(self.state, self.input, self.dt)
+        #   ms = self.problem.createConstraint('multiple_shooting', state_next_int - self.state.getVarOffset(), nodes=range(0, self.problem.getNNodes() - 1))
         # if dt is a single SX (which means that it involves ALL nodes):
         if isinstance(self.dt, (cs.SX, cs.MX)):
             # for var in self.problem.getVariables().values():

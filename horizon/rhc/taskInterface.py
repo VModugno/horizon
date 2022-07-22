@@ -18,8 +18,9 @@ class ModelDescription:
         self.prb = problem
         self.kd = model
 
-    def generateModel(self, model_type=None):
+    def generateModel(self, model_type=None, enable_torques=False, floating_base=False):
 
+        self.floating_base = floating_base
         self.model_type = 'whole_body' if model_type is None else model_type
 
         # todo choose
@@ -31,7 +32,8 @@ class ModelDescription:
             self.nv = self.kd.nv()
 
             # custom choices
-            self.nf = 3
+            # todo this is ugly
+            self.nf = 3 if enable_torques is False else 6
             self.q = self.prb.createStateVariable('q', self.nq)
             self.v = self.prb.createStateVariable('v', self.nv)
             self.a = self.prb.createInputVariable('a', self.nv)
@@ -54,19 +56,24 @@ class ModelDescription:
         return f_c
 
     def setDynamics(self):
-        _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
-        self.prb.setDynamics(self.xdot)
+        # todo refactor this floating base stuff
+        if self.floating_base:
+            _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
+        else:
+            _, self.xdot = utils.double_integrator(self.q, self.v, self.a)
 
+        self.prb.setDynamics(self.xdot)
         # underactuation constraints
         if self.contacts:
             id_fn = kin_dyn.InverseDynamics(self.kd, self.contacts, self.kd_frame)
-            tau = id_fn.call(self.q, self.v, self.a, self.fmap)
-            self.prb.createIntermediateConstraint('dynamics', tau[:6])
+            self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
+            self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
         # else:
         #     id_fn = kin_dyn.InverseDynamics(self.kd)
 
     def getContacts(self):
         return self.contacts
+
     # def getInput(self):
     #     return self.a
     #
@@ -82,10 +89,13 @@ class TaskInterface:
                  problem_opts: Dict[str, any],
                  model_description: str,
                  fixed_joints: List[str] = None,
-                 contacts: List[str] = None):  # todo this is wrong, it should not be listed in the initialization
+                 contacts: List[str] = None,  # todo this is wrong, it should not be listed in the initialization
+                 enable_torques: bool = False,
+                 is_receding: bool = True):
 
         # get the model
 
+        self.is_receding = is_receding
         # here I register the the default tasks
         # todo: should I do it here?
         task_factory.register('Cartesian', CartesianTask)
@@ -101,8 +111,6 @@ class TaskInterface:
         self.kd = pycasadi_kin_dyn.CasadiKinDyn(self.urdf, fixed_joints=fixed_joint_map)
         self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
 
-        self.joint_names = self.kd.joint_names()[2:]
-
         self.init_contacts = contacts
 
         # number of dof
@@ -112,8 +120,17 @@ class TaskInterface:
         # manage starting position
         # initial guess (also initial condition and nominal pose)
         q_init = {k: v for k, v in q_init.items() if k not in self.fixed_joints}
+
         self.q0 = self.kd.mapToQ(q_init)
-        self.q0[:7] = base_init
+
+        floating_base = False
+        if base_init is not None:
+            self.q0[:7] = base_init
+            floating_base = True
+            self.joint_names = self.kd.joint_names()[2:]
+        else:
+            self.joint_names = self.kd.joint_names()[1:]
+
         self.v0 = np.zeros(self.nv)
         # self.a0 = np.zeros(self.nv)
 
@@ -124,45 +141,34 @@ class TaskInterface:
 
         # model specification (whole body, centroidal, acceleration, velocity...)
         self.model = ModelDescription(self.prb, self.kd)
-        self.model.generateModel(model_description)
+        self.model.generateModel(model_description, enable_torques=enable_torques, floating_base=floating_base)
 
         if self.init_contacts is not None:
             for c in self.init_contacts:
                 self.model.setContactFrame(c)
 
-        self._initializeModel()
+        self.model.setDynamics()
+
 
     def _createProblem(self, problem_opts):
 
         # definition of the problem
         # todo: what if I want a variable dt?
-        self.N = problem_opts.get('N', 50)
+        self.N = problem_opts.get('ns', 50)
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
 
-        self.prb = Problem(self.N, receding=True)
+        self.prb = Problem(self.N, receding=self.is_receding)
         self.prb.setDt(self.dt)
-
-    def _initializeModel(self):
-        self.model.setDynamics()
 
     # a possible method could read from yaml and create the task list
     def setTaskFromYaml(self, yaml_config):
 
-        # todo this should probably go in each single task definition --> i don't have the info from the ti then
-        shortcuts = {
-            'nodes': {'final': self.N, 'all': range(self.N + 1)},
-            # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
-            # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
-        }
-
-        task_list, solver_options = YamlParser.load(yaml_config)
-
-        self.setSolverOptions(solver_options)
+        self.task_desrc_list, self.non_active_task, self.solver_options = YamlParser.load(yaml_config)
+        self.setSolverOptions(self.solver_options)
 
         # todo: this should be updated everytime a task is added
-        for task_descr in task_list:
-            task_descr_resolved = YamlParser.resolve(task_descr, shortcuts)
+        for task_descr in self.task_desrc_list:
 
             if 'weight' in task_descr and isinstance(task_descr['weight'], dict):
                 weight_dict = task_descr['weight']
@@ -179,9 +185,8 @@ class TaskInterface:
                     for f in self.model.fmap.values():
                         weight_dict[f.getName()] = weight_force
 
-            self.setTaskFromDict(task_descr_resolved)
+            self.setTaskFromDict(task_descr)
 
-        # tasks = [task_factory.create(self.prb, self.kd, task_description) for task_description in task_yaml]
 
     def setTaskFromDict(self, task_description):
         # todo if task is dict... ducktyping
@@ -192,7 +197,15 @@ class TaskInterface:
 
     def generateTaskFromDict(self, task_description):
 
-        task_description_with_subtasks = self._handle_subtask(task_description)
+        # todo this should probably go in each single task definition --> i don't have the info from the ti then
+        shortcuts = {
+            'nodes': {'final': self.N, 'all': range(self.N + 1)},
+            # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
+            # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
+        }
+        task_descr_resolved = YamlParser.resolve(task_description, shortcuts)
+
+        task_description_with_subtasks = self._handle_subtask(task_descr_resolved)
         task_specific = self.generateTaskContext(task_description_with_subtasks)
 
         task = task_factory.create(task_specific)
@@ -222,6 +235,9 @@ class TaskInterface:
 
             task_description_mod['force'] = self.prb.getVariables('f_' + task_description_mod['frame'])
 
+        if task_description_mod['type'] == 'TorqueLimits':
+            task_description_mod['var'] = self.model.tau
+
         return task_description_mod
 
     def _handle_subtask(self, task_description):
@@ -233,8 +249,19 @@ class TaskInterface:
         if 'subtask' in task_description_copy:
             subtask_description_list = task_description_copy.pop(
                 'subtask') if 'subtask' in task_description_copy else []
+
+
             # inherit from parent:
             for subtask_description in subtask_description_list:
+
+                # TODO: wrong way to handle YAML subtasks
+                if isinstance(subtask_description, str):
+                    for task in self.non_active_task:
+                        if task['name'] == subtask_description:
+                            subtask_description = task
+                            break
+
+
                 # child inherit from parent the values, if not present
                 # parent define the context for the child: child can override it
                 for key, value in task_description_copy.items():
@@ -253,6 +280,7 @@ class TaskInterface:
         self.task_list.append(task)
 
     def getTask(self, task_name):
+        # todo better error
         list_1 = [t for t in self.task_list if t.getName() == task_name][0]
         return list_1
 
@@ -276,6 +304,10 @@ class TaskInterface:
         # todo if receding is true ....
         scoped_opts = dict(zip([f"{self.si.type}.{key}" for key in self.si.opts.keys()], list(self.si.opts.values())))
         solver_bs = Solver.make_solver(self.si.type, self.prb, scoped_opts)
+        try:
+            solver_bs.set_iteration_callback()
+        except:
+            pass
 
         scoped_opts_rti = scoped_opts.copy()
         scoped_opts_rti['ilqr.enable_line_search'] = False

@@ -40,10 +40,28 @@ problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 model_description = 'whole_body'
 
 # todo: wrong way of adding the contacts contacts=['lf_foot']
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description)
+ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
 
 ti.setTaskFromYaml('config_walk.yaml')
+
+# for constraint in ti.prb.getConstraints():
+#     print(constraint)
+
+final_base_x = ti.getTask('final_base_x')
+final_base_x.setRef([ti.q0[0], 0, 0, 0, 0, 0, 1])
+
+final_base_y = ti.getTask('final_base_y')
+final_base_y.setRef([0, ti.q0[1], 0, 0, 0, 0, 1])
+
+# min_rot = ti.getTask('min_rot')
+# min_rot.setRef(ti.q0[3:5])
+
+final_x = ti.getTask('final_x')
+final_x.setRef([ti.q0[0], 0, 0, 0, 0, 0, 1])
+
+final_y = ti.getTask('final_y')
+final_y.setRef([0, ti.q0[1], 0, 0, 0, 0, 1])
 
 f0 = np.array([0, 0, 55])
 contact1 = ti.getTask('joint_regularization')
@@ -53,9 +71,9 @@ contact1.setRef(3, f0)
 contact1.setRef(4, f0)
 
 opts = dict()
+
 am = ActionManager(ti, opts)
 am._walk([10, 200], [0, 2, 1, 3])
-
 
 
 # ===============================================================
@@ -84,6 +102,8 @@ import subprocess, rospy
 from horizon.ros import replay_trajectory
 
 # todo
+
+final_base_x.setRef([0.5, 0, 0, 0, 0, 0, 1])
 # ptgt.assign(ptgt_final, nodes=ns)
 
 solver_bs, solver_rti = ti.getSolver()

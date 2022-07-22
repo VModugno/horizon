@@ -27,9 +27,7 @@
 #     <joint name="RForearmPlate" value="0.0"/>
 #     <joint name="RWrj1" value="-0.523599"/>
 #     <joint name="RWrj2" value="-0.0"/>
-'''
-An example of the famous robot Spot (from Boston Dynamics) performing a jump.
-'''
+
 
 from horizon import problem
 from horizon.transcriptions.transcriptor import Transcriptor
@@ -53,7 +51,7 @@ plot_sol = True
 load_initial_guess = False
 
 # get path to the examples folder and temporary add it to the environment
-path_to_examples = os.path.abspath(__file__ + "/../../examples")
+path_to_examples = os.path.abspath(__file__ + "/../../../examples")
 os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
 # mat storer
