@@ -290,7 +290,7 @@ class Problem:
             return None
         return lb
 
-    def _getUsedVar(self, f: cs.SX) -> list:
+    def _getUsedVar(self, f: Union[cs.SX, cs.MX]) -> list:
         """
         Finds all the variable used by a given CASADI function
 
@@ -301,11 +301,7 @@ class Problem:
             list of used variable
 
         """
-        used_var = list()
-        for var in self.var_container.getVarList(offset=True):
-            if cs.depends_on(f, var):
-                used_var.append(var)
-
+        used_var = self._getUsedSym(f, self.var_container.getVarList(offset=True))
         return used_var
 
     def _getUsedPar(self, f) -> list:
@@ -319,12 +315,27 @@ class Problem:
             list of used parameters
 
         """
-        used_par = list()
-        for var in self.var_container.getParList(offset=True):
-            if cs.depends_on(f, var):
-                used_par.append(var)
-
+        used_par = self._getUsedSym(f, self.var_container.getParList(offset=True))
         return used_par
+
+    def _getUsedSym(self, f, sym_list):
+
+        used_sym = list()
+        # todo add guards
+
+        if isinstance(f, cs.SX):
+            for sym in sym_list:
+                if cs.depends_on(f, sym):
+                    used_sym.append(sym)
+
+        elif isinstance(f, cs.MX):
+            sym_in_f = cs.symvar(f)
+            for symbol in sym_in_f:
+                for sym in sym_list:
+                    if str(sym) == symbol.name():
+                        used_sym.append(sym)
+
+        return used_sym
 
     # def _autoNodes(self, type, nodes=None):
     #
@@ -371,7 +382,6 @@ class Problem:
 
             # nodes = misc.checkNodes(nodes, range(self.nodes))
 
-        # get vars that constraint depends upon
         used_var = self._getUsedVar(g)  # these now are lists!
         used_par = self._getUsedPar(g)
 
