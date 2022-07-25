@@ -62,10 +62,6 @@ class AbstractFunction:
         all_names = [f'{i.getName()}_{str(i.getOffset())}' for i in all_input]
 
         self._fun = cs.Function(name, self.vars + self.pars, [self._f], all_names, ['f'])
-        # print(self._fun.factory('diocane',all_names, ["jac:f:qddot0"]))
-        # print(self._fun.factory('diocane',all_names, ["jac:f:qddot-1"]))
-        #
-        # exit()
 
     def getName(self) -> str:
         """
