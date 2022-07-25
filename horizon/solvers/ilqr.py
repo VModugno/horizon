@@ -27,6 +27,9 @@ class SolverILQR(Solver):
         # init base class
         super().__init__(prb, filtered_opts)
 
+        # get type of abstract variables in horizon problem (SX or MX)
+        abstract_casadi_type = self.prb.default_abstract_casadi_type
+
         # save max iter if any
         self.max_iter = self.opts.get('ilqr.max_iter', 100)
         
@@ -45,10 +48,10 @@ class SolverILQR(Solver):
             # integrator_opt['tf'] = self.dt
             x_int = self.int(self.x, self.u, self.dt)[0]
             dt_name = 'dt'
-            time = self.prb.default_casadi_type.sym(dt_name, 0)
+            time = abstract_casadi_type.sym(dt_name, 0)
 
         elif isinstance(self.dt, Parameter):
-            time = self.prb.default_casadi_type.sym(self.dt.getName(), 1)
+            time = abstract_casadi_type.sym(self.dt.getName(), 1)
             x_int = self.int(self.x, self.u, time)[0]
             dt_name = self.dt.getName()
             pass
