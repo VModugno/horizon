@@ -16,10 +16,10 @@ def str2bool(v):
 
 def main(args):
 
-    action = 'jump_on_wall'
+    action = args.action
     rviz_replay = args.replay
-    solver_type = 'ilqr'
-    codegen = False
+    solver_type = args.solver
+    codegen = args.codegen
     warmstart_flag = args.warmstart
     plot_sol = args.plot
 
@@ -99,7 +99,7 @@ def main(args):
     dt = tf / n_nodes
 
     # define dynamics
-    prb = problem.Problem(n_nodes, casadi_type=cs.MX)
+    prb = problem.Problem(n_nodes, casadi_type=cs.MX, abstract_casadi_type=cs.SX)
     q = prb.createStateVariable('q', n_q)
     q_dot = prb.createStateVariable('q_dot', n_v)
     q_ddot = prb.createInputVariable('q_ddot', n_v)
