@@ -58,9 +58,9 @@ class ModelDescription:
     def setDynamics(self):
         # todo refactor this floating base stuff
         if self.floating_base:
-            _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
+            self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
         else:
-            _, self.xdot = utils.double_integrator(self.q, self.v, self.a)
+            self.xdot = utils.double_integrator(self.v, self.a)
 
         self.prb.setDynamics(self.xdot)
         # underactuation constraints
@@ -157,8 +157,8 @@ class TaskInterface:
         self.N = problem_opts.get('ns', 50)
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
-
-        self.prb = Problem(self.N, receding=self.is_receding)
+        import casadi as cs
+        self.prb = Problem(self.N, receding=self.is_receding) # casadi_type=cs.SX
         self.prb.setDt(self.dt)
 
     # a possible method could read from yaml and create the task list

@@ -71,8 +71,8 @@ init_force.setRef(2, f0)
 if solver_type != 'ilqr':
     th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
-# final_base_x = ti.getTask('final_base_x')
-# final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
+final_base_x = ti.getTask('final_base_x')
+final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
