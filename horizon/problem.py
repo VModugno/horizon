@@ -328,6 +328,7 @@ class Problem:
                 if cs.depends_on(f, sym):
                     used_sym.append(sym)
 
+        # todo is this ok?
         elif isinstance(f, cs.MX):
             sym_in_f = cs.symvar(f)
             for symbol in sym_in_f:
