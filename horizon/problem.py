@@ -176,7 +176,7 @@ class Problem:
         nodes_array = np.zeros(self.nodes)
         nodes_array[nodes] = 1
 
-        par = self.var_container.setParameter(name, dim, nodes_array, abstract_casadi_type)
+        par = self.var_container.setParameter(name, dim, nodes_array, casadi_type, abstract_casadi_type)
         return par
 
     def createSingleParameter(self, name: str, dim: int, casadi_type=None, abstract_casadi_type=None) -> sv.SingleParameter:
