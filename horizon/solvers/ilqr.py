@@ -82,6 +82,9 @@ class SolverILQR(Solver):
         # empty solution dict
         self.solution_dict = dict()
 
+        # print iteration statistics
+        self.set_iteration_callback()
+
     def save(self):
         data = self.prb.save()
         data['solver'] = dict()

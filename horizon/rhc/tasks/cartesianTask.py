@@ -46,7 +46,7 @@ class CartesianTask(Task):
 
     def _quat_to_rot(self, quat):
         """
-        Covert a quaternion into a full three-dimensional rotation matrix.
+        Convert a quaternion into a full three-dimensional rotation matrix.
 
         Input
         :param quat: A 4 element array representing the quaternion (im(quat), re(quat))
@@ -214,10 +214,10 @@ class CartesianTask(Task):
             ee_v_base = cs.vertcat(ee_v_base_t, ee_v_base_r)
 
             # express this velocity from world to base
-            m_w = cs.SX.eye(6)
+            m_w = cs.MX.eye(6)
             m_w[[0, 1, 2], [3, 4, 5]] = - cs.skew(ee_p_rel)
 
-            r_adj = cs.SX(6, 6)
+            r_adj = cs.MX(6, 6)
             r_adj[[0, 1, 2], [0, 1, 2]] = ee_p_base_r.T
             r_adj[[3, 4, 5], [3, 4, 5]] = ee_p_base_r.T
 

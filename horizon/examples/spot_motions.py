@@ -16,10 +16,10 @@ def str2bool(v):
 
 def main(args):
 
-    action = args.action
+    action = 'jump_on_wall'
     rviz_replay = args.replay
-    solver_type = args.solver
-    codegen = args.codegen
+    solver_type = 'ilqr'
+    codegen = False
     warmstart_flag = args.warmstart
     plot_sol = args.plot
 
@@ -99,12 +99,12 @@ def main(args):
     dt = tf / n_nodes
 
     # define dynamics
-    prb = problem.Problem(n_nodes)
+    prb = problem.Problem(n_nodes, casadi_type=cs.MX)
     q = prb.createStateVariable('q', n_q)
     q_dot = prb.createStateVariable('q_dot', n_v)
     q_ddot = prb.createInputVariable('q_ddot', n_v)
     f_list = [prb.createInputVariable(f'force_{i}', n_f) for i in contacts_name]
-    x, x_dot = utils.double_integrator_with_floating_base(q, q_dot, q_ddot)
+    x_dot = utils.double_integrator_with_floating_base(q, q_dot, q_ddot)
     prb.setDynamics(x_dot)
     prb.setDt(dt)
     # contact map
@@ -180,7 +180,7 @@ def main(args):
     q_final[3:7] = disp[3:7]
 
     def barrier(x):
-        return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
+        return cs.if_else(x > 0, 0, x)
 
     for frame, f in contact_map.items():
         nodes_stance = k_stance if frame in lifted_legs else k_all
@@ -222,8 +222,8 @@ def main(args):
                 if solver_type == 'ipopt':
                     prb.createIntermediateConstraint(f"{frame}_fc_wall", fc, nodes=range(k_swing[-1], n_nodes), bounds=dict(lb=fc_lb, ub=fc_ub))
                 else:
-                    prb.createIntermediateCost(f"{frame}_fc_wall_lb", 1 * barrier(fc - fc_lb), nodes=range(k_swing[-1], n_nodes))
-                    prb.createIntermediateCost(f"{frame}_fc_wall_ub", 1 * barrier(fc_ub - fc), nodes=range(k_swing[-1], n_nodes))
+                    prb.createIntermediateResidual(f"{frame}_fc_wall_lb", 1 * barrier(fc - fc_lb), nodes=range(k_swing[-1], n_nodes))
+                    prb.createIntermediateResidual(f"{frame}_fc_wall_ub", 1 * barrier(fc_ub - fc), nodes=range(k_swing[-1], n_nodes))
 
                 prb.createFinalConstraint(f"lift_{frame}_leg", p - p_goal)
 
@@ -387,7 +387,7 @@ def main(args):
             dt_before_res = dt
 
         dt_res = 0.001
-        dae = {'x': x, 'p': q_ddot, 'ode': x_dot, 'quad': 1}
+        dae = {'x': prb.getState().getVars(), 'p': q_ddot, 'ode': x_dot, 'quad': 1}
         q_res, qdot_res, qddot_res, contact_map_res, tau_res = resampler_trajectory.resample_torques(
             solution["q"], solution["q_dot"], solution["q_ddot"], dt_before_res, dt_res, dae, contact_map,
             kindyn,
