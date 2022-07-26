@@ -40,7 +40,7 @@ class SolverILQR(Solver):
         # handle parametric time
         integrator_opt = {}
 
-        self.int = integrators.__dict__[integrator_name](dae, integrator_opt)
+        self.int = integrators.__dict__[integrator_name](dae, integrator_opt, self.prb.default_casadi_type)
         if isinstance(self.dt, float):
             # integrator_opt['tf'] = self.dt
             x_int = self.int(self.x, self.u, self.dt)[0]
@@ -55,9 +55,16 @@ class SolverILQR(Solver):
         else:
             raise TypeError('ilqr supports only float and Parameter dt')
 
+        all_params = self.prb.getParameters()
+        depend_params = {}
+        for pname, p in all_params.items():
+            if cs.depends_on(x_int, p):
+                depend_params[pname] = p
+        
+
         self.dyn = cs.Function('f', 
-                               {'x': self.x, 'u': self.u, dt_name: time, 'f': x_int},
-                               ['x', 'u', dt_name], ['f']
+                               {'x': self.x, 'u': self.u, dt_name: time, 'f': x_int, **depend_params},
+                               ['x', 'u', dt_name] + list(depend_params.keys()), ['f']
                                )
 
         # create ilqr solver
