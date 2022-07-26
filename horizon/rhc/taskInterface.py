@@ -1,10 +1,13 @@
 import casadi as cs
+from urllib3 import Retry
 
 from horizon.problem import Problem
 from horizon.utils import utils, kin_dyn
 from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
-from horizon.rhc.tasks.interactionTask import CopConstraint, InteractionTask, SurfaceContact
+from horizon.rhc.tasks.contactTask import ContactTask
+from horizon.rhc.tasks.interactionTask import InteractionTask, SurfaceContact, VertexContact
+from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
 from horizon.rhc.tasks.regularizationTask import RegularizationTask
@@ -13,12 +16,13 @@ import numpy as np
 from horizon.rhc import task_factory, plugin_handler, solver_interface
 from horizon.rhc.yaml_handler import YamlParser
 from horizon.solvers.solver import Solver
-
+import logging
+import time
 
 class ModelDescription:
     
     def __init__(self, problem, model):
-        self.prb = problem
+        self.prb: Problem = problem
         self.kd = model
 
     def fk(self, frame) -> Tuple[Union[cs.SX, cs.MX]]:
@@ -51,18 +55,54 @@ class ModelDescription:
         else:
             raise NotImplementedError()
 
-        # self.forces = [self.prb.createInputVariable('f_' + c, self.nf) for c in contacts]
-        self.contacts = []
-        self.fmap = dict()
 
-    def setContactFrame(self, contact, f_c):
+        self.fmap = dict()
+        self.cmap = dict()
+
+    def setContactFrame(self, contact_frame, contact_type, contact_params=dict()):
 
         # todo add more guards
-        if contact in self.contacts:
-            raise Exception(f'{contact} frame is already a contact.')
-        self.contacts.append(contact)
-        self.fmap[contact] = f_c
-        return f_c
+        if contact_frame in self.fmap.keys():
+            raise Exception(f'{contact_frame} frame is already a contact')
+
+        if contact_type == 'surface':
+            return self._make_surface_contact(contact_frame, contact_params)
+        elif contact_type == 'vertex':
+            return self._make_vertex_contact(contact_frame, contact_params) 
+        elif contact_type == 'point':
+            return self._make_point_contact(contact_frame, contact_params) 
+
+        raise ValueError(f'{contact_type} is not a valid contact type')
+
+    def _make_surface_contact(self, contact_frame, contact_params):
+        # create input (todo: support degree > 0)
+        wrench = self.prb.createInputVariable('f_' + contact_frame, dim=6)
+        self.fmap[contact_frame] = wrench
+        self.cmap[contact_frame] = [wrench]
+        return wrench
+
+    def _make_point_contact(self, contact_frame, contact_params):
+        # create input (todo: support degree > 0)
+        force = self.prb.createInputVariable('f_' + contact_frame, dim=3)
+        self.fmap[contact_frame] = force
+        self.cmap[contact_frame] = [force]
+        return force
+
+    def _make_vertex_contact(self, contact_frame, contact_params):
+        
+        vertex_frames = contact_params['vertex_frames']  # todo improve error
+
+        # create inputs (todo: support degree > 0)
+        vertex_forces = [self.prb.createInputVariable('f_' + vf, dim=3) for vf in vertex_frames]
+
+        # save vertices
+        for frame, force in zip(vertex_frames, vertex_forces):
+            self.fmap[frame] = force
+
+        self.cmap[contact_frame] = vertex_forces
+
+        # do we need to reconstruct the total wrench?
+        return vertex_forces
 
     def setDynamics(self):
         # todo refactor this floating base stuff
@@ -72,16 +112,17 @@ class ModelDescription:
             self.xdot = utils.double_integrator(self.v, self.a)
 
         self.prb.setDynamics(self.xdot)
+
         # underactuation constraints
-        if self.contacts:
-            id_fn = kin_dyn.InverseDynamics(self.kd, self.contacts, self.kd_frame)
+        if self.fmap:
+            id_fn = kin_dyn.InverseDynamics(self.kd, self.fmap.keys(), self.kd_frame)
             self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
             self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
         # else:
         #     id_fn = kin_dyn.InverseDynamics(self.kd)
 
     def getContacts(self):
-        return self.contacts
+        return self.cmap.keys()
 
     # def getInput(self):
     #     return self.a
@@ -106,8 +147,9 @@ class TaskInterface:
         # here I register the the default tasks
         # todo: should I do it here?
         task_factory.register('Cartesian', CartesianTask)
-        task_factory.register('SurfaceContact', SurfaceContact)
-        task_factory.register('CopConstraint', CopConstraint)
+        task_factory.register('Contact', ContactTask)
+        task_factory.register('Wrench', SurfaceContact)
+        task_factory.register('VertexForce', VertexContact)
         task_factory.register('Postural', PosturalTask)
         task_factory.register('JointLimits', JointLimitsTask)
         task_factory.register('Regularization', RegularizationTask)
@@ -156,6 +198,34 @@ class TaskInterface:
         to be called after all variables have been created
         """
         self.model.setDynamics()
+        self.getSolver()
+
+    
+    def bootstrap(self):
+        t = time.time()
+        self.solver_bs.solve()
+        elapsed = time.time() - t
+        print(f'bootstrap solved in {elapsed} s')
+        try:
+            self.solver_bs.print_timings()
+        except:
+            pass
+        self.solution = self.solver_bs.getSolutionDict()
+
+
+    def save_solution(self, filename):
+        from horizon.utils import mat_storer
+        ms = mat_storer.matStorer(filename)
+        self.solution['joint_names'] = self.joint_names
+        ms.store(self.solution)
+
+
+    def load_solution(self, filename):
+        from horizon.utils import mat_storer
+        ms = mat_storer.matStorer(filename)
+        ig = ms.load()
+        self.update_initial_guess(dk=0, from_dict=ig)
+
 
     def _createProblem(self, problem_opts):
 
@@ -165,7 +235,7 @@ class TaskInterface:
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
 
-        self.prb = Problem(self.N, receding=self.is_receding, casadi_type=cs.MX)
+        self.prb = Problem(self.N, receding=self.is_receding, casadi_type=cs.MX, logging_level=logging.DEBUG)
         self.prb.setDt(self.dt)
 
     # a possible method could read from yaml and create the task list
@@ -217,6 +287,8 @@ class TaskInterface:
 
         task = task_factory.create(task_specific)
 
+        self.setTask(task)
+
         return task
 
     def generateTaskContext(self, task_description):
@@ -265,14 +337,17 @@ class TaskInterface:
 
                 # child inherit from parent the values, if not present
                 # parent define the context for the child: child can override it
-                for key, value in task_description_copy.items():
-                    if key not in subtask_description and key != 'subtask':
-                        subtask_description[key] = value
+                
+                # todo: better handling of parameter propagation
+                # for key, value in task_description_copy.items():
+                #     if key not in subtask_description and key != 'subtask':
+                #         subtask_description[key] = value
 
-                if self.getTask(subtask_description['name']) is not None:
-                    continue
+                s_t = self.getTask(subtask_description['name'])
+                
+                if s_t is None:
+                    s_t = self.generateTaskFromDict(subtask_description)
 
-                s_t = self.generateTaskFromDict(subtask_description)
                 subtasks[s_t.name] = s_t
                 task_description_copy.update({'subtask': subtasks})
 
@@ -311,16 +386,21 @@ class TaskInterface:
 
     def getSolver(self):
 
+        if self.si.type != 'ilqr':
+            # todo get options from yaml
+            th = Transcriptor.make_method('multiple_shooting', self.prb)
+
         # todo if receding is true ....
-        solver_bs = Solver.make_solver(self.si.type, self.prb, self.si.opts)
+        self.solver_bs = Solver.make_solver(self.si.type, self.prb, self.si.opts)
+        
         try:
-            solver_bs.set_iteration_callback()
+            self.solver_bs.set_iteration_callback()
         except:
             pass
 
         scoped_opts_rti = self.si.opts.copy()
         scoped_opts_rti['ilqr.enable_line_search'] = False
         scoped_opts_rti['ilqr.max_iter'] = 4
-        solver_rti = Solver.make_solver(self.si.type, self.prb, scoped_opts_rti)
+        # solver_rti = Solver.make_solver(self.si.type, self.prb, scoped_opts_rti)
 
-        return solver_bs, solver_rti
+        return self.solver_bs, None

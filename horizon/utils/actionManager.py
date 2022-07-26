@@ -66,7 +66,7 @@ class ActionManager:
         self.opts = opts
 
         self.prb = self.ti.prb
-        self.contact_map = self.ti.model.fmap
+        self.contact_map = self.ti.model.cmap
 
         self.N = self.prb.getNNodes() - 1
         # todo list of contact is fixed?

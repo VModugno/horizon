@@ -56,7 +56,7 @@ class replay_trajectory:
         if force_reference_frame is cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED:
             if kindyn is None:
                 raise Exception('kindyn input can not be None if force_reference_frame is LOCAL_WORLD_ALIGNED!')
-            for frame in self.frame_force_mapping: # WE LOOP ON FRAMES
+            for frame in self.frame_force_mapping.keys(): # WE LOOP ON FRAMES
                 FK = kindyn.fk(frame)
                 self.frame_fk[frame] = FK
 
