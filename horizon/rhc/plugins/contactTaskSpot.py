@@ -144,10 +144,11 @@ class ContactTaskSpot(Task):
         f = self.force
         mu = 0.5
         fcost = barrier_fun(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
-        barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=active_nodes)
+        barrier = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost, nodes=active_nodes)
         return barrier
 
     def _reset(self):
+
         nodes = list(range(self.prb.getNNodes()))
         # todo reset task
         # task.reset()
