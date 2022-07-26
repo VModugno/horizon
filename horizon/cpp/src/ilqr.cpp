@@ -298,7 +298,7 @@ void IterativeLQR::setResidual(std::vector<int> indices,
 
     c->setResidual(cost, jac);
 
-    if(_verbose) std::cout << "adding residual '" << cost << "' at k = ";
+    if(_verbose) std::cout << "adding residual '" << residual << "' at k = ";
 
     for(int k : indices)
     {
@@ -464,8 +464,13 @@ void IterativeLQR::setParameterValue(const std::string& pname, const Eigen::Matr
     if(it->second.rows() != value.rows() ||
             it->second.cols() != value.cols())
     {
-        throw std::invalid_argument("wrong parameter value size for parameter name '"
-            + pname + "'");
+        std::ostringstream oss;
+
+        oss << "parameter '" << pname << "' has wrong size: expected "
+            << it->second.rows() << "x" << it->second.cols() << " != " 
+            << value.rows() << "x" << value.cols();
+
+        throw std::invalid_argument(oss.str());
     }
 
     it->second = value;
@@ -592,36 +597,59 @@ void IterativeLQR::linearize_quadratize()
     for(int i = 0; i < _N; i++)
     {
         TIC(linearize_quadratize_inner)
-
-        auto xi = state(i);
-        auto ui = input(i);
-        auto xnext = state(i+1);
-
-        _dyn[i].linearize(xi, ui, i);
-        _dyn[i].computeDefect(xi, ui, xnext, i, _dyn[i].d);
-        _constraint[i].linearize(xi, ui, i);
-        _cost[i].quadratize(xi, ui, i);
-
-        THROW_NAN(_dyn[i].A());
-        THROW_NAN(_dyn[i].B());
-        THROW_NAN(_dyn[i].d);
-
-        THROW_NAN(_constraint[i].C());
-        THROW_NAN(_constraint[i].D());
-        THROW_NAN(_constraint[i].h());
-
-        THROW_NAN(_cost[i].Q());
-        THROW_NAN(_cost[i].R());
-        THROW_NAN(_cost[i].P());
-        THROW_NAN(_cost[i].r());
-        THROW_NAN(_cost[i].q());
-
+        linearize_quadratize_inner(i);
     }
 
     // handle final cost and constraint
     // note: these are only function of the state!
     _cost.back().quadratize(state(_N), input(_N-1), _N); // note: input not used here!
     _constraint.back().linearize(state(_N), input(_N-1), _N); // note: input not used here!
+}
+
+void IterativeLQR::linearize_quadratize_inner(int i)
+{
+
+    auto xi = state(i);
+    auto ui = input(i);
+    auto xnext = state(i+1);
+
+    _dyn[i].linearize(xi, ui, i);
+    _dyn[i].computeDefect(xi, ui, xnext, i, _dyn[i].d);
+    _constraint[i].linearize(xi, ui, i);
+    _cost[i].quadratize(xi, ui, i);
+
+    THROW_NAN(_dyn[i].A());
+    THROW_NAN(_dyn[i].B());
+    THROW_NAN(_dyn[i].d);
+
+    THROW_NAN(_constraint[i].C());
+    THROW_NAN(_constraint[i].D());
+    THROW_NAN(_constraint[i].h());
+
+    THROW_NAN(_cost[i].Q());
+    THROW_NAN(_cost[i].R());
+    THROW_NAN(_cost[i].P());
+    THROW_NAN(_cost[i].r());
+    THROW_NAN(_cost[i].q());
+}
+
+void IterativeLQR::linearize_quadratize_mt()
+{
+    int n_th = _th_pool.size();
+
+    int nodes_per_th = _N / n_th;
+
+    int remainder = _N - nodes_per_th*n_th;
+}
+
+void IterativeLQR::linearize_quadratize_thread_main(int istart, int iend)
+{
+    while(!_th_exit)
+    {
+        std::unique_lock lg(_th_mtx);
+        _th_cond.wait(lg, [this](){ return _th_work_available_flag; });
+
+    }
 }
 
 void IterativeLQR::report_result(const IterativeLQR::ForwardPassResult& fpres)
@@ -714,7 +742,7 @@ void IterativeLQR::add_param_to_map(const casadi::Function& f)
     // add parameters from this function
     for(int i = 2; i < f.n_in(); i++)
     {
-        const int param_size = f.size1_in(2);
+        const int param_size = f.size1_in(i);
 
         // check if already exists
         if(_param_map->count(f.name()))

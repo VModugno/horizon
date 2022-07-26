@@ -66,7 +66,7 @@ class ActionManager:
         self.opts = opts
 
         self.prb = self.ti.prb
-        self.contact_map = self.ti.model.fmap
+        self.contact_map = self.ti.model.cmap
 
         self.N = self.prb.getNNodes() - 1
         # todo list of contact is fixed?
@@ -89,8 +89,8 @@ class ActionManager:
         self.default_foot_z = dict()
         for i, frame in enumerate(self.contacts):
             # fk functions and evaluated vars
-            fk = cs.Function.deserialize(self.ti.kd.fk(frame))
-            dfk = cs.Function.deserialize(self.ti.kd.frameVelocity(frame, self.ti.kd_frame))
+            fk = self.ti.kd.fk(frame)
+            dfk = self.ti.kd.frameVelocity(frame, self.ti.kd_frame)
 
             # save foot height
             self.default_foot_z[frame] = (fk(q=self.ti.q0)['ee_pos'][2]).toarray()

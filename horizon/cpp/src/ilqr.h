@@ -5,6 +5,10 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <variant>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+#include <atomic>
 
 #include "profiling.h"
 #include "iterate_filter.h"
@@ -196,6 +200,12 @@ private:
 
     void linearize_quadratize();
 
+    void linearize_quadratize_inner(int i);
+
+    void linearize_quadratize_mt();
+
+    void linearize_quadratize_thread_main(int istart, int iend);
+
     void report_result(const ForwardPassResult& fpres);
 
     void backward_pass();
@@ -326,6 +336,13 @@ private:
     Eigen::MatrixXd _lam_bound_u;
 
     std::vector<Temporaries> _tmp;
+
+    std::vector<std::thread> _th_pool;
+    std::condition_variable _th_cond;
+    std::mutex _th_mtx;
+    int _th_done_flag;
+    bool _th_work_available_flag;
+    std::atomic<bool> _th_exit;
 
     CallbackType _iter_cb;
     utils::ProfilingInfo _prof_info;

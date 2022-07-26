@@ -40,7 +40,13 @@ problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
 model_description = 'whole_body'
 
 # todo: wrong way of adding the contacts contacts=['lf_foot']
-ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts)
+ti = TaskInterface(urdf, 
+            q_init,
+            base_init, 
+            problem_opts, 
+            model_description, 
+            contacts=contacts)
+
 ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
 
 ti.setTaskFromYaml('config_walk.yaml')
@@ -64,11 +70,11 @@ final_y = ti.getTask('final_y')
 final_y.setRef([0, ti.q0[1], 0, 0, 0, 0, 1])
 
 f0 = np.array([0, 0, 55])
-contact1 = ti.getTask('joint_regularization')
-contact1.setRef(1, f0)
-contact1.setRef(2, f0)
-contact1.setRef(3, f0)
-contact1.setRef(4, f0)
+reg = ti.getTask('regularization')
+reg.setRef(1, f0)
+reg.setRef(2, f0)
+reg.setRef(3, f0)
+reg.setRef(4, f0)
 
 opts = dict()
 

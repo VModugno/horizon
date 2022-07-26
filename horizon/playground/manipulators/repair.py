@@ -10,6 +10,7 @@ from horizon.utils.tf_broadcaster import TFBroadcaster
 
 urdf_path = rospkg.RosPack().get_path('repair_urdf') + '/urdf/repair.urdf'
 urdf = open(urdf_path, 'r').read()
+rospy.set_param('/robot_description', urdf)
 
 
 def add_cartesian_tasks_vel():
@@ -28,14 +29,12 @@ def add_cartesian_tasks_vel():
                   'nodes': range(1, N),
                   'cartesian_type': 'velocity'}
 
-    ti.setTaskFromDict(cart_vel_1)
-    ee_cart_1 = ti.getTask('arm_1_tcp_ee_vel_world')
+    ee_cart_1 = ti.setTaskFromDict(cart_vel_1)
     goal_vec_1 = [0., 0., 0., 0., 0., 0.2]
     ee_cart_1.setRef(goal_vec_1)
 
 
-    ti.setTaskFromDict(cart_vel_2)
-    ee_cart_2 = ti.getTask('arm_2_tcp_ee_vel_rel')
+    ee_cart_2 = ti.setTaskFromDict(cart_vel_2)
     goal_vec_2 = [0., 0., 0., 0., 0., 0.2]
     ee_cart_2.setRef(goal_vec_2)
 
@@ -54,10 +53,8 @@ def add_cartesian_tasks_pos():
               'indices': [0, 1, 2, 3, 4, 5],
               'nodes': [N]}
 
-    ti.setTaskFromDict(cart_1)
-    ti.setTaskFromDict(cart_2)
-    ee_cart_1 = ti.getTask('arm_1_tcp_ee_world')
-    ee_cart_2 = ti.getTask('arm_2_tcp_ee_rel')
+    ee_cart_1 = ti.setTaskFromDict(cart_1)
+    ee_cart_2 = ti.setTaskFromDict(cart_2)
 
     # goal_vec = [0, 0, 0., 0, 0, 0, 1]
     goal_vec = [0.5, -0.2, 0.5, 0, 0, 0, 1]
