@@ -67,9 +67,9 @@ class ModelDescription:
     def setDynamics(self):
         # todo refactor this floating base stuff
         if self.floating_base:
-            _, self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
+            self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
         else:
-            _, self.xdot = utils.double_integrator(self.q, self.v, self.a)
+            self.xdot = utils.double_integrator(self.v, self.a)
 
         self.prb.setDynamics(self.xdot)
         # underactuation constraints
@@ -204,9 +204,6 @@ class TaskInterface:
 
     def generateTaskFromDict(self, task_description):
 
-        if task_description['name'] in self.task_list:
-            return None
-
         # todo this should probably go in each single task definition --> i don't have the info from the ti then
         shortcuts = {
             'nodes': {'final': self.N, 'all': range(self.N + 1)},
@@ -271,6 +268,9 @@ class TaskInterface:
                 for key, value in task_description_copy.items():
                     if key not in subtask_description and key != 'subtask':
                         subtask_description[key] = value
+
+                if self.getTask(subtask_description['name']) is not None:
+                    continue
 
                 s_t = self.generateTaskFromDict(subtask_description)
                 subtasks[s_t.name] = s_t
