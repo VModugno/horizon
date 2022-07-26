@@ -101,8 +101,8 @@ def toRot(q):
 def double_integrator_with_floating_base(q, qdot, qddot, base_velocity_reference_frame = cas_kin_dyn.CasadiKinDyn.LOCAL):
     """
     Construct the floating-base dynamic model:
-                x = [q, ndot]
-                xdot = [qdot, nddot]
+                x = [q, qdot]
+                xdot = [qdot, qddot]
     using quaternion dynamics: quatdot = quat x [omega, 0]
     NOTE: this implementation consider floating-base position and orientation expressed in GLOBAL (world) coordinates while
     if base_velocity_reference_frame = cas_kin_dyn.CasadiKinDyn.LOCAL
@@ -115,12 +115,10 @@ def double_integrator_with_floating_base(q, qdot, qddot, base_velocity_reference
         qddot_sx: joint space acceleration: nddot = [ax ay ax wdotx wdoty wdotz qddotj]
 
     Returns:
-        x: state x = [q, ndot]
-        xdot: derivative of the state xdot = [qdot, nddot]
+        xdot: derivative of the state xdot = [qdot, qddot]
     """
     if base_velocity_reference_frame != cas_kin_dyn.CasadiKinDyn.LOCAL and base_velocity_reference_frame != cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED:
         raise Exception(f'base_velocity_reference_frame can be only LOCAL or LOCAL_WORLD_ALIGNED!')
-    # q, ndot, nddot
 
     q_sx = cs.SX.sym('q_sx', q.shape[0])
     qdot_sx = cs.SX.sym('ndot_sx', qdot.shape[0])
@@ -144,7 +142,7 @@ def double_integrator_with_floating_base(q, qdot, qddot, base_velocity_reference
     R = toRot([0., 0., 0., 1.])
     if base_velocity_reference_frame == cas_kin_dyn.CasadiKinDyn.LOCAL:
         R = toRot(q_sx[3:7])
-    x = cs.vertcat(q_sx, qdot_sx)
+    # x = cs.vertcat(q_sx, qdot_sx)
 
     if qdot_sx.shape[1] == 1:
         first = cs.mtimes(R, qdot_sx[0:3])
@@ -158,17 +156,16 @@ def double_integrator_with_floating_base(q, qdot, qddot, base_velocity_reference
 
     xdot = cs.vertcat(first, cs.vertcat(*quaterniondot), third, qddot_sx)
 
-    fun_sx = cs.Function('double_integrator_with_floating_base', [q_sx, qdot_sx, qddot_sx], [x, xdot])
+    fun_sx = cs.Function('double_integrator_with_floating_base', [q_sx, qdot_sx, qddot_sx], [xdot])
 
-    x, xdot = fun_sx(q, qdot, qddot)
+    xdot = fun_sx(q, qdot, qddot)
 
-    return x, xdot
+    return xdot
 
 
-def double_integrator(q, qdot, qddot):
-    x = cs.vertcat(q, qdot)
+def double_integrator(qdot, qddot):
     xdot = cs.vertcat(qdot, qddot)
-    return x, xdot
+    return xdot
 
 def barrier(x):
     return cs.sum1(cs.if_else(x > 0, 0, x ** 2))

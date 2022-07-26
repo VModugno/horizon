@@ -59,7 +59,7 @@ class AbstractFunction:
 
         # create function of CASADI, dependent on (in order) [all_vars, all_pars]
         all_input = self.vars + self.pars
-        all_names = [i.getName() for i in all_input]
+        all_names = [f'{i.getName()}_{str(i.getOffset())}' for i in all_input]
 
         self._fun = cs.Function(name, self.vars + self.pars, [self._f], all_names, ['f'])
 
@@ -167,6 +167,7 @@ class AbstractFunction:
             used_var_impl = self._getUsedVarImpl()
             used_par_impl = self._getUsedParImpl()
             all_vars = used_var_impl + used_par_impl
+
             fun_eval = self._fun_map(*all_vars)
             self._fun_impl = fun_eval
 
@@ -284,7 +285,7 @@ class Function(AbstractFunction):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         # I have to convert the input nodes to the corresponding column position:
         # function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
@@ -615,7 +616,7 @@ class Constraint(Function, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
 
@@ -626,7 +627,7 @@ class Constraint(Function, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
 
@@ -704,7 +705,7 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._feas_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._feas_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 

@@ -30,7 +30,7 @@ class AbstractVariable(ABC):
           Horizon allows the user to work only with abstract variables. Internally, these variables are projected over the horizon nodes.
     """
 
-    def __init__(self, tag: str, dim: int, casadi_type=cs.SX):
+    def __init__(self, tag: str, dim: int, abstract_casadi_type):
         """
         Initialize the Abstract Variable. Inherits from the symbolic CASADI varaible SX.
 
@@ -40,16 +40,16 @@ class AbstractVariable(ABC):
         """
 
         # dynamically add casadi_type as base class 
-        class AVClass(self.__class__, casadi_type):
+        class AVClass(self.__class__, abstract_casadi_type):
             pass
         
         self.__class__ = AVClass
 
         # save the cs type
-        self.casadi_type = casadi_type
+        self._abstract_casadi_type = abstract_casadi_type
 
         # initialize base class
-        super().__init__(casadi_type.sym(tag, dim))
+        super().__init__(abstract_casadi_type.sym(tag, dim))
 
         # human readable name
         self._tag = tag
@@ -93,7 +93,7 @@ class AbstractVariableView:
     def __init__(self, parent: AbstractVariable, var_slice, indices):
 
         # dynamically add casadi_type as base class
-        class AVVClass(self.__class__, parent.casadi_type):
+        class AVVClass(self.__class__, parent._abstract_casadi_type):
             pass
         
         self.__class__ = AVVClass
@@ -126,7 +126,7 @@ class AbstractVariableView:
 
 
 class OffsetTemplate(AbstractVariable):  # note parametrize casadi type!!!
-    def __init__(self, parent_name, tag, dim, offset, nodes_array, impl, casadi_type=cs.SX):
+    def __init__(self, parent_name, tag, dim, offset, nodes_array, impl, casadi_type, abstract_casadi_type):
         """
         Initialize the Offset Variable.
 
@@ -139,7 +139,9 @@ class OffsetTemplate(AbstractVariable):  # note parametrize casadi type!!!
         """
         self._tag = tag
         self._dim = dim
-        super().__init__(tag, dim, casadi_type)
+        super().__init__(tag, dim, abstract_casadi_type)
+
+        self._casadi_type = casadi_type
 
         self.parent_name = parent_name
         self._offset = offset
@@ -162,7 +164,7 @@ class OffsetTemplate(AbstractVariable):  # note parametrize casadi type!!!
         nodes_array = np.array(nodes)
         # offset the node of self.offset
         offset_nodes = nodes_array + self._offset
-        offset_nodes = misc.checkNodes(offset_nodes, self._nodes_array)
+        offset_nodes, _ = misc.checkNodes(offset_nodes, self._nodes_array)
 
         var_impl = self._impl['var'][:, offset_nodes]
 
@@ -206,7 +208,7 @@ class SingleParameter(AbstractVariable):
     The assigned value is the same along the horizon, since this parameter is node-independent.
     The Parameter is abstract, and gets implemented automatically.
     """
-    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Initialize the Single Parameter: a node-independent parameter which is not projected over the horizon.
 
@@ -215,7 +217,7 @@ class SingleParameter(AbstractVariable):
             dim: dimension of the parameter
             dummy_nodes: useless input, used to simplify the framework mechanics
         """
-        super().__init__(tag, dim, casadi_type)
+        super().__init__(tag, dim, abstract_casadi_type)
 
         self._casadi_type = casadi_type
         self._nodes_array = nodes_array
@@ -258,7 +260,7 @@ class SingleParameter(AbstractVariable):
         if nodes is None:
             val_impl = self._impl[val_type]
         else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._nodes_array)
             num_nodes = int(np.sum(self._nodes_array[nodes]))
             val_impl = cs.repmat(self._impl[val_type], 1, num_nodes)
 
@@ -354,7 +356,7 @@ class Parameter(AbstractVariable):
     Parameter of Horizon Problem.
     It is used for parametric problems: it is a symbolic variable in the optimization problem but it is not optimized. Rather, it is kept parametric and can be assigned before solving the problem.
     """
-    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Initialize the Parameter: an abstract parameter projected over the horizon.
         Parameters are specified before building the problem and can be 'assigned' afterwards, before solving the problem.
@@ -366,7 +368,7 @@ class Parameter(AbstractVariable):
             dim: dimension of the parameter
             nodes: nodes the parameter is implemented at
         """
-        super().__init__(tag, dim, casadi_type)
+        super().__init__(tag, dim, abstract_casadi_type)
 
         self._casadi_type = casadi_type
 
@@ -440,7 +442,7 @@ class Parameter(AbstractVariable):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
@@ -503,7 +505,7 @@ class Parameter(AbstractVariable):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
@@ -549,7 +551,7 @@ class Parameter(AbstractVariable):
             createTag = lambda name, node: name + str(node) if node is not None else name
 
             new_tag = createTag(self._tag, node)
-            par = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl, self.casadi_type)
+            par = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl, self._abstract_casadi_type)
 
             self._par_offset[node] = par
         return par
@@ -613,7 +615,7 @@ class SingleVariable(AbstractVariable):
     The single variable is the same along the horizon, since it is node-independent.
     The Variable is abstract, and gets implemented automatically.
     """
-    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Initialize the Single Variable: a node-independent variable which is not projected over the horizon.
         The bounds of the variable are initialized to -inf/inf.
@@ -623,7 +625,7 @@ class SingleVariable(AbstractVariable):
             dim: dimension of the variable
             nodes_array: binary array specifying which node is active
         """
-        super().__init__(tag, dim, casadi_type)
+        super().__init__(tag, dim, abstract_casadi_type)
 
         self._casadi_type = casadi_type
         self._nodes_array = nodes_array
@@ -706,7 +708,7 @@ class SingleVariable(AbstractVariable):
         if nodes is None:
             val_impl = self._impl[val_type]
         else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._nodes_array)
             num_nodes = int(np.sum(self._nodes_array[nodes]))
             val_impl = cs.repmat(self._impl[val_type], 1, num_nodes)
 
@@ -893,7 +895,7 @@ class Variable(AbstractVariable):
 
         Implemented variable "x" --> x_0, x_1, ... x_N-1, x_N
     """
-    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Initialize the Variable.
         The bounds of the variable are initialized to -inf/inf.
@@ -903,9 +905,11 @@ class Variable(AbstractVariable):
             dim: dimension of the variable
             nodes_array: binary array specifying the variable is defined on
         """
-        super().__init__(tag, dim, casadi_type)
+        super().__init__(tag, dim, abstract_casadi_type)
 
+        self._abstract_casadi_type = abstract_casadi_type
         self._casadi_type = casadi_type
+
         self._nodes_array = np.array(nodes_array)
 
         self.var_offset = dict()
@@ -928,7 +932,7 @@ class Variable(AbstractVariable):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
 
@@ -1017,7 +1021,7 @@ class Variable(AbstractVariable):
             createTag = lambda name, node: name + str(node) if node is not None else name
 
             new_tag = createTag(self._tag, node)
-            var = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl, self.casadi_type)
+            var = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl, self._casadi_type, self._abstract_casadi_type)
 
             self.var_offset[node] = var
         return var
@@ -1103,14 +1107,27 @@ class Variable(AbstractVariable):
         Returns:
             value/s of the desired argument
         """
+        not_impl_nodes = np.array([])
         if nodes is None:
-            nodes = misc.getNodesFromBinary(self._nodes_array)
+            checked_nodes = misc.getNodesFromBinary(self._nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._nodes_array)
+            checked_nodes, not_impl_nodes = misc.checkNodes(nodes, self._nodes_array)
 
-        pos_nodes = misc.convertNodestoPos(nodes, self._nodes_array)
+        pos_nodes = misc.convertNodestoPos(checked_nodes, self._nodes_array)
 
-        vals = self._impl[val_type][:, pos_nodes]
+        # todo: hack to return matrix with nan values where the variable is not active/implemented
+        if val_type == 'var':
+            vals = self._casadi_type(self.getDim(), len(checked_nodes) + len(not_impl_nodes))
+            vals[:] = np.nan
+        else:
+            vals = np.nan * np.ones([self.getDim(), len(checked_nodes) + len(not_impl_nodes)])
+
+        node_pos_converter = dict(zip(checked_nodes.tolist() + not_impl_nodes.tolist(), range(vals.shape[1])))
+
+        vals[:, [node_pos_converter[elem] for elem in pos_nodes.tolist()]] = self._impl[val_type][:, pos_nodes]
+
+        # TODO: before was like this:
+        # vals = self._impl[val_type][:, pos_nodes]
 
         return vals
 
@@ -1348,8 +1365,8 @@ class VariableView(AbstractVariableView):
         return self._parent.getVarOffset(node)[self._indices, :]
 
 class RecedingVariable(Variable):
-    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
-        super().__init__(tag, dim, nodes_array, casadi_type)
+    def __init__(self, tag, dim, nodes_array, casadi_type, abstract_casadi_type):
+        super().__init__(tag, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
 
     def shift(self):
 
@@ -1372,8 +1389,8 @@ class RecedingVariable(Variable):
 
 # TODO: should I create the parameter on all the nodes and make it active only on the active_nodes, if nodes= is specified
 class RecedingParameter(Parameter):
-    def __init__(self, tag, dim, nodes_array, casadi_type=cs.SX):
-        super().__init__(tag, dim, nodes_array, casadi_type)
+    def __init__(self, tag, dim, nodes_array, casadi_type, abstract_casadi_type):
+        super().__init__(tag, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
 
     def shift(self):
 
@@ -1398,7 +1415,7 @@ class InputVariable(Variable):
 
         Implemented variable "x" --> x_0, x_1, ... x_N-1
     """
-    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes, casadi_type, abstract_casadi_type):
         """
         Initialize the Input Variable.
 
@@ -1407,7 +1424,7 @@ class InputVariable(Variable):
             dim: dimension of the variable
             nodes: should always be N-1, where N is the number of horizon nodes
         """
-        super().__init__(tag, dim, nodes, casadi_type)
+        super().__init__(tag, dim, nodes, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
 
 class StateVariable(Variable):
     """
@@ -1420,7 +1437,7 @@ class StateVariable(Variable):
         Implemented variable "x" --> x_0, x_1, ... x_N-1, x_N
     """
 
-    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes, casadi_type, abstract_casadi_type):
         """
         Initialize the State Variable.
 
@@ -1429,10 +1446,10 @@ class StateVariable(Variable):
             dim: dimension of the variable
             nodes: should always be N, where N is the number of horizon nodes
         """
-        super(StateVariable, self).__init__(tag, dim, nodes, casadi_type)
+        super(StateVariable, self).__init__(tag, dim, nodes, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
 
 class RecedingInputVariable(RecedingVariable):
-    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes, casadi_type, abstract_casadi_type):
         """
         Initialize the Receding Input Variable.
 
@@ -1441,11 +1458,11 @@ class RecedingInputVariable(RecedingVariable):
             dim: dimension of the variable
             nodes: should always be N-1, where N is the number of horizon nodes
         """
-        super().__init__(tag, dim, nodes, casadi_type)
+        super().__init__(tag, dim, nodes, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
 
 
 class RecedingStateVariable(RecedingVariable):
-    def __init__(self, tag, dim, nodes, casadi_type=cs.SX):
+    def __init__(self, tag, dim, nodes, casadi_type, abstract_casadi_type):
         """
         Initialize the Receding State Variable.
 
@@ -1454,7 +1471,7 @@ class RecedingStateVariable(RecedingVariable):
             dim: dimension of the variable
             nodes: should always be N-1, where N is the number of horizon nodes
         """
-        super().__init__(tag, dim, nodes, casadi_type)
+        super().__init__(tag, dim, nodes, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
 
 
 
@@ -1771,7 +1788,8 @@ class InputAggregate(Aggregate):
 
 #
 
-default_casadi_type = cs.SX
+default_abstract_casadi_type = cs.SX
+default_casadi_type = cs.MX
 
 class VariablesContainer:
     """
@@ -1792,7 +1810,7 @@ class VariablesContainer:
         self._vars = OrderedDict()
         self._pars = OrderedDict()
 
-    def createVar(self, var_type, name, dim, nodes_array, casadi_type=default_casadi_type):
+    def createVar(self, var_type, name, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Create a variable and adds it to the Variable Container.
 
@@ -1801,9 +1819,11 @@ class VariablesContainer:
             name: name of variable
             dim: dimension of variable
             nodes_array: nodes the variable is defined on
-            casadi_type: type of casadi variable (SX or MX)
+            abstract_casadi_type: type of abstract variable of horizon (casadi SX or MX)
+            casadi_type: type of implemented variable of horizon (casadi SX or MX)
+
         """
-        var = var_type(name, dim, nodes_array, casadi_type)
+        var = var_type(name, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
         self._vars[name] = var
 
         if self._logger:
@@ -1812,7 +1832,7 @@ class VariablesContainer:
 
         return var
 
-    def setVar(self, name, dim, nodes_array=None, casadi_type=default_casadi_type):
+    def setVar(self, name, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Creates a generic variable.
 
@@ -1820,8 +1840,10 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             active_nodes: nodes the variable is defined on. If not specified, a Single Variable is generated
-            casadi_type: type of casadi variable (SX or MX)
+            abstract_casadi_type: type of abstract variable of horizon (casadi SX or MX)
+            casadi_type: type of implemented variable of horizon (casadi SX or MX)
         """
+
         if nodes_array is None:
             var_type = SingleVariable
         else:
@@ -1830,10 +1852,10 @@ class VariablesContainer:
             else:
                 var_type = Variable
 
-        var = self.createVar(var_type, name, dim, nodes_array, casadi_type)
+        var = self.createVar(var_type, name, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
         return var
 
-    def setStateVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
+    def setStateVar(self, name, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Creates a State variable.
 
@@ -1841,17 +1863,19 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             nodes_array: binary array of nodes specifying which node is active
-            casadi_type: type of casadi variable (SX or MX)
+            abstract_casadi_type: type of abstract variable of horizon (casadi SX or MX)
+            casadi_type: type of implemented variable of horizon (casadi SX or MX)
         """
+
         if self.is_receding:
             var_type = RecedingStateVariable
         else:
             var_type = StateVariable
 
-        var = self.createVar(var_type, name, dim, nodes_array, casadi_type)
+        var = self.createVar(var_type, name, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
         return var
 
-    def setInputVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
+    def setInputVar(self, name, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Creates a Input (Control) variable.
 
@@ -1859,18 +1883,20 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             nodes_array: binary array of nodes specifying which node is active
-            casadi_type: type of casadi variable (SX or MX)
+            abstract_casadi_type: type of abstract variable of horizon (casadi SX or MX)
+            casadi_type: type of implemented variable of horizon (casadi SX or MX)
         """
+
         if self.is_receding:
             var_type = RecedingInputVariable
         else:
             var_type = InputVariable
 
 
-        var = self.createVar(var_type, name, dim, nodes_array, casadi_type)
+        var = self.createVar(var_type, name, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
         return var
 
-    def setSingleVar(self, name, dim, nodes_array, casadi_type=default_casadi_type):
+    def setSingleVar(self, name, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Creates a Single variable.
 
@@ -1878,12 +1904,14 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             nodes_array: binary array of nodes specifying which node is active
-            casadi_type: type of casadi variable (SX or MX)
+            abstract_casadi_type: type of abstract variable of horizon (casadi SX or MX)
+            casadi_type: type of implemented variable of horizon (casadi SX or MX)
         """
-        var = self.createVar(SingleVariable, name, dim, nodes_array, casadi_type)
+
+        var = self.createVar(SingleVariable, name, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
         return var
 
-    def setParameter(self, name, dim, nodes_array, casadi_type=default_casadi_type):
+    def setParameter(self, name, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Creates a Parameter.
 
@@ -1891,14 +1919,16 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             nodes_array: binary array of nodes specifying which node is active. If not specified, all the horizon nodes are considered
-            casadi_type: type of casadi variable (SX or MX)
+            abstract_casadi_type: type of abstract variable of horizon (casadi SX or MX)
+            casadi_type: type of implemented variable of horizon (casadi SX or MX)
         """
+
         if self.is_receding:
             par_type = RecedingParameter
         else:
             par_type = Parameter
 
-        par = par_type(name, dim, nodes_array, casadi_type)
+        par = par_type(name, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
         self._pars[name] = par
 
         if self._logger:
@@ -1907,7 +1937,7 @@ class VariablesContainer:
 
         return par
 
-    def setSingleParameter(self, name, dim, nodes_array, casadi_type=default_casadi_type):
+    def setSingleParameter(self, name, dim, nodes_array, casadi_type, abstract_casadi_type):
         """
         Creates a Single Variable.
 
@@ -1915,9 +1945,11 @@ class VariablesContainer:
             name: name of the variable
             dim: dimension of the variable
             nodes_array: binary array of nodes specifying which node is active.
-            casadi_type: type of casadi variable (SX or MX)
+            abstract_casadi_type: type of abstract variable of horizon (casadi SX or MX)
+            casadi_type: type of implemented variable of horizon (casadi SX or MX)
         """
-        par = SingleParameter(name, dim, nodes_array, casadi_type)
+
+        par = SingleParameter(name, dim, nodes_array, casadi_type=casadi_type, abstract_casadi_type=abstract_casadi_type)
         self._pars[name] = par
 
         if self._logger:

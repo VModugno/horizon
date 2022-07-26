@@ -125,6 +125,17 @@ void WrappedFunction::call(bool sparse)
 
 const Eigen::MatrixXd& WrappedFunction::getOutput(int i) const
 {
+    if(_out_matrix[i].hasNaN() || !_out_matrix[i].allFinite())
+    {
+        std::cout << "invalid value in output of " << _f.name() << "\n";
+        std::cout << "output #" << i << ": \n" << _out_matrix[i].format(3) << "\n";
+        for(int j = 0; j < _f.n_in(); j++)
+        {
+            auto in = Eigen::VectorXd::Map(_in_buf[j], _f.size1_in(j));
+            std::cout << "input #" << j << ": \n" << in.transpose().format(3) << "\n";
+        }
+    }
+
     return _out_matrix[i];
 }
 
