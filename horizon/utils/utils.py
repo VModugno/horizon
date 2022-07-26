@@ -168,5 +168,5 @@ def double_integrator(qdot, qddot):
     return xdot
 
 def barrier(x):
-    return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
+    return cs.if_else(x > 0, 0, x)
 

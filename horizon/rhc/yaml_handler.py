@@ -76,6 +76,13 @@ class YamlParser:
             # then substitute
             if isinstance(v, str) and k in shortcuts and v in shortcuts[k]:
                 task_desc_copy[k] = shortcuts[k][v]
+            elif isinstance(v, str) and len(v) >= 3 and v[:2] == '${' and v[-1] == '}':
+                try:
+                    ret = eval(v[2:-1], {}, {'N': shortcuts['nodes']['final']})
+                    task_desc_copy[k] = ret
+                except BaseException as e:
+                    pass
+
 
         return task_desc_copy
 

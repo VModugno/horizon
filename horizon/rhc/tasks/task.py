@@ -1,10 +1,12 @@
+from re import sub
 import casadi as cs
-from typing import List, Iterable, Union, Sequence
+from typing import List, Iterable, Union, Sequence, Dict, Type
 import random, string
 from horizon.problem import Problem
 import numpy as np
 from casadi_kin_dyn import pycasadi_kin_dyn
 from dataclasses import dataclass, field
+
 
 
 def generate_id() -> str:
@@ -14,10 +16,12 @@ def generate_id() -> str:
 
 @dataclass
 class Task:
+    
     # todo this is context: transform to context
     prb: Problem
     kin_dyn: pycasadi_kin_dyn.CasadiKinDyn
     kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+    model: 'ModelDescription'
 
     # todo: how to initialize?
     type: str
@@ -31,6 +35,14 @@ class Task:
     @classmethod
     def from_dict(cls, task_dict):
         return cls(**task_dict)
+
+    @classmethod
+    def subtask_by_class(cls, subtask: Dict, classname: Type) -> 'classname':
+        ret = []
+        for _, v in subtask.items():
+            if isinstance(v, classname):
+                ret.append(v)
+        return ret[0] if len(ret) == 1 else ret
 
     def __post_init__(self):
         # todo: this is for simplicity

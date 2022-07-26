@@ -74,6 +74,14 @@ void WrappedFunction::setInput(int i, Eigen::Ref<const Eigen::VectorXd> xi)
         throw std::invalid_argument(_f.name() + ": input size mismatch");
     }
 
+    if(xi.hasNaN() || !xi.allFinite())
+    {
+        std::ostringstream oss;
+        oss << _f.name() << " input " << i << " contains invalid values: \n" <<
+               xi.transpose().format(3);
+        throw std::runtime_error(oss.str());
+    }
+
     _in_buf[i] = xi.data();
 }
 
@@ -100,6 +108,13 @@ void WrappedFunction::call(bool sparse)
                           _rows[i], _cols[i],
                           _out_data[i],
                           _out_matrix[i]);
+
+            if(_out_matrix[i].hasNaN() || !_out_matrix[i].allFinite())
+            {
+                std::ostringstream oss;
+                oss << _f.name() << " output " << i << " contains invalid values";
+                throw std::runtime_error(oss.str());
+            }
         }
 
     }
@@ -176,6 +191,7 @@ void WrappedFunction::csc_to_matrix(const casadi::Sparsity& sp,
         matrix = Eigen::MatrixXd::Map(data.data(),
                                       matrix.rows(),
                                       matrix.cols());
+
         return;
     }
 
