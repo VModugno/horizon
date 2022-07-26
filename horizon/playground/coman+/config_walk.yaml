@@ -1,6 +1,11 @@
 solver:
   type: ipopt
   ipopt.linear_solver: ma57
+  ilqr.verbose: true
+  ilqr.codegen_enabled: True
+  ilqr.codegen_workdir: /tmp/miao
+  ilqr.enable_gn: true
+  # ilqr.log: true
 #  tol: 0.001
 #  constr_viol_tol: 0.001
 #  max_iter: 2000
@@ -18,8 +23,6 @@ constraints: [final_base_x,           # required to set x-target for the walk
               foot_xy_r_sole,         # required from the ActionManager
               rot_l_sole,              # keep the sole straight
               rot_r_sole,               # keep the sole straight
-              cop_l, 
-              cop_r
               ]
               # task_base_x,
               # final_x,
@@ -46,26 +49,24 @@ rot_l_sole:
   type: Cartesian
   distal_link: l_sole
   indices: [3, 4, 5]
-  nodes: all
+  nodes: ${range(N)}
   cartesian_type: velocity
 
 rot_r_sole:
   type: Cartesian
   distal_link: r_sole
   indices: [3, 4, 5]
-  nodes: all
+  nodes: ${range(N)}
   cartesian_type: velocity
 
 # ===============================
 
 interaction_l_foot:
-  type: SurfaceContact
+  type: Wrench
   frame: l_sole
-
-cop_l:
-  type: CopConstraint
-  subtask: [interaction_l_foot]
   dimensions: [0.2, 0.1]
+  fn_min: 10.0
+  enable_cop: true 
 
 zero_velocity_l_foot:
   type: Cartesian
@@ -75,13 +76,11 @@ zero_velocity_l_foot:
   cartesian_type: velocity
 
 interaction_r_foot:
-  type: SurfaceContact
+  type: Wrench
   frame: r_sole
-
-cop_r:
-  type: CopConstraint
-  subtask: [interaction_r_foot]
   dimensions: [0.2, 0.1]
+  fn_min: 10.0
+  enable_cop: true 
 
 zero_velocity_r_foot:
   type: Cartesian
