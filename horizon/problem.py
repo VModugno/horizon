@@ -555,7 +555,7 @@ class Problem:
 
         # if receding, add a weight for activating/disabling the node
         if self.is_receding:
-            fun._setWeightMask(self.default_casadi_type)
+            fun._setWeightMask(self.default_casadi_type, self.default_abstract_casadi_type)
             weight_mask = fun._getWeightMask()
             self.var_container._pars[weight_mask.getName()] = weight_mask
 

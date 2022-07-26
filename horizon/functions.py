@@ -807,8 +807,12 @@ class RecedingCost(RecedingFunction):
 
         super().__init__(name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
 
-    def _setWeightMask(self, casadi_type):
-        self.weight_mask = sv.RecedingParameter(f'{self.getName()}_weight_mask', self.getDim(), self._feas_nodes_array, casadi_type)
+    def _setWeightMask(self, casadi_type, abstract_casadi_type):
+        self.weight_mask = sv.RecedingParameter(f'{self.getName()}_weight_mask', 
+                                    self.getDim(), 
+                                    self._feas_nodes_array, 
+                                    casadi_type, 
+                                    abstract_casadi_type)
         self.pars.append(self.weight_mask)
 
         nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
