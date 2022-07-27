@@ -17,7 +17,7 @@ os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
 urdf = open(urdffile, 'r').read()
-rospy.set_param('/robot_description', urdf)
+# rospy.set_param('/robot_description', urdf)
 
 
 base_init = np.array([0., 0., 0.96, 0., 0.0, 0.0, 1.])
@@ -60,13 +60,13 @@ ti = TaskInterface(urdf,
         model_description, 
         is_receding=True)
 
-ti.setTaskFromYaml(os.path.dirname(__file__) + '/config_walk_forces.yaml')
+ti.setTaskFromYaml(os.path.dirname(__file__) + '/config_walk.yaml')
 
 
 f0 = np.array([0, 0, 315, 0, 0, 0])
 init_force = ti.getTask('joint_regularization')
-# init_force.setRef(1, f0)
-# init_force.setRef(2, f0)
+init_force.setRef(1, f0)
+init_force.setRef(2, f0)
 
 
 
@@ -80,8 +80,8 @@ final_base_x.setRef([0, 0, 0, 0, 0, 0, 1])
 
 opts = dict()
 am = ActionManager(ti, opts)
-# am._walk([10, 40], [0, 1])
-am._step(Step(frame='l_sole', k_start=20, k_goal=30))
+am._walk([10, 40], [0, 1])
+# am._step(Step(frame='l_sole', k_start=20, k_goal=30))
 
 # todo: horrible API
 # l_contact.setNodes(list(range(5)) + list(range(15, 50)))
@@ -129,11 +129,16 @@ ti.bootstrap()
 solution = ti.solution
 ti.save_solution('/tmp/dioboy.mat')
 
+
+if replay_motion:
+    os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
+    subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=cogimon'])
+    rospy.loginfo("'cogimon' visualization started.")
+
 if replay_motion:
 
     # single replay
     q_sol = solution['q']
-    print(ti.model.fmap)
     frame_force_mapping = {cname: solution[f.getName()] for cname, f in ti.model.fmap.items()}
     repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.kd_frame, ti.kd)
     repl.sleep(1.)
