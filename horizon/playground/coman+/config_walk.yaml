@@ -107,6 +107,7 @@ min_rot:
 joint_posture:
   type: Postural
   weight: 5. # 10
+  nodes: 'all'
 
 # todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they wont get considered.
 joint_regularization:
