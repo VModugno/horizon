@@ -808,16 +808,15 @@ class RecedingCost(RecedingFunction):
         super().__init__(name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
 
     def _setWeightMask(self, casadi_type, abstract_casadi_type):
-        self.weight_mask = sv.RecedingParameter(f'{self.getName()}_weight_mask', 
-                                    self.getDim(), 
-                                    self._feas_nodes_array, 
-                                    casadi_type, 
-                                    abstract_casadi_type)
-        self.pars.append(self.weight_mask)
 
-        nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
-        nodes_mask[:, misc.getNodesFromBinary(self._active_nodes_array)] = 1.
-        self.weight_mask.assign(nodes_mask)
+        dim_weight_mask = 1
+        self.weight_mask = sv.RecedingParameter(f'{self.getName()}_weight_mask',
+                                                dim_weight_mask,
+                                                self._feas_nodes_array,
+                                                casadi_type,
+                                                abstract_casadi_type)
+
+        self.pars.append(self.weight_mask)
 
         # override _f and _fun
         self._f = self.weight_mask * self._f
@@ -825,23 +824,25 @@ class RecedingCost(RecedingFunction):
         all_names = [i.getName() for i in all_input]
         self._fun = cs.Function(self.getName(), self.vars + self.pars, [self._f], all_names, ['f'])
 
+        self.setNodes(misc.getNodesFromBinary(self._active_nodes_array))
+
     def _getWeightMask(self):
         return self.weight_mask
 
     def setNodes(self, nodes, erasing=False):
         super().setNodes(nodes, erasing)
         # eliminate/enable cost functions by setting their weight
-        nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
+        nodes_mask = np.zeros([self.weight_mask.getDim(), np.sum(self._feas_nodes_array).astype(int)])
         nodes_mask[:, nodes] = 1.
         self.weight_mask.assign(nodes_mask)
 
     # def shift(self):
-        # pass
-        # shift_num = -1
+    # pass
+    # shift_num = -1
 
-        # print(f'============= COST ================')
-        # print(f'NAME: {self.getName()}')
-        # print(f'NEW VALUES:\n {self.weight_mask.getValues()}')
+    # print(f'============= COST ================')
+    # print(f'NAME: {self.getName()}')
+    # print(f'NEW VALUES:\n {self.weight_mask.getValues()}')
 
 class Residual(Cost):
     """
