@@ -296,7 +296,7 @@ class CartesianTask(Task):
         # print('=============================================')
 
         # core
-        self.constr.setNodes(self.nodes[1:-1], erasing=True)  # <==== SET NODES
+        self.constr.setNodes(self.nodes[1:], erasing=True)  # <==== SET NODES
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
