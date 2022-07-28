@@ -290,13 +290,13 @@ class CartesianTask(Task):
 
         if not nodes:
             self.nodes = []
-            self.constr.setNodes(self.nodes, erasing=True)
+            self.constr.setNodes(self.nodes)
             return 0
 
         # print('=============================================')
 
         # core
-        self.constr.setNodes(self.nodes[1:], erasing=True)  # <==== SET NODES
+        self.constr.setNodes(self.nodes[1:])  # <==== SET NODES
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')

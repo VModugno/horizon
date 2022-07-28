@@ -25,11 +25,11 @@ print(cnsrt.getLowerBounds())
 
 enabled_node = [4]
 print(f'========= disabling all but node: {enabled_node} =============')
-cnsrt.setNodes(enabled_node, erasing=True)
+cnsrt.setNodes(enabled_node)
 print(cnsrt.getLowerBounds())
 
 print(f'========= enable all nodes =============')
-cnsrt.setNodes(range(n_nodes+1), erasing=True)
+cnsrt.setNodes(range(n_nodes+1))
 print(cnsrt.getLowerBounds())
 
 print('========= setting bounds to nodes: [3, 8, 9] =============')
@@ -38,7 +38,7 @@ lb_1 =cnsrt.getLowerBounds().copy()
 print(lb_1)
 
 print('========== disabling all nodes ============')
-cnsrt.setNodes([], erasing=True)
+cnsrt.setNodes([])
 print(cnsrt.getLowerBounds())
 
 print('========== setting bounds to disabled nodes: should throw warning ============')
@@ -47,15 +47,15 @@ print(cnsrt.getLowerBounds())
 
 print('=========== enabling all nodes (if not receding, should throw) ===========')
 print(f'=========== should be: {lb_1} ===========')
-cnsrt.setNodes(range(n_nodes+1), erasing=True)
+cnsrt.setNodes(range(n_nodes+1))
 print(cnsrt.getLowerBounds())
 
 print('========== enabling nodes: [2, 3, 4] ============')
-cnsrt.setNodes([2, 3, 4], erasing=True)
+cnsrt.setNodes([2, 3, 4])
 print(cnsrt.getLowerBounds())
 
 print('========== enabling all nodes ============')
-cnsrt.setNodes(range(n_nodes+1), erasing=True)
+cnsrt.setNodes(range(n_nodes+1))
 print(cnsrt.getLowerBounds())
 
 node_to_set = 7
@@ -65,10 +65,10 @@ print(cnsrt.getLowerBounds())
 
 node_list = [node for node in range(10) if node != node_to_set]
 print(f'========== enable nodes: {node_list} ============')
-cnsrt.setNodes(node_list, erasing=True)
+cnsrt.setNodes(node_list)
 print(cnsrt.getLowerBounds())
 print('========== re-enable last set node ============')
-cnsrt.setNodes(range(11), erasing=True)
+cnsrt.setNodes(range(11))
 print(cnsrt.getLowerBounds())
 
 
