@@ -115,39 +115,14 @@ v.setBounds(ti.v0, ti.v0, nodes=0)
 
 q.setInitialGuess(ti.q0)
 
-if solver_type != 'ilqr':
-    th = Transcriptor.make_method(transcription_method, ti.prb, opts=transcription_opts)
 
+ti.finalize()
+ti.bootstrap()
+solution = ti.solution
 # ===========================================================================================
 # ================================== to wrap ================================================
 # ===========================================================================================
-opts = {'ipopt.tol': 0.001,
-        'ipopt.constr_viol_tol': 1e-6,
-        'ipopt.max_iter': 1000,
-        'error_on_fail': True,
-        'ilqr.max_iter': 200,
-        'ilqr.alpha_min': 0.01,
-        'ilqr.use_filter': False,
-        'ilqr.hxx_reg': 0.0,
-        'ilqr.integrator': 'RK4',
-        'ilqr.merit_der_threshold': 1e-6,
-        'ilqr.step_length_threshold': 1e-9,
-        'ilqr.line_search_accept_ratio': 1e-4,
-        'ilqr.kkt_decomp_type': 'qr',
-        'ilqr.constr_decomp_type': 'qr',
-        'ilqr.verbose': True,
-        'ipopt.linear_solver': 'ma57',
-        }
 
-solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
-
-try:
-    solver_bs.set_iteration_callback()
-except:
-    pass
-
-solver_bs.solve()
-solution = solver_bs.getSolutionDict()
 
 # os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 # subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
