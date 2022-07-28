@@ -56,7 +56,7 @@ class PosturalTask(Task):
         if not nodes:
             self.nodes = []
 
-        self.fun.setNodes(self.nodes, erasing=True)  # <==== SET NODES
+        self.fun.setNodes(self.nodes)  # <==== SET NODES
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')

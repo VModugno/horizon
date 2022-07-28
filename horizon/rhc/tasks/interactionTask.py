@@ -140,17 +140,17 @@ class SurfaceContact(InteractionTask):
                               nodes=good_nodes)
 
         # add normal force constraint
-        self.fn_barrier.setNodes(good_nodes, erasing=True)
+        self.fn_barrier.setNodes(good_nodes)
 
         # add cop constraint
         if self.cop_constr:
             # note: this resets bounds to (0, 0) !!!!!! EVIL!!!!!! SATAN!!!!!!
-            self.cop_constr.setNodes(good_nodes, erasing=True)
+            self.cop_constr.setNodes(good_nodes)
             # todo: this should be unnecessary, change behaviour of setNodes?
             # self.cop_constr.setLowerBounds(-np.inf * np.ones(4))
 
         if self.fc_constr:
-            self.fc_constr.setNodes(good_nodes, erasing=True)
+            self.fc_constr.setNodes(good_nodes)
 
 
     def getWrench(self):
@@ -219,11 +219,11 @@ class VertexContact(InteractionTask):
                         nodes=good_nodes)
 
         # add normal force constraint
-        self.fn_barrier.setNodes(good_nodes, erasing=True)
+        self.fn_barrier.setNodes(good_nodes)
 
         # set friction cone
         if self.fc_constr:
-            self.fc_constr.setNodes(good_nodes, erasing=True)
+            self.fc_constr.setNodes(good_nodes)
        
 
     def getWrench(self):
