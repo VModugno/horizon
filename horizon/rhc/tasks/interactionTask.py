@@ -147,7 +147,7 @@ class SurfaceContact(InteractionTask):
             # note: this resets bounds to (0, 0) !!!!!! EVIL!!!!!! SATAN!!!!!!
             self.cop_constr.setNodes(good_nodes, erasing=True)
             # todo: this should be unnecessary, change behaviour of setNodes?
-            self.cop_constr.setLowerBounds(-np.inf * np.ones(4))
+            # self.cop_constr.setLowerBounds(-np.inf * np.ones(4))
 
         if self.fc_constr:
             self.fc_constr.setNodes(good_nodes, erasing=True)
