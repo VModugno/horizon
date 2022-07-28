@@ -426,25 +426,28 @@ class RecedingFunction(AbstractFunction):
 
 class AbstractBounds:
     """
-    Constraint Function of Horizon.
+    Bounds helper of Horizon.
     """
 
-    def __init__(self, fun_dim):
+    def __init__(self, fun_dim, init_bounds):
         """
-        Initialize the Constraint Function.
+        Initialize the bounds helper.
 
         Args:
-            name: name of the constraint function
-            f: constraint SX function
-            used_vars: variable used in the function
-            used_pars: parameters used in the function
-            active_nodes_array: nodes the function is active on
-            bounds: bounds of the constraint. If not specified, the bounds are set to zero.
         """
         self.bounds = dict()
+        self.set_bounds = dict()
+
+        self.bounds['lb'] = init_bounds['lb']
+        self.bounds['ub'] = init_bounds['ub']
+
+        # default value of constraints is 0.
+        self.set_bounds['lb'] = np.zeros_like(init_bounds['lb'])
+        self.set_bounds['ub'] = np.zeros_like(init_bounds['ub'])
+
         self.fun_dim = fun_dim
 
-    def _init_bounds(self, bounds):
+    def _set_initial_bounds(self, bounds):
 
         # manage bounds
         if bounds is not None:
@@ -470,7 +473,6 @@ class AbstractBounds:
             val: desired values to set
             nodes: which nodes the values are applied on
         """
-
         val_checked = misc.checkValueEntry(val)
         if val_checked.shape[0] != self.fun_dim:
             raise Exception('Wrong dimension of upper bounds inserted.')
@@ -486,6 +488,7 @@ class AbstractBounds:
             bounds: desired bounds of the function
             nodes: nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.
         """
+        self._setVals(self.set_bounds['lb'], bounds, nodes)
         self._setVals(self.bounds['lb'], bounds, nodes)
 
     def setUpperBounds(self, bounds, nodes=None):
@@ -496,6 +499,7 @@ class AbstractBounds:
             bounds: desired bounds of the function
             nodes: nodes of the function the bounds are applied on. If not specified, the function is bounded along ALL the nodes.
         """
+        self._setVals(self.set_bounds['ub'], bounds, nodes)
         self._setVals(self.bounds['ub'], bounds, nodes)
 
     def setBounds(self, lb, ub, nodes=None):
@@ -571,15 +575,20 @@ class AbstractBounds:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+
         # todo check for repetition in setted nodes?
         # todo think about this, it depends on how the mechanics of the receding works
         if erasing:
+            # apply mask without erasing old values
             self.bounds['lb'][:] = -np.inf
             self.bounds['ub'][:] = np.inf
 
-        # for all the "new nodes" that weren't there, add default bounds
-        self.bounds['lb'][:, nodes] = 0.
-        self.bounds['ub'][:, nodes] = 0.
+        # restore old bounds where set
+        self.bounds['lb'][:, nodes] = self.set_bounds['lb'][:, nodes]
+        self.bounds['ub'][:, nodes] = self.set_bounds['ub'][:, nodes]
+
+        # set 0. all the remaining "new nodes", if any
+
 
 class Constraint(Function, AbstractBounds):
     """
@@ -601,14 +610,15 @@ class Constraint(Function, AbstractBounds):
             bounds: bounds of the constraint. If not specified, the bounds are set to zero.
         """
         Function.__init__(self, name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
-        AbstractBounds.__init__(self, f.shape[0])
 
         # constraints are initialized to 0.: 0. <= x <= 0.
         num_nodes = int(np.sum(active_nodes_array))
-        self.bounds['lb'] = np.full((f.shape[0], num_nodes), 0.)
-        self.bounds['ub'] = np.full((f.shape[0], num_nodes), 0.)
+        init_bounds = dict()
+        init_bounds['lb'] = np.full((f.shape[0], num_nodes), 0.)
+        init_bounds['ub'] = np.full((f.shape[0], num_nodes), 0.)
 
-        self._init_bounds(bounds)
+        AbstractBounds.__init__(self, f.shape[0], init_bounds)
+        self._set_initial_bounds(bounds)
 
     def _setVals(self, val_type, val, nodes=None):
 
@@ -672,7 +682,6 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
             bounds: bounds of the constraint. If not specified, the bounds are set to zero.
         """
         RecedingFunction.__init__(self, name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
-        AbstractBounds.__init__(self, f.shape[0])
 
         num_nodes = int(np.sum(self._feas_nodes_array))
         temp_lb = -np.inf * np.ones([f.shape[0], num_nodes])
@@ -685,11 +694,12 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         temp_lb[:, pos_nodes] = 0.
         temp_ub[:, pos_nodes] = 0.
 
-        self.bounds = dict()
-        self.bounds['lb'] = temp_lb
-        self.bounds['ub'] = temp_ub
+        init_bounds = dict()
+        init_bounds['lb'] = temp_lb
+        init_bounds['ub'] = temp_ub
 
-        self._init_bounds(bounds)
+        AbstractBounds.__init__(self, f.shape[0], init_bounds)
+        self._set_initial_bounds(bounds)
 
     def _checkActiveNodes(self):
 
@@ -705,7 +715,7 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes, _ = misc.checkNodes(nodes, self._feas_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
