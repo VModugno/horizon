@@ -319,7 +319,7 @@ class Function(AbstractFunction):
         return misc.getNodesFromBinary(self._active_nodes_array)
 
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         """
         Setter for the active nodes of the function.
 
@@ -410,7 +410,7 @@ class RecedingFunction(AbstractFunction):
         """
         super()._projectNodes(thread_map_num=self.thread_map_num)
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         """
         Setter for the active nodes of the function.
 
@@ -567,7 +567,7 @@ class AbstractBounds:
         """
         return self.getLowerBounds(nodes), self.getUpperBounds(nodes)
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         """
         Setter for the active nodes of the constraint function.
 
@@ -649,7 +649,7 @@ class Constraint(Function, AbstractBounds):
 
         return vals
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         """
         Setter for the active nodes of the constraint function.
 
@@ -727,7 +727,7 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         # todo return the bounds on all nodes always??
         return val_type
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         # todo check for repetition in setted nodes?
         RecedingFunction.setNodes(self, nodes, erasing)
 
@@ -793,7 +793,7 @@ class Cost(Function):
 
         super().__init__(name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         super().setNodes(nodes, erasing)
 
 class RecedingCost(RecedingFunction):
@@ -834,12 +834,12 @@ class RecedingCost(RecedingFunction):
         all_names = [i.getName() for i in all_input]
         self._fun = cs.Function(self.getName(), self.vars + self.pars, [self._f], all_names, ['f'])
 
-        self.setNodes(misc.getNodesFromBinary(self._active_nodes_array))
+        self.setNodes(misc.getNodesFromBinary(self._active_nodes_array), erasing=True)
 
     def _getWeightMask(self):
         return self.weight_mask
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         super().setNodes(nodes, erasing)
         # eliminate/enable cost functions by setting their weight
         nodes_mask = np.zeros([self.weight_mask.getDim(), np.sum(self._feas_nodes_array).astype(int)])
