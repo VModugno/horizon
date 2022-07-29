@@ -1,8 +1,9 @@
 solver:
   type: ipopt
   ipopt.linear_solver: ma57
+  ipopt.hessian_approximation: exact
   ilqr.verbose: true
-  ilqr.codegen_enabled: True
+  ilqr.codegen_enabled: true
   ilqr.codegen_workdir: /tmp/miao
   ilqr.enable_gn: true
   # ilqr.log: true
@@ -66,7 +67,7 @@ interaction_l_foot:
   frame: l_sole
   dimensions: [0.2, 0.1]
   fn_min: 10.0
-  enable_cop: true 
+  enable_cop: false 
 
 zero_velocity_l_foot:
   type: Cartesian
@@ -80,7 +81,7 @@ interaction_r_foot:
   frame: r_sole
   dimensions: [0.2, 0.1]
   fn_min: 10.0
-  enable_cop: true 
+  enable_cop: false 
 
 zero_velocity_r_foot:
   type: Cartesian

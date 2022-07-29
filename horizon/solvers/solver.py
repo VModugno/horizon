@@ -45,7 +45,7 @@ class Solver(ABC):
             ret = ilqr.SolverILQR(prb, opts)
         elif type == 'gnsqp':
             from . import sqp
-            qp_solver = 'qpoases'
+            qp_solver = 'osqp'
             if opts is not None:
                 if 'gnsqp.qp_solver' in opts:
                     qp_solver = opts['gnsqp.qp_solver']
@@ -84,7 +84,6 @@ class Solver(ABC):
         # save state and control
         self.x = prb.getState().getVars()
         self.u = prb.getInput().getVars()
-        self.xdot = prb.getDynamics()
         self.dt = prb.getDt()
 
         # derived classes should at least provide the optimal state trajectory, 

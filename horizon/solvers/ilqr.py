@@ -36,42 +36,42 @@ class SolverILQR(Solver):
         # num shooting interval
         self.N = prb.getNNodes() - 1  
 
-        # get integrator and compute discrete dynamics in the form (x, u, p) -> f
-        integrator_name = self.opts.get('ilqr.integrator', 'RK4')
-        dae = {'ode': self.xdot, 'x': self.x, 'p': self.u, 'quad': 0}
+        # # get integrator and compute discrete dynamics in the form (x, u, p) -> f
+        # integrator_name = self.opts.get('ilqr.integrator', 'RK4')
+        # dae = {'ode': self.xdot, 'x': self.x, 'p': self.u, 'quad': 0}
 
-        # handle parametric time
-        integrator_opt = {}
+        # # handle parametric time
+        # integrator_opt = {}
 
-        self.int = integrators.__dict__[integrator_name](dae, integrator_opt, self.prb.default_casadi_type)
-        if isinstance(self.dt, float):
-            # integrator_opt['tf'] = self.dt
-            x_int = self.int(self.x, self.u, self.dt)[0]
-            dt_name = 'dt'
-            time = abstract_casadi_type.sym(dt_name, 0)
+        # self.int = integrators.__dict__[integrator_name](dae, integrator_opt, self.prb.default_casadi_type)
+        # if isinstance(self.dt, float):
+        #     # integrator_opt['tf'] = self.dt
+        #     x_int = self.int(self.x, self.u, self.dt)[0]
+        #     dt_name = 'dt'
+        #     time = abstract_casadi_type.sym(dt_name, 0)
 
-        elif isinstance(self.dt, Parameter):
-            time = abstract_casadi_type.sym(self.dt.getName(), 1)
-            x_int = self.int(self.x, self.u, time)[0]
-            dt_name = self.dt.getName()
-            pass
-        else:
-            raise TypeError('ilqr supports only float and Parameter dt')
+        # elif isinstance(self.dt, Parameter):
+        #     time = abstract_casadi_type.sym(self.dt.getName(), 1)
+        #     x_int = self.int(self.x, self.u, time)[0]
+        #     dt_name = self.dt.getName()
+        #     pass
+        # else:
+        #     raise TypeError('ilqr supports only float and Parameter dt')
 
-        all_params = self.prb.getParameters()
-        depend_params = {}
-        for pname, p in all_params.items():
-            if cs.depends_on(x_int, p):
-                depend_params[pname] = p
+        # all_params = self.prb.getParameters()
+        # depend_params = {}
+        # for pname, p in all_params.items():
+        #     if cs.depends_on(x_int, p):
+        #         depend_params[pname] = p
         
 
-        self.dyn = cs.Function('f', 
-                               {'x': self.x, 'u': self.u, dt_name: time, 'f': x_int, **depend_params},
-                               ['x', 'u', dt_name] + list(depend_params.keys()), ['f']
-                               )
+        # self.dyn = cs.Function('f', 
+        #                        {'x': self.x, 'u': self.u, dt_name: time, 'f': x_int, **depend_params},
+        #                        ['x', 'u', dt_name] + list(depend_params.keys()), ['f']
+        #                        )
 
         # create ilqr solver
-        self.ilqr = IterativeLQR(self.dyn, self.N, self.opts)
+        self.ilqr = IterativeLQR(self.prb.getIntegrator(), self.N, self.opts)
 
         # should we use GN approx for residuals?
         self.use_gn = self.opts.get('ilqr.enable_gn', False)
@@ -287,6 +287,8 @@ class SolverILQR(Solver):
             p_vals[:] = np.nan
             p_vals[:, p.getNodes()] = p_vals_temp
             self.ilqr.setParameterValue(p.getName(), p_vals)
+
+        self.ilqr.setParameterValue('dt', np.full((1, self.N+1), self.prb.getDt()))
 
     
     def _iter_callback(self, fpres):

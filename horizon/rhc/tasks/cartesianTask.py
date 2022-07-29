@@ -1,3 +1,4 @@
+from cmath import sqrt
 from horizon.rhc.tasks.task import Task
 import casadi as cs
 from horizon.problem import Problem
@@ -138,8 +139,10 @@ class CartesianTask(Task):
         R_skew = (R_err - R_err.T) / 2
 
         r = cs.vertcat(R_skew[2, 1], R_skew[0, 2], R_skew[1, 0])
-
-        div = cs.sqrt(epsi + 1 + cs.trace(R_err))
+        
+        sqrt_arg = 1 + cs.trace(R_err)
+        sqrt_arg = cs.if_else(sqrt_arg > epsi, sqrt_arg, epsi)
+        div = cs.sqrt(sqrt_arg)
         rot_err = r / div
 
         return rot_err
@@ -164,8 +167,8 @@ class CartesianTask(Task):
             ee_p_base_t = ee_p_base['ee_pos']
             ee_p_base_r = ee_p_base['ee_rot']
 
-            ee_p_rel = ee_p_distal_t - ee_p_base_t
-            ee_r_rel = ee_p_base_r.T @ ee_p_distal_r
+            ee_p_rel = ee_p_distal_t 
+            ee_r_rel = ee_p_distal_r
 
             frame_name = f'{self.name}_{self.distal_link}_pos'
             # TODO: right now this is slightly unintuitive:
@@ -177,6 +180,8 @@ class CartesianTask(Task):
             #    - if the parameter exists on all the nodes, the whole function will exists on all the nodes
             self.pose_tgt = self.prb.createParameter(
                 f'{frame_name}_tgt', 7)  # 3 position + 4 orientation
+
+            self.pose_tgt.assign([0, 0, 0, 0, 0, 0, 1])
 
             self.ref = self.pose_tgt
 

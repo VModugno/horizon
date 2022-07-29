@@ -196,6 +196,8 @@ private:
     typedef std::map<std::string, std::shared_ptr<ConstraintEntity>>
         ConstraintPtrMap;
 
+    void init_thread_pool(int pool_size);
+
     void add_param_to_map(const casadi::Function& f);
 
     void linearize_quadratize();
@@ -338,10 +340,12 @@ private:
     std::vector<Temporaries> _tmp;
 
     std::vector<std::thread> _th_pool;
-    std::condition_variable _th_cond;
-    std::mutex _th_mtx;
+    std::condition_variable _th_work_avail_cond;
+    std::mutex _th_work_avail_mtx;
+    std::condition_variable _th_work_done_cond;
+    std::mutex _th_work_done_mtx;
     int _th_done_flag;
-    bool _th_work_available_flag;
+    int _th_work_available_flag;
     std::atomic<bool> _th_exit;
 
     CallbackType _iter_cb;

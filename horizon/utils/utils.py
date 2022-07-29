@@ -1,5 +1,6 @@
 import casadi as cs
 from casadi_kin_dyn import pycasadi_kin_dyn as cas_kin_dyn
+import numpy as np
 
 def jac(dict, var_string_list, function_string_list):
     """
@@ -97,6 +98,22 @@ def toRot(q):
 
     return R
 
+def rotationMatrixToQuaterion(R):
+    """
+    Compute quaternion from rotation matrix
+    Args:
+        R: rotation matrix
+
+    Returns:
+        q: quaternion
+
+    """
+    q = np.zeros(4)
+    q[3] = 0.5 * cs.sqrt(1. + R[0, 0] + R[1, 1] + R[2, 2])
+    q[0] = 0.5 * (R[2, 1] - R[1, 2]) / (4. * q[3])
+    q[1] = 0.5 * (R[0, 2] - R[2, 0]) / (4. * q[3])
+    q[2] = 0.5 * (R[1, 0] - R[0, 1]) / (4. * q[3])
+    return q
 
 def double_integrator_with_floating_base(q, qdot, qddot, base_velocity_reference_frame = cas_kin_dyn.CasadiKinDyn.LOCAL):
     """
@@ -162,6 +179,34 @@ def double_integrator_with_floating_base(q, qdot, qddot, base_velocity_reference
 
     return xdot
 
+def model_isdkosdkpoadpkas(x, u, kd, degree=2):
+
+    if degree != 2:
+        raise NotImplementedError('Only degree 2 is implemented')
+
+    q = x[0:kd.nq()]
+    v = x[kd.nq():]
+    a = u[0:kd.nv()]
+
+    if isinstance(x, cs.SX):
+        casadi_type = cs.SX
+    elif isinstance(x, cs.MX):
+        casadi_type = cs.MX
+
+    dt = casadi_type.sym('dt', 1)
+
+    q[3:7] /= cs.norm_2(q[3:7]) 
+    q[10:14] /= cs.norm_2(q[10:14]) 
+    q[17:21] /= cs.norm_2(q[17:21]) 
+
+    vnext = v + a*dt 
+    vmean = (v + vnext)/2.
+    qnext = kd.integrate()(q, vmean*dt)
+    xnext = cs.vertcat(qnext, vnext)
+
+    quad = casadi_type.zeros(1)
+
+    return cs.Function('F_MI', [x, u, dt], [xnext, quad], ['x', 'u', 'dt'], ['f', 'q'])
 
 def double_integrator(qdot, qddot):
     xdot = cs.vertcat(qdot, qddot)

@@ -59,7 +59,9 @@ class Problem:
 
         self.state_aggr = sv.StateAggregate()
         self.input_aggr = sv.InputAggregate()
+
         self.state_der: Union[cs.SX, cs.MX] = None
+        self.f_int: cs.Function = None
         self.dt = None
 
     def createStateVariable(self, name: str, dim: int, casadi_type=None, abstract_casadi_type=None) -> sv.StateVariable:
@@ -229,7 +231,23 @@ class Problem:
         """
         return self.input_aggr
 
-    def setDynamics(self, xdot):
+    def setIntegrator(self, f_int: cs.Function):
+        """
+        Setter for the integrator function. The integrator function is used to integrate the system dynamics.
+        Args:
+            f_int: integrator function
+        """
+        self.f_int = f_int
+        if f_int.size1_in(0) != self.getState().getVars().shape[0] or \
+            f_int.size1_in(1) != self.getInput().getVars().shape[0] or  \
+            f_int.size1_in(2) != 1:
+            raise ValueError(f"Integrator function {f_int} must have the following input arguments: "
+                             "state, input, time (with appropriate input sizes)")
+
+    def getIntegrator(self) -> cs.Function:
+        return self.f_int
+
+    def setDynamics(self, xdot, integrator='RK4'):
         """
         Setter of the system Dynamics used in the optimization problem.
         Remember that the variables in "xdot" are to be ordered as the variable in the state "x"
@@ -240,7 +258,22 @@ class Problem:
         nx = self.getState().getVars().shape[0]
         if xdot.shape[0] != nx:
             raise ValueError(f'state derivative dimension mismatch ({xdot.shape[0]} != {nx})')
+        
         self.state_der = xdot
+        
+        import horizon.transcriptions.integrators as integrators
+        
+        dae = {
+            'x': self.getState().getVars(),
+            'p': self.getInput().getVars(),
+            'ode': self.state_der,
+            'quad': 0
+        }
+
+        f_int = integrators.__dict__[integrator](dae, {}, self.default_abstract_casadi_type)
+        
+        self.setIntegrator(f_int)
+
 
     def getDynamics(self) -> cs.SX:
         """

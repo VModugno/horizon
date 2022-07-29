@@ -179,10 +179,14 @@ class MultipleShooting(Transcriptor):
 
     def __integrate(self, state, input, dt):
 
-        if self.state_dot is None:
-            raise Exception('Dynamics of the system is not specified. Missing "state_dot"')
-
         state_int = self.integrator(state, input, dt)[0]
+
+        print(state)
+        print(input)
+        print(dt)
+
+        exit()
+
         return state_int
 
 

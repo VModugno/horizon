@@ -77,7 +77,7 @@ class ActionManager:
         self.contacts = self.contact_map.keys()
         self.nc = len(self.contacts)
 
-        self.kd = self.ti.kd
+        self.kd = self.ti.model.kd
 
         # todo: how to set these options?
         # f0 = opts.get('f0', np.array([0, 0, 250]))
@@ -89,11 +89,11 @@ class ActionManager:
         self.default_foot_z = dict()
         for i, frame in enumerate(self.contacts):
             # fk functions and evaluated vars
-            fk = self.ti.kd.fk(frame)
-            dfk = self.ti.kd.frameVelocity(frame, self.ti.kd_frame)
+            fk = self.ti.model.kd.fk(frame)
+            dfk = self.ti.model.kd.frameVelocity(frame, self.ti.model.kd_frame)
 
             # save foot height
-            self.default_foot_z[frame] = (fk(q=self.ti.q0)['ee_pos'][2]).toarray()
+            self.default_foot_z[frame] = (fk(q=self.ti.model.q0)['ee_pos'][2]).toarray()
 
         self.k0 = 0
 
@@ -376,11 +376,11 @@ class ActionManager:
         for s_i in step_list:
             am.setStep(s_i)
 
-    def execute(self, solver):
+    def execute(self, bootstrap_solution):
         """
         set the actions and spin
         """
-        self._update_initial_state(solver, -1)
+        self._update_initial_state(bootstrap_solution, -1)
 
         self._set_default_action()
         k0 = 1
@@ -407,10 +407,10 @@ class ActionManager:
         ## todo should implement --> removeNodes()
         ## todo should implement a function to reset to default values
 
-    def _update_initial_state(self, solver: Solver, shift_num):
+    def _update_initial_state(self, bootstrap_solution, shift_num):
 
-        x_opt = solver.getSolutionState()
-        u_opt = solver.getSolutionInput()
+        x_opt = bootstrap_solution['x_opt']
+        u_opt = bootstrap_solution['u_opt']
 
         xig = np.roll(x_opt, shift_num, axis=1)
 
