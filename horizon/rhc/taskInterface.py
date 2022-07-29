@@ -22,8 +22,6 @@ import logging
 import time
 
 
-
-
 class TaskInterface:
     def __init__(self,
                  prb,
