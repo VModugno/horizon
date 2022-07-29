@@ -22,9 +22,6 @@ urdffile = os.path.join(path_to_examples, 'urdf', 'slider_2_0_urdf.urdf')
 urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
 
-
-kd = py3casadi_kin_dyn.CasadiKinDyn(urdf)
-
 base_init = np.array([0., 0., 0.5, 0., 0.0, 0.0, 1.])
 
 q_init = {"Left_Roll":         0.,
