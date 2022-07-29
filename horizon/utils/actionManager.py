@@ -99,6 +99,18 @@ class ActionManager:
 
         # TODO: action manager requires some tasks from the ti. It searches them by NAME.
         self.required_tasks = dict()
+        tasks_foot_contact = [f"foot_contact_{contact}" for contact in self.contacts]
+        tasks_foot_z = [f"foot_z_{contact}" for contact in self.contacts]
+        tasks_foot_xy = [f"foot_xy_{contact}" for contact in self.contacts]
+
+        for task in tasks_foot_contact:
+            print(f'searching for: {task}: {self.ti.getTask(task)}')
+        for task in tasks_foot_z:
+            print(f'searching for: {task}: {self.ti.getTask(task)}')
+        for task in tasks_foot_xy:
+            print(f'searching for: {task}: {self.ti.getTask(task)}')
+
+
         self.required_tasks['foot_contact'] = {contact: self.ti.getTask(f"foot_contact_{contact}") for contact in self.contacts}
         self.required_tasks['foot_z'] = {contact: self.ti.getTask(f"foot_z_{contact}") for contact in self.contacts}
         self.required_tasks['foot_xy'] = {contact: self.ti.getTask(f"foot_xy_{contact}") for contact in self.contacts}
