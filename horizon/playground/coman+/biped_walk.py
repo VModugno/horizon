@@ -9,11 +9,6 @@ from horizon.utils.actionManager import ActionManager, Step
 import casadi as cs
 import rospy
 
-# set up problem
-ns = 50
-tf = 10.0  # 10s
-dt = tf / ns
-
 # set up model
 path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples")
 os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
@@ -52,9 +47,6 @@ q_init = {"LHipLat":       -0.0,
           "RForearmPlate": 0.0,
           "RWrj1":         -0.523599,
           "RWrj2":         -0.0}
-
-problem_opts = {'ns': ns, 'tf': tf, 'dt': dt}
-
 
 contact_dict = {
     'l_sole': {
@@ -97,17 +89,16 @@ prb.setDt(dt)
 
 
 # set up model
-if False:
-    model = FullModelInverseDynamics(problem=prb, 
-                                     kd=kd, 
-                                     q_init=q_init,
-                                     base_init=base_init)
-else:
-    model = SingleRigidBodyDynamicsModel(problem=prb, 
-                                         kd=kd, 
-                                         q_init=q_init,
-                                         base_init=base_init,
-                                         contact_dict=contact_dict)
+model = FullModelInverseDynamics(problem=prb,
+                                 kd=kd,
+                                 q_init=q_init,
+                                 base_init=base_init)
+# else:
+# model = SingleRigidBodyDynamicsModel(problem=prb,
+#                                      kd=kd,
+#                                      q_init=q_init,
+#                                      base_init=base_init,
+#                                      contact_dict=contact_dict)
 
 ti = TaskInterface(prb=prb,
                    model=model)
