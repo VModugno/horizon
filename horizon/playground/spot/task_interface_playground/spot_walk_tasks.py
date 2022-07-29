@@ -112,7 +112,7 @@ from horizon.ros import replay_trajectory
 final_base_x.setRef([0.5, 0, 0, 0, 0, 0, 1])
 # ptgt.assign(ptgt_final, nodes=ns)
 
-solver_bs, solver_rti = ti.getSolver()
+solver_bs, solver_rti = ti._create_solver()
 solver_bs.solve()
 solution = solver_bs.getSolutionDict()
 
