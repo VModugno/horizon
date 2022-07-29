@@ -185,6 +185,10 @@ class SolverILQR(Solver):
 
         prof_info = self.ilqr.getProfilingInfo()
 
+        # max string length
+        keys = prof_info.timings.keys()
+        max_len = max([len(k) for k in keys])
+
         if len(prof_info.timings) == 0:
             return
         
@@ -192,7 +196,7 @@ class SolverILQR(Solver):
         for k, v in prof_info.timings.items():
             if '_inner' not in k:
                 continue
-            print(f'{k[:-6]:30}{np.mean(v)} us')
+            print(f'{k[:-6]:{max_len}}{np.mean(v)} us')
 
         print('\ntimings (iter):')
         for k, v in prof_info.timings.items():

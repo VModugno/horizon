@@ -180,6 +180,7 @@ class MultipleShooting(Transcriptor):
     def __integrate(self, state, input, dt):
 
         state_int = self.integrator(state, input, dt)[0]
+
         return state_int
 
 

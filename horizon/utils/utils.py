@@ -208,9 +208,16 @@ def model_isdkosdkpoadpkas(x, u, kd, degree=2):
 
     return cs.Function('F_MI', [x, u, dt], [xnext, quad], ['x', 'u', 'dt'], ['f', 'q'])
 
-def double_integrator(qdot, qddot):
-    xdot = cs.vertcat(qdot, qddot)
-    return xdot
+def double_integrator(q, v, a, kd=None):
+    
+    if kd is None:
+        xdot = cs.vertcat(v, a)
+        return xdot
+
+    qdot_fn = kd.qdot()
+
+    return cs.vertcat(qdot_fn(q, v), a)
+
 
 def barrier(x):
     return cs.if_else(x > 0, 0, x)
