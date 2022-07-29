@@ -17,12 +17,6 @@ WrappedFunction &WrappedFunction::operator=(casadi::Function f)
 
     _f = f;
 
-//    if(f.sz_arg() != f.n_in() ||
-//            f.sz_res() != f.n_out())
-//    {
-//        throw std::runtime_error("f.sz_arg() != f.n_in() || f.sz_res() != f.n_out() => contact the developers!!!");
-//    }
-
     // resize work vectors
     _iw.assign(_f.sz_iw(), 0);
     _dw.assign(_f.sz_w(), 0.);
@@ -112,7 +106,15 @@ void WrappedFunction::call(bool sparse)
             if(_out_matrix[i].hasNaN() || !_out_matrix[i].allFinite())
             {
                 std::ostringstream oss;
-                oss << _f.name() << " output " << i << " contains invalid values";
+                oss << _f.name() << " output " << i << " contains invalid values: \n";
+                oss << _out_matrix[i].format(3) << "\n";
+                for(int j = 0; j < _f.n_in(); j++)
+                {
+                    auto u = Eigen::VectorXd::Map(_in_buf[j],
+                                                  _f.size1_in(j));
+                    oss << _f.name() << " input " << j <<
+                           " = " << u.transpose().format(3) << "\n";
+                }
                 throw std::runtime_error(oss.str());
             }
         }

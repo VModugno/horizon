@@ -119,6 +119,8 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     decomp_type_str = value_or<std::string>(opt, "ilqr.kkt_decomp_type", "lu");
     _kkt_decomp_type = str_to_decomp_type(decomp_type_str);
 
+    int n_threads = value_or(opt, "ilqr.n_threads", 0);
+
     // initialize hxx from base value
     _hxx_reg = std::max(_hxx_reg_base, _hxx_reg);
 
@@ -183,6 +185,12 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
 
         _cost[i].addCost(al);
 
+    }
+
+    // worker threads
+    if(n_threads > 0)
+    {
+        init_thread_pool(n_threads);
     }
 }
 
@@ -592,7 +600,13 @@ bool IterativeLQR::solve(int max_iter)
 
 void IterativeLQR::linearize_quadratize()
 {
-    TIC(linearize_quadratize)
+    TIC(linearize_quadratize);
+
+    if(_th_pool.size() > 0)
+    {
+        linearize_quadratize_mt();
+        return;
+    }
 
     for(int i = 0; i < _N; i++)
     {
@@ -635,19 +649,55 @@ void IterativeLQR::linearize_quadratize_inner(int i)
 
 void IterativeLQR::linearize_quadratize_mt()
 {
-    int n_th = _th_pool.size();
+    {
+        // wake up workers
+        std::unique_lock lg(_th_work_avail_mtx);
+        _th_work_available_flag = _th_pool.size();
+        _th_work_avail_cond.notify_all();
+    }
 
-    int nodes_per_th = _N / n_th;
+    // do our part
+    int istart = _th_pool.size() * (_N / _th_pool.size());
 
-    int remainder = _N - nodes_per_th*n_th;
+    for(int i = istart; i < _N; i++)
+    {
+        linearize_quadratize_inner(i);
+    }
+
+    // handle final cost and constraint
+    // note: these are only function of the state!
+    _cost.back().quadratize(state(_N), input(_N-1), _N); // note: input not used here!
+    _constraint.back().linearize(state(_N), input(_N-1), _N); // note: input not used here!
+
+    {
+        // wait workers
+        std::unique_lock lg(_th_work_done_mtx);
+        _th_work_done_cond.wait(lg,
+                                 [this](){ return _th_done_flag == _th_pool.size(); });
+        _th_done_flag = 0;
+    }
+
 }
 
 void IterativeLQR::linearize_quadratize_thread_main(int istart, int iend)
 {
     while(!_th_exit)
     {
-        std::unique_lock lg(_th_mtx);
-        _th_cond.wait(lg, [this](){ return _th_work_available_flag; });
+        {
+            std::unique_lock lg1(_th_work_avail_mtx);
+            _th_work_avail_cond.wait(lg1,
+                                     [this](){ return _th_work_available_flag > 0; });
+            _th_work_available_flag--;
+        }
+
+        for(int i = istart; i < iend; i++)
+        {
+            linearize_quadratize_inner(i);
+        }
+
+        std::unique_lock lg2(_th_work_done_mtx);
+        _th_done_flag++;
+        _th_work_done_cond.notify_all();
 
     }
 }
@@ -735,6 +785,33 @@ VecConstRef IterativeLQR::input(int i) const
 MatConstRef IterativeLQR::gain(int i) const
 {
     return _bp_res[i].Lu;
+}
+
+void IterativeLQR::init_thread_pool(int pool_size)
+{
+    int n_th = pool_size;
+
+    int nodes_per_th = _N / n_th;
+
+    _th_done_flag = 0;
+    _th_work_available_flag = 0;
+    _th_exit = false;
+
+    for(int k = 0; k < pool_size; k++)
+    {
+        std::cout << "worker " << k << " started, will handle nodes in range [" <<
+               k*nodes_per_th << ", "  <<   (k + 1)*nodes_per_th << ") \n";
+
+        auto th_func = [this, k, nodes_per_th]()
+        {
+            linearize_quadratize_thread_main(k*nodes_per_th,
+                                             (k + 1)*nodes_per_th);
+
+            std::cout << "worker " << k << " exiting.. \n";
+        };
+
+        _th_pool.emplace_back(th_func);
+    }
 }
 
 void IterativeLQR::add_param_to_map(const casadi::Function& f)
@@ -967,6 +1044,9 @@ void IterativeLQR::IntermediateCostEntity::quadratize(VecConstRef x,
                                                       VecConstRef u,
                                                       int k)
 {
+    horizon::utils::Timer tm("quadratize_" + l.function().name() + "_inner",
+                             on_timer_toc);
+
     // compute cost gradient
     dl.setInput(0, x);
     dl.setInput(1, u);
@@ -1027,6 +1107,9 @@ void IterativeLQR::IntermediateResidualEntity::quadratize(VecConstRef x,
                                                           VecConstRef u,
                                                           int k)
 {
+    horizon::utils::Timer tm("quadratize_" + res.function().name() + "_inner",
+                             on_timer_toc);
+
     evaluate(x, u, k);
 
     // compute residual jacobian

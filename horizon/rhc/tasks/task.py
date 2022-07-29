@@ -47,6 +47,7 @@ class Task:
     def __post_init__(self):
         # todo: this is for simplicity
         self.indices = np.array(self.indices) if self.indices is not None else None
+        # self.nodes = list(range(self.prb.getNNodes()))
 
     def setNodes(self, nodes):
         self.nodes = nodes

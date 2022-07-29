@@ -173,7 +173,7 @@ def second_order_resample_integrator(p, v, u, node_time, dt, dae):
     return p_res, v_res, u_res
 
 
-def resampler(state_vec, input_vec, nodes_dt, desired_dt, dae):
+def resampler(state_vec, input_vec, nodes_dt, desired_dt, dae, f_int=None):
 
     # convert to np if not np already
     states = np.array(state_vec)
@@ -203,7 +203,10 @@ def resampler(state_vec, input_vec, nodes_dt, desired_dt, dae):
 
     # L = 1
     # dae = {'x': state_abst, 'p': input_abst, 'ode': state_dot, 'quad': L}
-    F_integrator = integrators.RK4(dae, cs.SX)
+    if f_int is None:
+        F_integrator = integrators.RK4(dae, cs.SX)
+    else:
+        F_integrator = f_int
 
     # initialize resapmpled trajectories
     state_res = np.zeros([state_dim, n_nodes_res]) # state: number of resampled nodes
@@ -217,7 +220,7 @@ def resampler(state_vec, input_vec, nodes_dt, desired_dt, dae):
     node = 0
     while i < input_res.shape[1] - 1:
         # integrate the state using the input at the desired node
-        state_res_i = F_integrator(x0=state_res[:, i], p=inputs[:, node], time=desired_dt)['xf'].toarray().flatten()
+        state_res_i = F_integrator(state_res[:, i], inputs[:, node], desired_dt)[0].toarray().flatten()
 
         t += desired_dt
         i += 1
@@ -236,8 +239,7 @@ def resampler(state_vec, input_vec, nodes_dt, desired_dt, dae):
             if new_dt >= 1e-6:
                 # I set the new_dt as the integrator time
                 # integrate from the node i just exceed with the relative input for the exceeding time
-                state_res_i = F_integrator(x0=states[:, node], p=inputs[:, node], time=new_dt)[
-                    'xf'].toarray().flatten()
+                state_res_i = F_integrator(states[:, node], inputs[:, node], new_dt)[0].toarray().flatten()
                 state_res[:, i] = state_res_i
                 input_res[:, i] = inputs[:, node]
 

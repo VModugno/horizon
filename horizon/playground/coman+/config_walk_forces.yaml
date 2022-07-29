@@ -1,50 +1,39 @@
 solver:
-  type: ipopt
+  type: ilqr
   ipopt.linear_solver: ma57
+  # ipopt.hessian_approximation: limited-memory
   ilqr.verbose: true
-  ilqr.codegen_enabled: True
+  ilqr.codegen_enabled: true
   ilqr.codegen_workdir: /tmp/miao
   ilqr.enable_gn: true
-  ilqr.max_iter: 100
-  ilqr.alpha_min: 0.01
-#  tol: 0.001
-#  constr_viol_tol: 0.001
-#  max_iter: 2000
-  # enable_gn: True
-  # verbose: True
+  ilqr.max_iter: 200
+  ilqr.hxx_reg_base: 0.0
+  ilqr.n_threads: 0
 
 
-constraints: [final_base_x,           # required to set x-target for the walk
-#              final_base_y,
-              foot_contact_l_sole,    # required from the ActionManager
-              foot_contact_r_sole,    # required from the ActionManager
-              foot_z_l_sole,          # required from the ActionManager
-              foot_xy_l_sole,         # required from the ActionManager
-              foot_z_r_sole,          # required from the ActionManager
-              foot_xy_r_sole,         # required from the ActionManager
-              rot_l_sole,              # keep the sole straight
-              rot_r_sole               # keep the sole straight
-              ]
-              # task_base_x,
-              # final_x,
-              # zero_velocity_l_foot,
-              # zero_velocity_r_foot
+constraints: 
+ - final_base_x          # required to set x-target for the walk
+ - foot_contact_l_sole   # required from the ActionManager
+ - foot_contact_r_sole   # required from the ActionManager
+ - foot_z_l_sole         # required from the ActionManager
+ - foot_xy_l_sole        # required from the ActionManager
+ - foot_z_r_sole         # required from the ActionManager
+ - foot_xy_r_sole        # required from the ActionManager
+ - rot_l_sole            # keep the sole straight
+ - rot_r_sole            # keep the sole straight
+   
+costs: 
+  - joint_posture
+  - joint_regularization
+  # - final_posture
+  # - base_posture
 
-costs: [joint_posture, joint_regularization] # final_base_y, min_rot # final_y
 
 final_base_x:
   type: Cartesian
   distal_link: base_link
   indices: [0]
   nodes: final
-  weight: 1000
-#
-final_base_y:
-  type: Cartesian
-  distal_link: base_link
-  indices: [1]
-  nodes: final
-  weight: 1000
 
 rot_l_sole:
   type: Cartesian
@@ -105,16 +94,22 @@ foot_contact_r_sole:
   type: Contact
   subtask: [force_r_foot, zero_velocity_r_foot]
 
-
-min_rot:
-  type: Postural
-  indices: [3, 4]
-  nodes: all
-  weight: 0.001
-#
 joint_posture:
   type: Postural
   weight: 5. # 10
+  nodes: all
+
+base_posture:
+  type: Cartesian
+  indices: [3, 4, 5]
+  weight: 10
+  distal_link: DWYTorso
+  nodes: all
+
+final_posture:
+  type: Postural
+  weight: 50. # 10
+  nodes: final
 
 # todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they wont get considered.
 joint_regularization:
