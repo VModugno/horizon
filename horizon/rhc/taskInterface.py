@@ -18,6 +18,7 @@ import numpy as np
 from horizon.rhc import task_factory, plugin_handler, solver_interface
 from horizon.rhc.yaml_handler import YamlParser
 from horizon.solvers.solver import Solver
+from horizon.ros.replay_trajectory import replay_trajectory
 import logging
 import time
 
@@ -132,6 +133,27 @@ class TaskInterface:
         self.prb.getInput().setInitialGuess(u_opt)
         self.prb.setInitialState(x0=x_opt[:, 0])
 
+    def replay_trajectory(self):
+
+
+        # single replay
+
+        q_sol = self.solution['q']
+        print(q_sol.shape)
+
+        joint_names = self.model.kd.joint_names()[2:]
+
+        frame_force_mapping = {cname: self.solution[f.getName()] for cname, f in self.model.fmap.items()}
+
+        repl = replay_trajectory(self.prb.getDt(),
+                                 joint_names,
+                                 q_sol,
+                                 frame_force_mapping,
+                                 self.model.kd_frame,
+                                 self.model.kd,
+                                 fixed_joint_map=self.model.fixed_joint_map)
+        repl.sleep(1.)
+        repl.replay(is_floating_base=True, base_link='pelvis')
 
     # a possible method could read from yaml and create the task list
     def setTaskFromYaml(self, yaml_config):
