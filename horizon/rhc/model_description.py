@@ -108,7 +108,7 @@ class FullModelInverseDynamics:
     def setDynamics(self):
         # todo refactor this floating base stuff
         if self.floating_base:
-            self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
+            self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a, self.kd)
         else:
             self.xdot = utils.double_integrator(self.v, self.a)
 
@@ -204,9 +204,18 @@ class SingleRigidBodyDynamicsModel:
         self.nv = self.kd_srbd.nv()
         self.v0 = np.zeros(self.nv)
 
+        # kinodynamic model?
+        self.use_kinodynamic = kwargs.get('use_kinodynamic', False)
+
         self.q = self.prb.createStateVariable('q', self.nq)
         self.v = self.prb.createStateVariable('v', self.nv)
-        self.a = self.prb.createInputVariable('a', self.nv)
+
+        if self.use_kinodynamic:
+            # note: base acceleration computation is postponed to setDynamics.
+            # when we'll know the forces
+            self.aj =  self.prb.createInputVariable('aj', self.nv - 6)
+        else:
+            self.a = self.prb.createInputVariable('a', self.nv)
 
         
 
@@ -379,10 +388,9 @@ class SingleRigidBodyDynamicsModel:
 
     def setDynamics(self):
 
-        self.prb.setIntegrator(
-            utils.model_isdkosdkpoadpkas(x=self.prb.getState().getVars(),
-                                         u=self.prb.getInput().getVars(),
-                                         kd=self.kd_srbd))
+        xdot = utils.double_integrator(self.q, self.v, self.a, self.kd_srbd)
+
+        self.prb.setDynamics(xdot)
 
         # underactuation constraints
         if self.fmap:

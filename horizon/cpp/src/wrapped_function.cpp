@@ -1,6 +1,9 @@
 #include "wrapped_function.h"
+#include "profiling.h"
 
 using namespace casadi_utils;
+
+extern horizon::utils::Timer::TocCallback on_timer_toc;
 
 
 WrappedFunction::WrappedFunction(casadi::Function f)
@@ -93,8 +96,8 @@ void WrappedFunction::call(bool sparse)
         {
             csc_to_sparse_matrix(_f.sparsity_out(i),
                                  _rows[i], _cols[i],
-                                         _out_data[i],
-                                         _out_matrix_sparse[i]);
+                                 _out_data[i],
+                                 _out_matrix_sparse[i]);
         }
         else
         {
@@ -119,6 +122,39 @@ void WrappedFunction::call(bool sparse)
             }
         }
 
+    }
+
+    // release mem (?)
+    _f.release(mem);
+}
+
+void WrappedFunction::call_accumulate(std::vector<Eigen::Ref<Eigen::MatrixXd>> &out)
+{
+    // call function (allocation-free)
+    casadi_int mem = _f.checkout();
+
+    {
+
+#ifdef HORIZON_PROFILING
+        horizon::utils::Timer tm("call_accumulate_" + _f.name() + "_inner",
+                                 on_timer_toc);
+#endif
+
+        _f(_in_buf.data(), _out_buf.data(), _iw.data(), _dw.data(), mem);
+    }
+
+#ifdef HORIZON_PROFILING
+    horizon::utils::Timer tm("csc_to_matrix_accu_" + _f.name() + "_inner",
+                             on_timer_toc);
+#endif
+
+    // sum all outputs to out matrices
+    for(int i = 0; i < _f.n_out(); ++i)
+    {
+        csc_to_matrix_accu(_f.sparsity_out(i),
+                           _rows[i], _cols[i],
+                           _out_data[i],
+                           out[i]);
     }
 
     // release mem (?)
@@ -206,6 +242,35 @@ void WrappedFunction::csc_to_matrix(const casadi::Sparsity& sp,
 
         // copy data
         matrix(row_i, col_j) =  data[k];
+    }
+}
+
+void WrappedFunction::csc_to_matrix_accu(const casadi::Sparsity &sp,
+                                         const std::vector<casadi_int> &sp_rows,
+                                         const std::vector<casadi_int> &sp_cols,
+                                         const std::vector<double> &data,
+                                         Eigen::Ref<Eigen::MatrixXd> matrix)
+{
+    // if dense output, do copy assignment which should be
+    // faster
+    if(sp.is_dense())
+    {
+        matrix += Eigen::MatrixXd::Map(data.data(),
+                                       matrix.rows(),
+                                       matrix.cols());
+
+        return;
+    }
+
+
+    for(int k = 0; k < sp.nnz(); k++)
+    {
+        // current elem row index
+        int row_i = sp_rows[k];
+        int col_j = sp_cols[k];
+
+        // copy data
+        matrix(row_i, col_j) +=  data[k];
     }
 }
 
