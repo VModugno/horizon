@@ -104,11 +104,16 @@ class ActionManager:
         tasks_foot_xy = [f"foot_xy_{contact}" for contact in self.contacts]
 
         for task in tasks_foot_contact:
-            print(f'searching for: {task}: {self.ti.getTask(task)}')
+            if self.ti.getTask(task) is None:
+                print(f'task "{task}" not found.')
+
         for task in tasks_foot_z:
-            print(f'searching for: {task}: {self.ti.getTask(task)}')
+            if self.ti.getTask(task) is None:
+                print(f'task "{task}" not found.')
+
         for task in tasks_foot_xy:
-            print(f'searching for: {task}: {self.ti.getTask(task)}')
+            if self.ti.getTask(task) is None:
+                print(f'task "{task}" not found.')
 
 
         self.required_tasks['foot_contact'] = {contact: self.ti.getTask(f"foot_contact_{contact}") for contact in self.contacts}
@@ -386,7 +391,7 @@ class ActionManager:
             step_list.append(s2)
 
         for s_i in step_list:
-            am.setStep(s_i)
+            self.setStep(s_i)
 
     def execute(self, bootstrap_solution):
         """
