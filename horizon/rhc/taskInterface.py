@@ -2,11 +2,13 @@ import casadi as cs
 from urllib3 import Retry
 
 from horizon.problem import Problem
-from horizon.utils import utils, kin_dyn
+from horizon.utils import utils, kin_dyn, mat_storer, resampler_trajectory
+
 from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.contactTask import ContactTask
 from horizon.rhc.tasks.interactionTask import InteractionTask, SurfaceContact, VertexContact
+from horizon.rhc.model_description import FullModelInverseDynamics, SingleRigidBodyDynamicsModel
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
@@ -19,131 +21,19 @@ from horizon.solvers.solver import Solver
 import logging
 import time
 
-class ModelDescription:
-    
-    def __init__(self, problem, model):
-        self.prb: Problem = problem
-        self.kd = model
 
-    def fk(self, frame) -> Tuple[Union[cs.SX, cs.MX]]:
-        """
-        returns the tuple (ee_pos, ee_rot), evaluated
-        at the symbolic state variable q
-        """
-        fk_fn = self.kd.fk(frame)
-        return fk_fn(self.q)
-
-    def generateModel(self, model_type=None, floating_base=False):
-
-        self.floating_base = floating_base
-        self.model_type = 'whole_body' if model_type is None else model_type
-
-        # todo choose
-        if self.model_type == 'whole_body':
-
-            self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-
-            self.nq = self.kd.nq()
-            self.nv = self.kd.nv()
-
-            # custom choices
-            # todo this is ugly
-            self.q = self.prb.createStateVariable('q', self.nq)
-            self.v = self.prb.createStateVariable('v', self.nv)
-            self.a = self.prb.createInputVariable('a', self.nv)
-
-        else:
-            raise NotImplementedError()
-
-
-        self.fmap = dict()
-        self.cmap = dict()
-
-    def setContactFrame(self, contact_frame, contact_type, contact_params=dict()):
-
-        # todo add more guards
-        if contact_frame in self.fmap.keys():
-            raise Exception(f'{contact_frame} frame is already a contact')
-
-        if contact_type == 'surface':
-            return self._make_surface_contact(contact_frame, contact_params)
-        elif contact_type == 'vertex':
-            return self._make_vertex_contact(contact_frame, contact_params) 
-        elif contact_type == 'point':
-            return self._make_point_contact(contact_frame, contact_params) 
-
-        raise ValueError(f'{contact_type} is not a valid contact type')
-
-    def _make_surface_contact(self, contact_frame, contact_params):
-        # create input (todo: support degree > 0)
-        wrench = self.prb.createInputVariable('f_' + contact_frame, dim=6)
-        self.fmap[contact_frame] = wrench
-        self.cmap[contact_frame] = [wrench]
-        return wrench
-
-    def _make_point_contact(self, contact_frame, contact_params):
-        # create input (todo: support degree > 0)
-        force = self.prb.createInputVariable('f_' + contact_frame, dim=3)
-        self.fmap[contact_frame] = force
-        self.cmap[contact_frame] = [force]
-        return force
-
-    def _make_vertex_contact(self, contact_frame, contact_params):
-        
-        vertex_frames = contact_params['vertex_frames']  # todo improve error
-
-        # create inputs (todo: support degree > 0)
-        vertex_forces = [self.prb.createInputVariable('f_' + vf, dim=3) for vf in vertex_frames]
-
-        # save vertices
-        for frame, force in zip(vertex_frames, vertex_forces):
-            self.fmap[frame] = force
-
-        self.cmap[contact_frame] = vertex_forces
-
-        # do we need to reconstruct the total wrench?
-        return vertex_forces
-
-    def setDynamics(self):
-        # todo refactor this floating base stuff
-        if self.floating_base:
-            self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a)
-        else:
-            self.xdot = utils.double_integrator(self.v, self.a)
-
-        self.prb.setDynamics(self.xdot)
-
-        # underactuation constraints
-        if self.fmap:
-            id_fn = kin_dyn.InverseDynamics(self.kd, self.fmap.keys(), self.kd_frame)
-            self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
-            self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
-        # else:
-        #     id_fn = kin_dyn.InverseDynamics(self.kd)
-
-    def getContacts(self):
-        return self.cmap.keys()
-
-    # def getInput(self):
-    #     return self.a
-    #
-    # def getState(self):
-    #     return
 
 
 class TaskInterface:
     def __init__(self,
-                 urdf,
-                 q_init: Dict[str, float],
-                 base_init: np.array,
-                 problem_opts: Dict[str, any],
-                 model_description: str,
-                 fixed_joints: List[str] = None,
-                 is_receding: bool = True):
+                 prb,
+                 model):
 
         # get the model
-
-        self.is_receding = is_receding
+        self.prb = prb
+        self.model = model
+        
+        
         # here I register the the default tasks
         # todo: should I do it here?
         task_factory.register('Cartesian', CartesianTask)
@@ -154,43 +44,11 @@ class TaskInterface:
         task_factory.register('JointLimits', JointLimitsTask)
         task_factory.register('Regularization', RegularizationTask)
 
-        self.urdf = urdf.replace('continuous', 'revolute')
-        self.fixed_joints = [] if fixed_joints is None else fixed_joints.copy()
-        self.fixed_joints_pos = [q_init[k] for k in self.fixed_joints]
-        fixed_joint_map = {k: q_init[k] for k in self.fixed_joints}
-        self.kd = pycasadi_kin_dyn.CasadiKinDyn(self.urdf, fixed_joints=fixed_joint_map)
-        self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
 
-        # number of dof
-        self.nq = self.kd.nq()
-        self.nv = self.kd.nv()
-
-        # manage starting position
-        # initial guess (also initial condition and nominal pose)
-        q_init = {k: v for k, v in q_init.items() if k not in self.fixed_joints}
-
-        self.q0 = self.kd.mapToQ(q_init)
-
-        floating_base = False
-        if base_init is not None:
-            self.q0[:7] = base_init
-            floating_base = True
-            self.joint_names = self.kd.joint_names()[2:]
-        else:
-            self.joint_names = self.kd.joint_names()[1:]
-
-        self.v0 = np.zeros(self.nv)
         # self.a0 = np.zeros(self.nv)
 
         # task list
         self.task_list = []
-
-        self._createProblem(problem_opts)
-
-        # model specification (whole body, centroidal, acceleration, velocity...)
-        self.model = ModelDescription(self.prb, self.kd)
-        self.model.generateModel(model_description, floating_base=floating_base)
-
         
 
     def finalize(self):
@@ -198,7 +56,7 @@ class TaskInterface:
         to be called after all variables have been created
         """
         self.model.setDynamics()
-        self.getSolver()
+        self._create_solver()
 
     
     def bootstrap(self):
@@ -207,36 +65,75 @@ class TaskInterface:
         elapsed = time.time() - t
         print(f'bootstrap solved in {elapsed} s')
         try:
-            self.solver_bs.print_timings()
+            self.solver_rti.print_timings()
         except:
             pass
         self.solution = self.solver_bs.getSolutionDict()
 
+    
+    def rti(self):
+                
+        t = time.time()
+        self.solver_rti.solve()
+        elapsed = time.time() - t
+        print(f'rti solved in {elapsed} s')
+
+        self.solution = self.solver_rti.getSolutionDict()
+
+
+    def resample(self, dt_res):
+        
+        u_res = resampler_trajectory.resample_input(
+            self.solution['u_opt'], 
+            self.prb.getDt(), 
+            dt_res)
+
+        x_res = resampler_trajectory.resampler(
+            self.solution['x_opt'], 
+            self.solution['u_opt'], 
+            self.prb.getDt(), 
+            dt_res, 
+            dae=None,
+            f_int=self.prb.getIntegrator())
+            
+
+        self.solution['x_opt_res'] = x_res
+        self.solution['u_opt_res'] = u_res
+
+        for s in self.prb.getState():
+            sname = s.getName()
+            off, dim = self.prb.getState().getVarIndex(sname)
+            self.solution[f'{sname}_res'] = x_res[off:off+dim, :]
+
+        for s in self.prb.getInput():
+            sname = s.getName()
+            off, dim = self.prb.getInput().getVarIndex(sname)
+            self.solution[f'{sname}_res'] = u_res[off:off+dim, :]
+
 
     def save_solution(self, filename):
-        from horizon.utils import mat_storer
         ms = mat_storer.matStorer(filename)
-        self.solution['joint_names'] = self.joint_names
+        self.solution['joint_names'] = self.model.joint_names
         ms.store(self.solution)
 
 
     def load_solution(self, filename):
-        from horizon.utils import mat_storer
         ms = mat_storer.matStorer(filename)
         ig = ms.load()
-        self.update_initial_guess(dk=0, from_dict=ig)
+        self.load_initial_guess(from_dict=ig)
 
+    
+    def load_initial_guess(self, from_dict=None):
+        if from_dict is None:
+            from_dict = self.solution
 
-    def _createProblem(self, problem_opts):
+        x_opt = from_dict['x_opt']
+        u_opt = from_dict['u_opt']
+        
+        self.prb.getState().setInitialGuess(x_opt)
+        self.prb.getInput().setInitialGuess(u_opt)
+        self.prb.setInitialState(x0=x_opt[:, 0])
 
-        # definition of the problem
-        # todo: what if I want a variable dt?
-        self.N = problem_opts.get('ns', 50)
-        self.tf = problem_opts.get('tf', 10.0)
-        self.dt = self.tf / self.N
-
-        self.prb = Problem(self.N, receding=self.is_receding, casadi_type=cs.MX)
-        self.prb.setDt(self.dt)
 
     # a possible method could read from yaml and create the task list
     def setTaskFromYaml(self, yaml_config):
@@ -276,7 +173,7 @@ class TaskInterface:
 
         # todo this should probably go in each single task definition --> i don't have the info from the ti then
         shortcuts = {
-            'nodes': {'final': self.N, 'all': range(self.N + 1)},
+            'nodes': {'final': self.prb.getNNodes() - 1, 'all': range(self.prb.getNNodes())},
             # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
             # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
         }
@@ -301,12 +198,12 @@ class TaskInterface:
 
         # add generic context
         task_description_mod['prb'] = self.prb
-        task_description_mod['kin_dyn'] = self.kd
+        task_description_mod['kin_dyn'] = self.model.kd
         task_description_mod['model'] = self.model
 
         # add specific context
         if task_description_mod['type'] == 'Postural':
-            task_description_mod['postural_ref'] = self.q0
+            task_description_mod['postural_ref'] = self.model.q0
 
         if task_description_mod['type'] == 'TorqueLimits':
             task_description_mod['var'] = self.model.tau
@@ -384,7 +281,7 @@ class TaskInterface:
         is_receding = solver_options.pop('receding', False)
         self.si = solver_interface.SolverInterface(solver_type, is_receding, solver_options)
 
-    def getSolver(self):
+    def _create_solver(self):
 
         if self.si.type != 'ilqr':
             # todo get options from yaml
@@ -400,7 +297,7 @@ class TaskInterface:
 
         scoped_opts_rti = self.si.opts.copy()
         scoped_opts_rti['ilqr.enable_line_search'] = False
-        scoped_opts_rti['ilqr.max_iter'] = 4
-        # solver_rti = Solver.make_solver(self.si.type, self.prb, scoped_opts_rti)
+        scoped_opts_rti['ilqr.max_iter'] = 1
+        self.solver_rti = Solver.make_solver(self.si.type, self.prb, scoped_opts_rti)
 
-        return self.solver_bs, None
+        return self.solver_bs, self.solver_rti
