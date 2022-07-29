@@ -909,9 +909,6 @@ IterativeLQR::BoundAuglagCostEntity::BoundAuglagCostEntity(int N,
                                                            VecConstRef uub):
     _xlb(xlb), _xub(xub), _ulb(ulb), _uub(uub), _N(N)
 {
-    _Q.setZero(xlb.size(), xlb.size());
-    _R.setZero(ulb.size(), ulb.size());
-    _P.setZero(ulb.size(), xlb.size());
     _r.setZero(ulb.size());
     _q.setZero(xlb.size());
     _xlam.setZero(xlb.size());
@@ -946,7 +943,10 @@ double IterativeLQR::BoundAuglagCostEntity::evaluate(VecConstRef x,
 
 void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
                                                      VecConstRef u,
-                                                     int k)
+                                                     int k,
+                                                     Eigen::MatrixXd& Q,
+                                                     Eigen::MatrixXd& R,
+                                                     Eigen::MatrixXd& P)
 {
     evaluate(x, u, k);
 
@@ -954,7 +954,7 @@ void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
 
     for(int i = 0; i < x.size(); i++)
     {
-        _Q(i, i) = _x_violation(i) != 0.0 ? _rho : 0.0;
+        Q(i, i) += _x_violation(i) != 0.0 ? _rho : 0.0;
     }
 
     if(k < _N)
@@ -963,7 +963,7 @@ void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
 
         for(int i = 0; i < u.size(); i++)
         {
-            _R(i, i) = _u_violation(i) != 0.0 ? _rho : 0.0;
+            R(i, i) += _u_violation(i) != 0.0 ? _rho : 0.0;
         }
     }
 }
@@ -1002,29 +1002,14 @@ void IterativeLQR::IntermediateCostEntity::setCost(casadi::Function _l,
     ddl = _ddl;
 }
 
-const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::Q() const
-{
-    return ddl.getOutput(0);
-}
-
 Eigen::Ref<const Eigen::VectorXd> IterativeLQR::IntermediateCostEntity::q() const
 {
     return dl.getOutput(0).col(0);
 }
 
-const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::R() const
-{
-    return ddl.getOutput(1);
-}
-
 Eigen::Ref<const Eigen::VectorXd> IterativeLQR::IntermediateCostEntity::r() const
 {
     return dl.getOutput(1).col(0);
-}
-
-const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::P() const
-{
-    return ddl.getOutput(2);
 }
 
 double IterativeLQR::IntermediateCostEntity::evaluate(VecConstRef x,
@@ -1042,10 +1027,15 @@ double IterativeLQR::IntermediateCostEntity::evaluate(VecConstRef x,
 
 void IterativeLQR::IntermediateCostEntity::quadratize(VecConstRef x,
                                                       VecConstRef u,
-                                                      int k)
+                                                      int k,
+                                                      Eigen::MatrixXd& Q,
+                                                      Eigen::MatrixXd& R,
+                                                      Eigen::MatrixXd& P)
 {
+#ifdef HORIZON_PROFILING
     horizon::utils::Timer tm("quadratize_" + l.function().name() + "_inner",
                              on_timer_toc);
+#endif
 
     // compute cost gradient
     dl.setInput(0, x);
@@ -1057,7 +1047,9 @@ void IterativeLQR::IntermediateCostEntity::quadratize(VecConstRef x,
     ddl.setInput(0, x);
     ddl.setInput(1, u);
     set_param_inputs(param, k, ddl);
-    ddl.call();
+
+    std::vector<Eigen::Ref<Eigen::MatrixXd>> out = {Q, R, P};
+    ddl.call_accumulate(out);
 
 }
 
@@ -1084,9 +1076,6 @@ void IterativeLQR::IntermediateResidualEntity::setResidual(casadi::Function _res
     int nx = _res.size1_in(0);
     int nu = _res.size1_in(1);
 
-    _Q.setZero(nx, nx);
-    _R.setZero(nu, nu);
-    _P.setZero(nu, nx);
     _q.setZero(nx);
     _r.setZero(nu);
 }
@@ -1105,10 +1094,15 @@ double IterativeLQR::IntermediateResidualEntity::evaluate(VecConstRef x,
 
 void IterativeLQR::IntermediateResidualEntity::quadratize(VecConstRef x,
                                                           VecConstRef u,
-                                                          int k)
+                                                          int k,
+                                                          Eigen::MatrixXd& Q,
+                                                          Eigen::MatrixXd& R,
+                                                          Eigen::MatrixXd& P)
 {
+#ifdef HORIZON_PROFILING
     horizon::utils::Timer tm("quadratize_" + res.function().name() + "_inner",
                              on_timer_toc);
+#endif
 
     evaluate(x, u, k);
 
@@ -1134,9 +1128,9 @@ void IterativeLQR::IntermediateResidualEntity::quadratize(VecConstRef x,
 
     _q.noalias() = 2.0 * Jx.transpose()*r;
     _r.noalias() = 2.0 * Ju.transpose()*r;
-    _Q.noalias() = 2.0 * Jx.transpose()*Jx;
-    _R.noalias() = 2.0 * Ju.transpose()*Ju;
-    _P.noalias() = 2.0 * Ju.transpose()*Jx;
+    Q.noalias() += 2.0 * Jx.transpose()*Jx;
+    R.noalias() += 2.0 * Ju.transpose()*Ju;
+    P.noalias() += 2.0 * Ju.transpose()*Jx;
 }
 
 casadi::Function IterativeLQR::IntermediateResidualEntity::Jacobian(const casadi::Function &f)
@@ -1213,10 +1207,7 @@ void IterativeLQR::IntermediateCost::quadratize(VecConstRef x,
 
     for(auto& it : items)
     {
-        it->quadratize(x, u, k);
-        _Q += it->Q();
-        _R += it->R();
-        _P += it->P();
+        it->quadratize(x, u, k, _Q, _R, _P);
         _q += it->q();
         _r += it->r();
     }
@@ -1405,6 +1396,11 @@ void IterativeLQR::ConstraintEntity::linearize(VecConstRef x, VecConstRef u, int
     {
         return;
     }
+
+#ifdef HORIZON_PROFILING
+    horizon::utils::Timer tm("linearize_" + f.function().name() + "_inner",
+                             on_timer_toc);
+#endif
 
     // compute constraint value
     evaluate(x, u, k);
