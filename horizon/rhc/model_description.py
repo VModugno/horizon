@@ -11,12 +11,15 @@ np.set_printoptions(precision=3, suppress=True)
 
 class FullModelInverseDynamics:
     
-    def __init__(self, problem, kd, q_init, base_init, floating_base=True, **kwargs):
+    def __init__(self, problem, kd, q_init, base_init, floating_base=True, fixed_joint_map=None, **kwargs):
+
+        if fixed_joint_map is None:
+            fixed_joint_map = {}
 
         self.prb: Problem = problem
         self.kd = kd
         self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-        self.floating_base = floating_base
+        self.fixed_joint_map = fixed_joint_map
 
         # number of dof
         self.nq = self.kd.nq()
@@ -28,7 +31,6 @@ class FullModelInverseDynamics:
 
         if floating_base is True:
             self.q0[:7] = base_init
-            floating_base = True
             self.joint_names = self.kd.joint_names()[2:]
         else:
             self.joint_names = self.kd.joint_names()[1:]

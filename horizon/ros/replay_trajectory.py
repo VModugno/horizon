@@ -27,7 +27,8 @@ def normalize_quaternion(q):
 
 
 class replay_trajectory:
-    def __init__(self, dt, joint_list, q_replay, frame_force_mapping=None, force_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL, kindyn=None):
+    def __init__(self, dt, joint_list, q_replay, frame_force_mapping=None, force_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL, kindyn=None,
+                 fixed_joint_map=None):
         """
         Contructor
         Args:
@@ -38,6 +39,10 @@ class replay_trajectory:
             force_reference_frame: frame w.r.t. the force is expressed. If LOCAL_WORLD_ALIGNED then forces are rotated in LOCAL frame before being published
             kindyn: needed if forces are in LOCAL_WORLD_ALIGNED
         """
+
+        if fixed_joint_map is None:
+            fixed_joint_map = {}
+
         if frame_force_mapping is None:
             frame_force_mapping = {}
         self.dt = dt
@@ -48,6 +53,7 @@ class replay_trajectory:
         self.frame_force_mapping = {}
         self.slow_down_rate = 1.
         self.frame_fk = dict()
+        self.fixed_joint_map = fixed_joint_map
 
         if frame_force_mapping is not None:
             self.frame_force_mapping = deepcopy(frame_force_mapping)
@@ -172,10 +178,28 @@ class replay_trajectory:
 
 
     def replay(self, is_floating_base=True, base_link='base_link'):
+
+        # account for fixed joints
+        nq = np.shape(self.q_replay)[0]
+        ns = np.shape(self.q_replay)[1]
+
+        joint_names = self.joint_list
+        q_sol = self.q_replay
+
+        q_fixed_sol = dict()
+        for fixed_joint, fixed_val in self.fixed_joint_map.items():
+            fixed_val_array = np.full([1, ns], fixed_val)
+            q_fixed_sol[fixed_joint] = fixed_val_array
+            q_sol = np.vstack((q_sol, fixed_val_array))
+            joint_names.append(fixed_joint)
+
+
         rate = rospy.Rate(self.slow_down_rate / self.dt)
         joint_state_pub = JointState()
         joint_state_pub.header = Header()
-        joint_state_pub.name = self.joint_list
+        joint_state_pub.name = joint_names
+
+
 
         if is_floating_base:
             br = ros_tf.TransformBroadcaster()
@@ -183,8 +207,7 @@ class replay_trajectory:
             m.header.frame_id = 'world'
             m.child_frame_id = base_link
 
-        nq = np.shape(self.q_replay)[0]
-        ns = np.shape(self.q_replay)[1]
+
 
         while not rospy.is_shutdown():
             k = 0

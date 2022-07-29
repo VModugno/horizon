@@ -9,7 +9,6 @@ from casadi_kin_dyn import py3casadi_kin_dyn
 import casadi as cs
 import rospy
 
-
 rospy.init_node('centauro_up_node')
 # set up model
 path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples")
@@ -19,29 +18,29 @@ urdffile = os.path.join(path_to_examples, 'urdf', 'centauro.urdf')
 urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
 
-fixed_joints = {'torso_yaw' :       0.00,
-                'j_arm1_1':         1.50,
-                'j_arm1_2':         0.3,
-                'j_arm1_3':         -0.2,
-                'j_arm1_4':         -2.20,
-                'j_arm1_5':         0.00,
-                'j_arm1_6':         -1.3,
-                'j_arm1_7':         0.0,
-                'j_arm2_1':         1.30,
-                'j_arm2_2':         0.3,
-                'j_arm2_3':         -0.2,
-                'j_arm2_4':         -2.2,
-                'j_arm2_5':         0.0,
-                'j_arm2_6':         -1.3,
-                'j_arm2_7':         0.0,
-                'd435_head_joint':  0.0,
-                'velodyne_joint':   0.0}
+fixed_joint_map = {'torso_yaw': 0.00,
+                    'j_arm1_1': 1.50,
+                    'j_arm1_2': 0.3,
+                    'j_arm1_3': -0.2,
+                    'j_arm1_4': -2.20,
+                    'j_arm1_5': 0.00,
+                    'j_arm1_6': -1.3,
+                    'j_arm1_7': 0.0,
+                    'j_arm2_1': 1.30,
+                    'j_arm2_2': 0.3,
+                    'j_arm2_3': -0.2,
+                    'j_arm2_4': -2.2,
+                    'j_arm2_5': 0.0,
+                    'j_arm2_6': -1.3,
+                    'j_arm2_7': 0.0,
+                    'd435_head_joint': 0.0,
+                    'velodyne_joint': 0.0}
 
-wheels = [f'j_wheel_{i+1}' for i in range(4)]
-fixed_joints.update(zip(wheels, 4 * [0.]))
+wheels = [f'j_wheel_{i + 1}' for i in range(4)]
+fixed_joint_map.update(zip(wheels, 4 * [0.]))
 
-ankle_yaws = [f'ankle_yaw_{i+1}' for i in range(4)]
-fixed_joints.update(zip(ankle_yaws, 4 * [.0]))
+ankle_yaws = [f'ankle_yaw_{i + 1}' for i in range(4)]
+fixed_joint_map.update(zip(ankle_yaws, 4 * [.0]))
 
 # initial config
 q_init = {
@@ -67,19 +66,16 @@ q_init = {
     'ankle_pitch_4': -0.3,
 }
 
-q_init.update(fixed_joints)
+q_init.update(fixed_joint_map)
 base_init = np.array([0, 0, 0.718565, 0, 0, 0, 1])
 
 # set up model description
 urdf = urdf.replace('continuous', 'revolute')
-fixed_joints = []
-fixed_joints_pos = [q_init[k] for k in fixed_joints]
-fixed_joint_map = {k: q_init[k] for k in fixed_joints}
-q_init = {k: v for k, v in q_init.items() if k not in fixed_joints}
 
-print(fixed_joint_map)
-exit()
-kd = py3casadi_kin_dyn.CasadiKinDyn(urdf, fixed_joints=fixed_joint_map)
+kd = pycasadi_kin_dyn.CasadiKinDyn(urdf, fixed_joints=fixed_joint_map)
+kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
+joint_names = kd.joint_names()[2:]
+q_init = {k: v for k, v in q_init.items() if k not in fixed_joint_map.keys()}
 
 # set up problem
 N = 50
@@ -93,7 +89,8 @@ prb.setDt(dt)
 model = FullModelInverseDynamics(problem=prb,
                                  kd=kd,
                                  q_init=q_init,
-                                 base_init=base_init)
+                                 base_init=base_init,
+                                 fixed_joint_map=fixed_joint_map)
 # else:
 #     model = SingleRigidBodyDynamicsModel(problem=prb,
 #                                          kd=kd,
@@ -102,12 +99,10 @@ model = FullModelInverseDynamics(problem=prb,
 #                                          contact_dict=contact_dict)
 
 
-
 ti = TaskInterface(prb=prb,
                    model=model)
 
 ti.setTaskFromYaml(os.path.dirname(__file__) + '/centauro_config.yaml')
-
 
 f0 = np.array([0, 0, 110, 0, 0, 0])
 init_force = ti.getTask('joint_regularization')
@@ -120,7 +115,6 @@ final_base_x = ti.getTask('final_base_x')
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
-
 
 
 opts = dict()
@@ -172,16 +166,6 @@ ti.finalize()
 ti.bootstrap()
 solution = ti.solution
 ti.save_solution('/tmp/dioboy.mat')
-
-if replay_motion:
-
-    # single replay
-    q_sol = solution['q']
-    frame_force_mapping = {cname: solution[f.getName()] for cname, f in ti.model.fmap.items()}
-    repl = replay_trajectory.replay_trajectory(dt, ti.model.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.model.kd_frame, ti.model.kd)
-    repl.sleep(1.)
-    repl.replay(is_floating_base=True, base_link='pelvis')
-
-
+ti.replay_trajectory()
 
 # =========================================================================
