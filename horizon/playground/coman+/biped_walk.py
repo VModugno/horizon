@@ -19,7 +19,6 @@ urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
 urdf = open(urdffile, 'r').read()
 # rospy.set_param('/robot_description', urdf)
 
-
 base_init = np.array([0., 0., 0.96, 0., 0.0, 0.0, 1.])
 
 q_init = {"LHipLat":       -0.0,

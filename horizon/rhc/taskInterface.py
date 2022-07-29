@@ -235,7 +235,7 @@ class TaskInterface:
         self.tf = problem_opts.get('tf', 10.0)
         self.dt = self.tf / self.N
 
-        self.prb = Problem(self.N, receding=self.is_receding, casadi_type=cs.MX, logging_level=logging.DEBUG)
+        self.prb = Problem(self.N, receding=self.is_receding, casadi_type=cs.MX)
         self.prb.setDt(self.dt)
 
     # a possible method could read from yaml and create the task list
