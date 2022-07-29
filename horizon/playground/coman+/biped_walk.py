@@ -123,8 +123,8 @@ final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
 opts = dict()
 am = ActionManager(ti, opts)
-# am._walk([10, 40], [0, 1])
-am._step(Step(frame='l_sole', k_start=20, k_goal=30))
+am._walk([10, 40], [0, 1])
+# am._step(Step(frame='l_sole', k_start=20, k_goal=30))
 
 # todo: horrible API
 # l_contact.setNodes(list(range(5)) + list(range(15, 50)))
@@ -240,7 +240,7 @@ forces = [f for _, f in ti.model.fmap.items()]
 while True:
     iteration = iteration + 1
     print(iteration)
-    
+
     solution = ti.solution
     am.execute(solution)
     ti.rti()
