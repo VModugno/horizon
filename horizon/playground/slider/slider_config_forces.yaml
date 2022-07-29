@@ -1,6 +1,8 @@
 solver:
   type: ipopt
   ipopt.linear_solver: ma57
+  ipopt.tol: 1e-3
+  ipopt.constr_viol_tol: 1e-3
   # ipopt.hessian_approximation: limited-memory
   ilqr.verbose: false
   ilqr.codegen_enabled: true
@@ -116,8 +118,8 @@ joint_regularization:
   type: Regularization
   nodes: all
   weight:
-    velocity: 1.
-    acceleration: 1. # 0.01
+#    velocity: 1.
+    acceleration: 0.1 # 0.01
     force: 0.01 # todo <----- how to do? if there are more forces...
 
 foot_z_Left_Foot:
