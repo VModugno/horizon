@@ -115,6 +115,7 @@ final_base_x.setRef([0, 0, 0, 0, 0, 0, 1])
 opts = dict()
 am = ActionManager(ti, opts)
 am._walk([10, 40], [0, 1])
+# am._jump([10, 20])
 # am._step(Step(frame='Left_Foot', k_start=20, k_goal=30))
 
 # todo: horrible API
