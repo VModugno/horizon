@@ -95,17 +95,17 @@ model = FullModelInverseDynamics(problem=prb,
 ti = TaskInterface(prb=prb,
                    model=model)
 
-ti.setTaskFromYaml(os.path.dirname(__file__) + '/slider_config.yaml')
+ti.setTaskFromYaml(os.path.dirname(__file__) + '/slider_config_forces.yaml')
 
 
 f0 = np.array([0, 0, 110, 0, 0, 0])
 init_force = ti.getTask('joint_regularization')
-init_force.setRef(1, f0)
-init_force.setRef(2, f0)
+# init_force.setRef(1, f0)
+# init_force.setRef(2, f0)
 
 
 final_base_x = ti.getTask('final_base_x')
-final_base_x.setRef([0, 0, 0, 0, 0, 0, 1])
+final_base_x.setRef([0.5, 0, 0, 0, 0, 0, 1])
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
