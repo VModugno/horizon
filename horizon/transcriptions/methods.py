@@ -181,12 +181,6 @@ class MultipleShooting(Transcriptor):
 
         state_int = self.integrator(state, input, dt)[0]
 
-        print(state)
-        print(input)
-        print(dt)
-
-        exit()
-
         return state_int
 
 
