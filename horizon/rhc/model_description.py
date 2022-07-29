@@ -107,11 +107,8 @@ class FullModelInverseDynamics:
 
     def setDynamics(self):
         # todo refactor this floating base stuff
-        if self.floating_base:
-            self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a, self.kd)
-        else:
-            self.xdot = utils.double_integrator(self.v, self.a)
 
+        self.xdot = utils.double_integrator(self.q, self.v, self.a, self.kd)
         self.prb.setDynamics(self.xdot)
 
         # underactuation constraints
