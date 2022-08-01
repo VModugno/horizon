@@ -8,6 +8,7 @@ from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.tasks.cartesianTask import CartesianTask
 from horizon.rhc.tasks.contactTask import ContactTask
 from horizon.rhc.tasks.interactionTask import InteractionTask, SurfaceContact, VertexContact
+from horizon.rhc.tasks.rollingTask import RollingTask
 from horizon.rhc.model_description import FullModelInverseDynamics, SingleRigidBodyDynamicsModel
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.rhc.tasks.posturalTask import PosturalTask
@@ -35,6 +36,7 @@ class TaskInterface:
         
         # here I register the the default tasks
         # todo: should I do it here?
+        # uniform the names of these tasks
         task_factory.register('Cartesian', CartesianTask)
         task_factory.register('Contact', ContactTask)
         task_factory.register('Wrench', SurfaceContact)
@@ -42,6 +44,9 @@ class TaskInterface:
         task_factory.register('Postural', PosturalTask)
         task_factory.register('JointLimits', JointLimitsTask)
         task_factory.register('Regularization', RegularizationTask)
+        task_factory.register('Rolling', RollingTask)
+
+
 
 
         # self.a0 = np.zeros(self.nv)
@@ -139,7 +144,6 @@ class TaskInterface:
         # single replay
 
         q_sol = self.solution['q']
-        print(q_sol.shape)
 
         joint_names = self.model.kd.joint_names()[2:]
 

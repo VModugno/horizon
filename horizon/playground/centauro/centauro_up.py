@@ -1,3 +1,4 @@
+import logging
 import os
 import numpy as np
 from horizon.rhc.taskInterface import TaskInterface
@@ -34,17 +35,31 @@ fixed_joint_map = {'torso_yaw': 0.00,
                     'j_arm2_6': -1.3,
                     'j_arm2_7': 0.0,
                     'd435_head_joint': 0.0,
-                    'velodyne_joint': 0.0}
+                    'velodyne_joint': 0.0,
 
-wheels = [f'j_wheel_{i + 1}' for i in range(4)]
-fixed_joint_map.update(zip(wheels, 4 * [0.]))
-
-ankle_yaws = [f'ankle_yaw_{i + 1}' for i in range(4)]
-fixed_joint_map.update(zip(ankle_yaws, 4 * [.0]))
+                    # 'hip_yaw_1': -0.746,
+                    # 'hip_pitch_1': -1.254,
+                    # 'knee_pitch_1': -1.555,
+                    # 'ankle_pitch_1': -0.3,
+                    #
+                    # 'hip_yaw_2': 0.746,
+                    # 'hip_pitch_2': 1.254,
+                    # 'knee_pitch_2': 1.555,
+                    # 'ankle_pitch_2': 0.3,
+                    #
+                    # 'hip_yaw_3': 0.746,
+                    # 'hip_pitch_3': 1.254,
+                    # 'knee_pitch_3': 1.555,
+                    # 'ankle_pitch_3': 0.3,
+                    #
+                    # 'hip_yaw_4': -0.746,
+                    # 'hip_pitch_4': -1.254,
+                    # 'knee_pitch_4': -1.555,
+                    # 'ankle_pitch_4': -0.3,
+                    }
 
 # initial config
 q_init = {
-
     'hip_yaw_1': -0.746,
     'hip_pitch_1': -1.254,
     'knee_pitch_1': -1.555,
@@ -66,7 +81,18 @@ q_init = {
     'ankle_pitch_4': -0.3,
 }
 
+wheels = [f'j_wheel_{i + 1}' for i in range(4)]
+q_init.update(zip(wheels, 4 * [0.]))
+
+ankle_yaws = [f'ankle_yaw_{i + 1}' for i in range(4)]
+# q_init.update(zip(ankle_yaws, 4 * [-np.pi/4]))
+q_init.update(dict(ankle_yaw_1=np.pi/4))
+q_init.update(dict(ankle_yaw_2=-np.pi/4))
+q_init.update(dict(ankle_yaw_3=-np.pi/4))
+q_init.update(dict(ankle_yaw_4=np.pi/4))
+
 q_init.update(fixed_joint_map)
+
 base_init = np.array([0, 0, 0.718565, 0, 0, 0, 1])
 
 # set up model description
@@ -82,7 +108,7 @@ N = 50
 tf = 10.0
 dt = tf / N
 
-prb = Problem(N, receding=True)
+prb = Problem(N, receding=True) #
 prb.setDt(dt)
 
 # set up model
@@ -110,18 +136,18 @@ init_force = ti.getTask('joint_regularization')
 # init_force.setRef(2, f0)
 
 
-final_base_x = ti.getTask('final_base_x')
-# final_base_x.setRef([0.5, 0, 0, 0, 0, 0, 1])
+final_base_x = ti.getTask('final_base_xy')
+final_base_x.setRef([1, 1, 0, 0, 0, 0, 1])
 
-# final_base_y = ti.getTask('final_base_y')
-# final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
 
+# final_base_y = ti.getTask('base_posture')
+# final_base_y.setRef([0, 0, 0.718565, 0, 0, 0, 1])
 
 opts = dict()
-am = ActionManager(ti, opts)
+# am = ActionManager(ti, opts)
 # am._walk([10, 40], [0, 3])
-am._step(Step(frame='contact_1', k_start=20, k_goal=30))
-am._step(Step(frame='contact_2', k_start=20, k_goal=30))
+# am._step(Step(frame='contact_1', k_start=20, k_goal=30))
+# am._step(Step(frame='contact_2', k_start=20, k_goal=30))
 
 # todo: horrible API
 # l_contact.setNodes(list(range(5)) + list(range(15, 50)))
@@ -135,9 +161,8 @@ q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')
 a = ti.prb.getVariables('a')
 
-cd_fun = ti.model.kd.computeCentroidalDynamics()
-
 # adding minimization of angular momentum
+# cd_fun = ti.model.kd.computeCentroidalDynamics()
 # h_lin, h_ang, dh_lin, dh_ang = cd_fun(q, v, a)
 # ti.prb.createIntermediateResidual('min_angular_mom', 0.1 * dh_ang)
 
