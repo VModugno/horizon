@@ -1,10 +1,13 @@
 solver:
   type: ipopt
+#  print_time: 0
+#  ipopt.print_level: 0
+#  ipopt.sb: "yes"
   ipopt.linear_solver: ma57
-  ipopt.tol: 1e-3
-  ipopt.constr_viol_tol: 1e-3
+#  ipopt.tol: 1e-3
+#  ipopt.constr_viol_tol: 1e-3
 #  ipopt.max_iter: 200
-  # ipopt.hessian_approximation: limited-memory
+#  ipopt.hessian_approximation: limited-memory
   ilqr.verbose: false
   ilqr.codegen_enabled: true
   ilqr.codegen_workdir: /tmp/miao
@@ -119,33 +122,50 @@ foot_contact_contact_4:
 
 joint_posture:
   type: Postural
-  weight: 5. # 10
-  indices: [0, 1, 2, 3, 4,
-            6, 7, 8, 9, 10,
-            12, 13, 14, 15, 16,
-            18, 19, 20, 21, 22]
+  weight: 3. # 10
+#  indices: [0, 1, 2, 3, #4, # all fixed but ankle yaws and wheels
+#            5, 6, 7, 8, #9,
+#            10, 11, 12, 13, #14,
+#            15, 16, 17, 18, #19
+#           ]
+  indices: [0, 1, 2, 3, #4, 5, normal, no postural on ankle yaw, no wheel
+            6, 7, 8, 9, #10, 11,
+            12, 13, 14, 15, #16, 17
+            18, 19, 20, 21, #22, 23
+            ]
+#  indices: [ 0, 1, 2, 3, #4, 5, 6, # continuous wheels
+#             7, 8, 9, 10, #11, 12, 13,
+#             14, 15, 16, 17, # 18, 19, 20,
+#             21, 22, 23, 24, # 25, 26, 27
+#           ]
+#  indices: [ 0, 1, 2, 3, #4, 5, 6, 7,
+#             8, 9, 10, 11, #12, 13, 14, 15,
+#             16, 17, 18, 19, #20, 21, 22, 23,
+#             24, 25, 26, 27, #28, 29, 30, 31
+#           ]
   nodes: all
 
-base_posture:
-  type: Cartesian
-  indices: [2, 3, 4, 5]
-  weight: 10
-  distal_link: pelvis
-  nodes: all
 
-final_posture:
-  type: Postural
-  weight: 50. # 10
-  nodes: final
+#base_posture:
+#  type: Cartesian
+#  indices: [2, 3, 4, 5]
+#  weight: 10
+#  distal_link: pelvis
+#  nodes: all
+
+#final_posture:
+#  type: Postural
+#  weight: 50. # 10
+#  nodes: final
 
 # todo: wrong, as the order COUNTS. If I add the contacts after the joint regularization, they wont get considered.
 joint_regularization:
   type: Regularization
   nodes: all
   weight:
-    velocity: 0.1
+#    velocity: 0.1
     acceleration: 0.1 # 0.01
-    force: 0.01 # todo <----- how to do? if there are more forces...
+#    force: 0.01 # todo <----- how to do? if there are more forces...
 
 foot_z_contact_1:
   type: Cartesian

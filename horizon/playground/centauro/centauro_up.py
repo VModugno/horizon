@@ -19,21 +19,23 @@ urdffile = os.path.join(path_to_examples, 'urdf', 'centauro.urdf')
 urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
 
-fixed_joint_map = {'torso_yaw': 0.00,
-                    'j_arm1_1': 1.50,
-                    'j_arm1_2': 0.3,
-                    'j_arm1_3': -0.2,
-                    'j_arm1_4': -2.20,
-                    'j_arm1_5': 0.00,
-                    'j_arm1_6': -1.3,
-                    'j_arm1_7': 0.0,
-                    'j_arm2_1': 1.30,
-                    'j_arm2_2': 0.3,
-                    'j_arm2_3': -0.2,
-                    'j_arm2_4': -2.2,
-                    'j_arm2_5': 0.0,
-                    'j_arm2_6': -1.3,
-                    'j_arm2_7': 0.0,
+fixed_joint_map = {'torso_yaw': 0.00,   # 0.00,
+
+                    'j_arm1_1': 1.50,   # 1.60,
+                    'j_arm1_2': 0.1,    # 0.,
+                    'j_arm1_3': 0.2,   # 1.5,
+                    'j_arm1_4': -2.2,  # 0.3,
+                    'j_arm1_5': 0.00,   # 0.00,
+                    'j_arm1_6': -1.3,   # 0.,
+                    'j_arm1_7': 0.0,    # 0.0,
+
+                    'j_arm2_1': 1.50,   # 1.60,
+                    'j_arm2_2': 0.1,    # 0.,
+                    'j_arm2_3': -0.2,   # 1.5,
+                    'j_arm2_4': -2.2,   #-0.3,
+                    'j_arm2_5': 0.0,    # 0.0,
+                    'j_arm2_6': -1.3,   # 0.,
+                    'j_arm2_7': 0.0,    # 0.0,
                     'd435_head_joint': 0.0,
                     'velodyne_joint': 0.0,
 
@@ -85,7 +87,7 @@ wheels = [f'j_wheel_{i + 1}' for i in range(4)]
 q_init.update(zip(wheels, 4 * [0.]))
 
 ankle_yaws = [f'ankle_yaw_{i + 1}' for i in range(4)]
-# q_init.update(zip(ankle_yaws, 4 * [-np.pi/4]))
+# q_init.update(zip(ankle_yaws, 4 * [0.]))
 q_init.update(dict(ankle_yaw_1=np.pi/4))
 q_init.update(dict(ankle_yaw_2=-np.pi/4))
 q_init.update(dict(ankle_yaw_3=-np.pi/4))
@@ -108,7 +110,7 @@ N = 50
 tf = 10.0
 dt = tf / N
 
-prb = Problem(N, receding=True) #
+prb = Problem(N, receding=True)  # logging_level=logging.DEBUG
 prb.setDt(dt)
 
 # set up model
@@ -135,9 +137,8 @@ init_force = ti.getTask('joint_regularization')
 # init_force.setRef(1, f0)
 # init_force.setRef(2, f0)
 
-
 final_base_x = ti.getTask('final_base_xy')
-final_base_x.setRef([1, 1, 0, 0, 0, 0, 1])
+final_base_x.setRef([0, 1.5, 0, 0, 0, 0, 1])
 
 
 # final_base_y = ti.getTask('base_posture')
