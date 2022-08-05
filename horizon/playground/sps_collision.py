@@ -25,6 +25,7 @@ def rot_error_cost(R, Rdes):
 
 # options
 solver_type = 'ilqr'
+use_orientation_as_constraint = True
 transcription_method = 'multiple_shooting'
 transcription_opts = dict(integrator='RK4')
 tf = 4.0
@@ -66,7 +67,7 @@ if 'universe' in joint_names: joint_names.remove('universe')
 if 'floating_base_joint' in joint_names: joint_names.remove('floating_base_joint')
 
 # define dynamics
-prb = problem.Problem(n_nodes) #, casadi_type=cs.SX)
+prb = problem.Problem(n_nodes, receding=True) #, casadi_type=cs.SX)
 q = prb.createStateVariable('q', nq)
 q_dot = prb.createStateVariable('q_dot', nv)
 q_ddot = prb.createInputVariable('q_ddot', nv)
@@ -118,23 +119,23 @@ print(o_start_B)
 # v_A = DFK_A(q=q, qdot=q_dot)['ee_vel_linear']
 # v_B = DFK_B(q=q, qdot=q_dot)['ee_vel_linear']
 
-p_tgt_A = p_start_A + np.array([0.6, -0.0, 0.0])
+p_tgt_A = p_start_A + np.array([0.4, -0.0, 0.0])
 p_tgt_B = p_start_B + np.array([-0.1, +0.0, 0.0])
 
 o_tgt_A = o_start_A
 print(rot_error_constr(o_start_A, o_tgt_A))
+print(rot_error_cost(o_start_A, o_tgt_A))
 o_tgt_B = o_start_B
 print(rot_error_constr(o_start_B, o_tgt_B))
+print(rot_error_cost(o_start_B, o_tgt_B))
 
 # final node constraints
 final_node=n_nodes
 prb.createFinalConstraint('ee_tgt_A', p_A - p_tgt_A)
 prb.createFinalConstraint('ee_tgt_B', p_B - p_tgt_B)
 q_dot.setBounds(lb=np.zeros(nv), ub=np.zeros(nv), nodes=final_node)
-# prb.createFinalConstraint('ee_tgt_A_rot', rot_error_constr(o_A, o_tgt_A))
-# prb.createFinalConstraint('ee_tgt_B_rot', rot_error_constr(o_B, o_tgt_B))
 
-orrore = cs.Function('error', [q], [p_A - p_tgt_A, p_B - p_tgt_B, rot_error_constr(o_A, o_tgt_A), rot_error_constr(o_B, o_tgt_B)])
+orrore = cs.Function('error', [q], [rot_error_cost(o_A, o_tgt_A), rot_error_cost(o_B, o_tgt_B), rot_error_constr(o_A, o_tgt_A), rot_error_constr(o_B, o_tgt_B)])
 
 # collision
 srdf = open(srdfpath, 'r').read()
@@ -146,10 +147,6 @@ else:
     ch = collision.CollisionHandler(urdfstr=urdf, srdfstr=srdf, kindyn=kindyn)
     collision_fn = ch.get_function()
 
-# collision_constr = prb.createConstraint('collision', collision_fn(q))
-# collision_constr.setBounds(lb=np.zeros(collision_fn.size1_out(0)),
-#                            ub=np.full(collision_fn.size1_out(0), np.inf))
-
 collision_sx = collision_fn(q)
 print(collision_sx.size1())
 
@@ -160,17 +157,21 @@ if solver_type == 'ilqr':
     coll_weight = prb.createParameter('coll_weight', dim=1)
     prb.createResidual('collision', coll_weight*collision_barrier)
     coll_weight.assign(1e2)
-
-    # cost on orientation
-    rot_weight = prb.createParameter('rot_weight', dim=1)
-    prb.createResidual('rot_error_A', rot_weight*rot_error_cost(o_A, o_tgt_A))
-    prb.createResidual('rot_error_B', rot_weight*rot_error_cost(o_B, o_tgt_B))
-    rot_weight.assign(1)
-
 else:
     collision_const = prb.createConstraint('collision_const', collision_sx)
     collision_const.setBounds(lb=np.zeros(collision_sx.size1()), ub=np.inf*np.ones(collision_sx.size1()))
 
+# cost on orientation
+if use_orientation_as_constraint:
+    ee_tgt_A_rot = prb.createConstraint('ee_tgt_A_rot', rot_error_constr(o_A, o_tgt_A), nodes=[])
+    ee_tgt_B_rot = prb.createConstraint('ee_tgt_B_rot', rot_error_constr(o_B, o_tgt_B), nodes=[])
+else:
+    rot_weight = prb.createParameter('rot_weight', dim=1)
+    prb.createFinalResidual('rot_error_A', rot_weight*rot_error_cost(o_A, o_tgt_A))
+    prb.createFinalResidual('rot_error_B', rot_weight*rot_error_cost(o_B, o_tgt_B))
+    rot_weight.assign(0)
+    if solver_type=='ipopt':
+        rot_weight.assign(1e3)
 
 ##### Cost function #####
 # penalize input
@@ -208,6 +209,7 @@ except:
 tic = time.time()
 prb_solver.solve()
 
+# if ILQR, do more iterations
 if solver_type=='ilqr':
     prb.getState().setInitialGuess(prb_solver.x_opt)
     prb.getInput().setInitialGuess(prb_solver.u_opt)
@@ -218,6 +220,33 @@ if solver_type=='ilqr':
     prb.getInput().setInitialGuess(prb_solver.u_opt)
     coll_threshold.assign(0.01)
     prb_solver.solve()
+
+    ee_tgt_A_rot.setNodes([n_nodes])
+    ee_tgt_B_rot.setNodes([n_nodes])
+    prb.getState().setInitialGuess(prb_solver.x_opt)
+    prb.getInput().setInitialGuess(prb_solver.u_opt)
+    prb_solver.solve()
+
+    if not use_orientation_as_constraint:
+        prb.getState().setInitialGuess(prb_solver.x_opt)
+        prb.getInput().setInitialGuess(prb_solver.u_opt)
+        rot_weight.assign(1)
+        prb_solver.solve()
+
+        prb.getState().setInitialGuess(prb_solver.x_opt)
+        prb.getInput().setInitialGuess(prb_solver.u_opt)
+        rot_weight.assign(1e1)
+        prb_solver.solve()
+
+        prb.getState().setInitialGuess(prb_solver.x_opt)
+        prb.getInput().setInitialGuess(prb_solver.u_opt)
+        rot_weight.assign(1e2)
+        prb_solver.solve()
+
+    # prb.getState().setInitialGuess(prb_solver.x_opt)
+    # prb.getInput().setInitialGuess(prb_solver.u_opt)
+    # rot_weight.assign(1e3)
+    # prb_solver.solve()
 
 toc = time.time()
 print('time elapsed solving:', toc - tic)
@@ -231,19 +260,33 @@ print(f"total trajectory time: {total_time}")
 
 collision_values = collision_fn(solution['q']).toarray().T
 
+costerror_values_A = orrore(solution['q'])[0].toarray().T
+costerror_values_B = orrore(solution['q'])[1].toarray().T
 orror_values_A = orrore(solution['q'])[2].toarray().T
 orror_values_B = orrore(solution['q'])[3].toarray().T
 
 from matplotlib import pyplot as plt
+fig = plt.figure()
+fig.suptitle('collisions distances')
 plt.plot(collision_values)
 plt.grid()
-plt.show()
+plt.savefig('collision.png')
 
-plt.figure()
+fig = plt.figure()
+fig.suptitle("orientation_error_cost")
+plt.plot(costerror_values_A)
+plt.plot(costerror_values_B)
+plt.grid()
+plt.savefig('costerror.png')
+
+fig = plt.figure()
+fig.suptitle("orientation_error_constraint")
 plt.plot(orror_values_A)
 plt.plot(orror_values_B)
 plt.grid()
-plt.show()
+plt.savefig('orror.png')
+
+# plt.show()
 
 # visualize the robot in RVIZ
 joint_list = joint_names
