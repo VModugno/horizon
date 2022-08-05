@@ -15,7 +15,7 @@ from srdfdom.srdf import SRDF
 def rot_error_constr(R, Rdes):
     Re = R @ Rdes.T
     S = (Re - Re.T)/2
-    r = cs.vec(S)
+    r = cs.vertcat(S[0,1], S[0,2], S[1,2])
     err = r / cs.sqrt(1 + cs.trace(Re))
     return err
 
