@@ -47,8 +47,6 @@ class TaskInterface:
         task_factory.register('Rolling', RollingTask)
 
 
-
-
         # self.a0 = np.zeros(self.nv)
 
         # task list
@@ -100,7 +98,7 @@ class TaskInterface:
             dae=None,
             f_int=self.prb.getIntegrator())
             
-
+        self.solution['dt_res'] = dt_res
         self.solution['x_opt_res'] = x_res
         self.solution['u_opt_res'] = u_res
 
@@ -114,11 +112,68 @@ class TaskInterface:
             off, dim = self.prb.getInput().getVarIndex(sname)
             self.solution[f'{sname}_res'] = u_res[off:off+dim, :]
 
+        # get tau resampled
+
+        # new fmap with resampled forces
+        if self.model.fmap:
+
+            fmap = dict()
+            for frame, wrench in self.model.fmap.items():
+                fmap[frame] = self.solution[f'{wrench.getName()}']
+
+            fmap_res = dict()
+            for frame, wrench in self.model.fmap.items():
+                fmap_res[frame] = self.solution[f'{wrench.getName()}_res']
+
+            tau = np.zeros([self.model.tau.shape[0], self.prb.getNNodes() -1])
+            tau_res = np.zeros([self.model.tau.shape[0], u_res.shape[1]])
+
+            id = kin_dyn.InverseDynamics(self.model.kd, fmap_res.keys(), self.model.kd_frame)
+
+                # id_fn = kin_dyn.InverseDynamics(self.kd, self.fmap.keys(), self.kd_frame)
+                # self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
+                # self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
+
+            # todo: this is horrible. id.call should take matrices, I should not iter over each node
+
+            for i in range(tau.shape[1]):
+                fmap_i = dict()
+                for frame, wrench in fmap.items():
+                    fmap_i[frame] = wrench[:, i]
+                tau_i = id.call(self.solution['q'][:, i], self.solution['v'][:, i], self.solution['a'][:, i], fmap_i)
+                tau[:, i] = tau_i.toarray().flatten()
+
+            for i in range(tau_res.shape[1]):
+                fmap_res_i = dict()
+                for frame, wrench in fmap_res.items():
+                    fmap_res_i[frame] = wrench[:, i]
+                tau_res_i = id.call(self.solution['q_res'][:, i], self.solution['v_res'][:, i], self.solution['a_res'][:, i], fmap_res_i)
+                tau_res[:, i] = tau_res_i.toarray().flatten()
+
+            self.solution['tau'] = tau
+            self.solution['tau_res'] = tau_res
+
 
     def save_solution(self, filename):
+        import copy
         ms = mat_storer.matStorer(filename)
-        self.solution['joint_names'] = self.model.joint_names
-        ms.store(self.solution)
+        joint_names = self.model.joint_names.copy()
+        sol_to_save = copy.deepcopy(self.solution)
+
+        # todo: duplicate code in replay_trajectory
+        # add all the fixed joint values (for now, do it for q_res)
+        ns = np.shape(sol_to_save['q_res'])[1]
+
+        for fixed_joint, fixed_val in self.model.fixed_joint_map.items():
+            # append fixed joints name to joints name list
+            joint_names.append(fixed_joint)
+            # expand fixed value along the nodes and append the row to the q_sol
+            fixed_val_array = np.full([1, ns], fixed_val)
+            sol_to_save['q_res'] = np.vstack((sol_to_save['q_res'], fixed_val_array))
+
+        sol_to_save['joint_names'] = joint_names
+        sol_to_save['dt'] = self.prb.getDt()
+        ms.store(sol_to_save)
 
 
     def load_solution(self, filename):
@@ -140,18 +195,21 @@ class TaskInterface:
 
     def replay_trajectory(self):
 
-
         # single replay
+        joint_names = self.model.kd.joint_names()[2:]
 
         q_sol = self.solution['q']
+        q_sol_minimal = np.zeros([len(joint_names)+7, self.prb.getNNodes()])
 
-        joint_names = self.model.kd.joint_names()[2:]
+        # if q is not minimal (continuous joints are present) make it minimal
+        for col in range(q_sol.shape[1]):
+            q_sol_minimal[:, col] = self.model.kd.getMinimalQ(q_sol[:, col])
 
         frame_force_mapping = {cname: self.solution[f.getName()] for cname, f in self.model.fmap.items()}
 
         repl = replay_trajectory(self.prb.getDt(),
                                  joint_names,
-                                 q_sol,
+                                 q_sol_minimal,
                                  frame_force_mapping,
                                  self.model.kd_frame,
                                  self.model.kd,
@@ -254,8 +312,6 @@ class TaskInterface:
                         if task['name'] == subtask_description:
                             subtask_description = task
                             break
-
-
                 # child inherit from parent the values, if not present
                 # parent define the context for the child: child can override it
                 
@@ -303,6 +359,7 @@ class TaskInterface:
     def setSolverOptions(self, solver_options):
         solver_type = solver_options.pop('type')
         is_receding = solver_options.pop('receding', False)
+
         self.si = solver_interface.SolverInterface(solver_type, is_receding, solver_options)
 
     def _create_solver(self):
