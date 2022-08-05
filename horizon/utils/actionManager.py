@@ -45,9 +45,10 @@ class Step(Action):
     simple class representing a step, contains the main info about the step
     """
 
-    def __init__(self, frame: str, k_start: int, k_goal: int, start=np.array([]), goal=np.array([]), clearance=0.08):
+    def __init__(self, frame: str, k_start: int, k_goal: int, start=np.array([]), goal=np.array([]), clearance=0.08, indices=None):
         super().__init__(frame, k_start, k_goal, start, goal)
         self.clearance = clearance
+        self.indices = indices
 
 
 # what if the action manager provides only the nodes? but for what?
@@ -311,13 +312,16 @@ class ActionManager:
         self.setContact(frame, self.contact_constr_nodes[frame])
 
         # xy goal
-        if self.N >= k_goal > 0 and step.goal.size > 0:
+        # TODO: refactor this
+        # if self.N >= k_goal > 0 and step.goal.size > 0:
             # adding param:
-            self._foot_tgt_params[frame][:, swing_nodes_in_horizon] = s.goal[:2]
+            # self._foot_tgt_params[frame][:, swing_nodes_in_horizon] = s.goal[:2]
+            #
+            # self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame])  # [k_goal]
+            # self.foot_tgt_constr[frame].setRef(self._foot_tgt_params[frame][self.foot_tgt_constr_nodes[frame]])  # s.goal[:2]
 
-            self.foot_tgt_constr[frame].setRef(
-                self._foot_tgt_params[frame][self.foot_tgt_constr_nodes[frame]])  # s.goal[:2]
-            self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame])  # [k_goal]
+        if step.goal.size > 0:
+            s.start = np.array([0, 0, s.goal[2]])
 
         # z goal
         start = np.array([0, 0, self.default_foot_z[frame]]) if s.start.size == 0 else s.start
