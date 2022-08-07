@@ -1,3 +1,4 @@
+
 from horizon.problem import Problem
 from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.rhc.model_description import *
@@ -16,10 +17,12 @@ tf = 10.0  # 10s
 dt = tf / ns
 
 # set up model
-path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples")
+path_to_examples = os.path.dirname(os.path.abspath(__file__)) + "/../../examples"
 os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
+
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
+print(path_to_examples, urdffile, os.path.dirname(__file__))
 urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
 
@@ -111,7 +114,7 @@ else:
 ti = TaskInterface(prb=prb,
                    model=model)
 
-ti.setTaskFromYaml(os.path.dirname(__file__) + '/config_walk_forces.yaml')
+ti.setTaskFromYaml(os.path.dirname(os.path.abspath(__file__)) + '/config_walk_forces.yaml')
 
 
 f0 = np.array([0, 0, 315, 0, 0, 0])
