@@ -174,10 +174,11 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     // add auglag cost
     for(int i = 0; i < _N+1; i++)
     {
+        int ui = std::min(i, _N-1);
         auto al = std::make_shared<BoundAuglagCostEntity>(
                     _N,
                     _x_lb.col(i), _x_ub.col(i),
-                    _u_lb.col(i), _u_ub.col(i));
+                    _u_lb.col(ui), _u_ub.col(ui));
 
         al->setRho(_rho);
 
