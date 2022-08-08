@@ -40,8 +40,13 @@ class replay_trajectory:
         """
         if frame_force_mapping is None:
             frame_force_mapping = {}
+
         self.dt = dt
-        self.joint_list = joint_list
+        self.joints_1dof = [j for j in joint_list if kindyn.joint_nq(j) == 1]
+        self.joints_floating = [j for j in joint_list if kindyn.joint_nq(j) == 7]
+        self.iq_1dof = [kindyn.joint_iq(j) for j in self.joints_1dof]
+        self.iq_floating = [kindyn.joint_iq(j) for j in self.joints_floating]
+        self.parent_child_floating = [(kindyn.parentLink(j), kindyn.childLink(j)) for j in self.joints_floating]
         self.q_replay = q_replay
         self.__sleep = 0.
         self.force_pub = []
@@ -135,28 +140,29 @@ class replay_trajectory:
         '''
         self.slow_down_rate = 1./slow_down_factor
 
-    def publish_joints(self, qk, is_floating_base=True, base_link='base_link'):
+    def publish_joints(self, qk, fixed_joint_map=dict(), is_floating_base=True, base_link='base_link'):
+        
         joint_state_pub = JointState()
         joint_state_pub.header = Header()
-        joint_state_pub.name = self.joint_list
+        joint_state_pub.name = self.joints_1dof + list(fixed_joint_map.keys())
         t = rospy.Time.now()
         br = self.br
         nq = len(qk)
 
-        if is_floating_base:
-            
-            qk = normalize_quaternion(qk)
-            
+        for iq, (parent, child) in zip(self.iq_floating, self.parent_child_floating):
+
+            q = normalize_quaternion(qk[iq:iq+7])
+
             m = geometry_msgs.msg.TransformStamped()
-            m.header.frame_id = 'world'
-            m.child_frame_id = base_link
-            m.transform.translation.x = qk[0]
-            m.transform.translation.y = qk[1]
-            m.transform.translation.z = qk[2]
-            m.transform.rotation.x = qk[3]
-            m.transform.rotation.y = qk[4]
-            m.transform.rotation.z = qk[5]
-            m.transform.rotation.w = qk[6]
+            m.header.frame_id = parent
+            m.child_frame_id = child
+            m.transform.translation.x = q[0]
+            m.transform.translation.y = q[1]
+            m.transform.translation.z = q[2]
+            m.transform.rotation.x = q[3]
+            m.transform.rotation.y = q[4]
+            m.transform.rotation.z = q[5]
+            m.transform.rotation.w = q[6]
 
             br.sendTransform((m.transform.translation.x, m.transform.translation.y, m.transform.translation.z),
                                 (m.transform.rotation.x, m.transform.rotation.y, m.transform.rotation.z,
@@ -165,7 +171,7 @@ class replay_trajectory:
 
         
         joint_state_pub.header.stamp = t
-        joint_state_pub.position = qk[7:nq] if is_floating_base else qk
+        joint_state_pub.position = qk[self.iq_1dof].tolist() + list(fixed_joint_map.values())
         joint_state_pub.velocity = []
         joint_state_pub.effort = []
         self.pub.publish(joint_state_pub)
