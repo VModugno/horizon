@@ -254,6 +254,17 @@ void IterativeLQR::optimize_initial_state()
     auto C = _constraint_to_go->C();
     auto h = _constraint_to_go->h();
 
+    if(_log)
+    {
+        std::cout << "n_constr_x[0] = " << C.rows() << "\n";
+
+        auto Csvd = C.jacobiSvd();
+        Csvd.setThreshold(_svd_threshold);
+        Eigen::VectorXd svC = Csvd.singularValues();
+        std::cout << "sv(C[" << 0 << "]) in [" <<
+                     svC.minCoeff() << ", " << svC.maxCoeff() << "], rank = " << Csvd.rank() <<  "\n";
+    }
+
     // construct kkt matrix
     TIC(construct_state_kkt);
     Eigen::MatrixXd& K = _tmp[0].x_kkt;
@@ -289,7 +300,8 @@ void IterativeLQR::optimize_initial_state()
             break;
 
         case Qr:
-
+        
+            qr.compute(K);
             dx_lam = qr.solve(k);
             break;
 
@@ -308,6 +320,10 @@ void IterativeLQR::optimize_initial_state()
 
     if(_log)
     {
+        Eigen::VectorXd eigS = S.eigenvalues().real();
+        std::cout << "eig(S[" << 0 << "]) in [" <<
+                     eigS.minCoeff() << ", " << eigS.maxCoeff() << "] \n";
+
         std::cout << "state_kkt_err = " <<
                      (K*dx_lam - k).lpNorm<Eigen::Infinity>() << "\n";
     }
