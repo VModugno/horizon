@@ -262,17 +262,17 @@ class Problem:
         self.state_der = xdot
         
         import horizon.transcriptions.integrators as integrators
-        
-        dae = {
-            'x': self.getState().getVars(),
-            'p': self.getInput().getVars(),
-            'ode': self.state_der,
-            'quad': 0
-        }
 
-        f_int = integrators.__dict__[integrator](dae, {}, self.default_abstract_casadi_type)
-        
-        self.setIntegrator(f_int)
+        # dae = {
+        #     'x': self.getState().getVars(),
+        #     'p': self.getInput().getVars(),
+        #     'ode': self.state_der,
+        #     'quad': 0
+        # }
+        #
+        # f_int = integrators.__dict__[integrator](dae, {}, self.default_abstract_casadi_type)
+        #
+        # self.setIntegrator(f_int)
 
 
     def getDynamics(self) -> cs.SX:

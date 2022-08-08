@@ -84,7 +84,7 @@ class Solver(ABC):
         # save state and control
         self.x = prb.getState().getVars()
         self.u = prb.getInput().getVars()
-        self.dt = prb.getDt()
+        # self.dt = prb.getDt()
 
         # derived classes should at least provide the optimal state trajectory, 
         # and input trajectory

@@ -1,6 +1,6 @@
 import casadi as cs
 import horizon.problem as prb
-from horizon.variables import AbstractVariable, SingleVariable, Variable, SingleParameter, Parameter
+from horizon.variables import AbstractVariable, SingleVariable, Variable, SingleParameter, Parameter, StateVariable, InputVariable, Aggregate
 import numpy as np
 from horizon.transcriptions.transcriptor import Transcriptor
 import horizon.transcriptions.integrators as integ
@@ -123,6 +123,7 @@ class MultipleShooting(Transcriptor):
             integrator (string|any): name of the default integrator or custom integrator
         """
         super().__init__(prob)
+
         # logic to pick a default integrator or keep a custom integrator
         # todo could be done dividing the arguments, for instance default_integrator_type and integrator
         if isinstance(integrator, str):
@@ -132,6 +133,11 @@ class MultipleShooting(Transcriptor):
                 raise Exception('Selected default integrator is not implemented.')
         else:
             self.integrator = integrator
+
+        # self.__set_multiple_shooting_constraint()
+
+
+    def __set_multiple_shooting_constraint(self):
 
         # todo add support for dt that is not a variable/parameter of the problem but depends on problem variables/parameters
         #   this could be solved by using state_next, not state:
@@ -162,6 +168,23 @@ class MultipleShooting(Transcriptor):
             for node_n in range(1, self.problem.getNNodes()):
                 state_int = self.__integrate(self.state_prev, self.input_prev, self.dt[node_n - 1])
                 ms = self.problem.createConstraint(f'multiple_shooting_node_{node_n}', state_int - self.state, nodes=node_n)
+
+
+    def add_ms_to_var(self, var: Aggregate, input: Aggregate, dt, integrator):
+
+
+        # horizon_var = [variable for variable in self.problem.getVariables().values() if cs.depends_on(var, variable)]
+        # horizon_input = [variable for variable in self.problem.getVariables().values() if cs.depends_on(input, variable)]
+
+
+        var_prev = var.getVarOffset(-1)
+        input_prev = input.getVarOffset(-1).getVars()
+        dt_prev = dt.getVarOffset(-1)
+
+        var_int = integrator(var_prev, input_prev, dt_prev)[0]
+
+        ms = self.problem.createConstraint(f'multiple_shooting_node_{dt}', var_int - var, nodes=range(1, self.problem.getNNodes()))
+
 
     def setDefaultIntegrator(self, integrator_type):
 

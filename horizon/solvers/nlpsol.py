@@ -140,7 +140,7 @@ class NlpsolSolver(Solver):
         self.var_solution['u_opt'] = self.u_opt
 
         # build dt_solution as an array
-        self._createDtSol()
+        # self._createDtSol()
 
         return self.solver.stats()['success']
 

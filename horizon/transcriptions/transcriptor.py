@@ -41,7 +41,7 @@ class Transcriptor(ABC):
         self.problem = prb
         self.integrator = None
 
-        self.dt = prb.getDt()
+        # self.dt = prb.getDt()
 
         state_list = self.problem.getState()
         state_prev_list = list()
@@ -53,6 +53,7 @@ class Transcriptor(ABC):
         self.state_prev = cs.vertcat(*state_prev_list)
 
         input_list = self.problem.getInput()
+
         input_prev_list = list()
         for var in input_list:
             input_prev_list.append(var.getVarOffset(-1))
