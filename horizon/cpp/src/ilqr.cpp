@@ -69,8 +69,8 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _svd_threshold(1e-6),
     _constraint_violation_threshold(1e-6),
     _defect_norm_threshold(1e-6),
-    _merit_der_threshold(1e-6),
-    _step_length_threshold(1e-6),
+    _merit_der_threshold(1e-3),
+    _step_length_threshold(1e-9),
     _cost(N+1, IntermediateCost(_nx, _nu)),
     _constraint(N+1, Constraint(_nx, _nu)),
     _value(N+1, ValueFunction(_nx)),
@@ -102,8 +102,8 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _svd_threshold = value_or(opt, "ilqr.svd_threshold", 1e-6);
     _constraint_violation_threshold = value_or(opt, "ilqr.constraint_violation_threshold", 1e-6);
     _defect_norm_threshold = value_or(opt, "ilqr.defect_norm_threshold", 1e-6);
-    _merit_der_threshold = value_or(opt, "ilqr.merit_der_threshold", 1e-6);
-    _step_length_threshold = value_or(opt, "ilqr.step_length_threshold", 1e-6);
+    _merit_der_threshold = value_or(opt, "ilqr.merit_der_threshold", 1e-3);
+    _step_length_threshold = value_or(opt, "ilqr.step_length_threshold", 1e-9);
     _closed_loop_forward_pass = value_or(opt, "ilqr.closed_loop_forward_pass", 1);
     _codegen_workdir = value_or<std::string>(opt, "ilqr.codegen_workdir", "/tmp");
     _codegen_enabled = value_or(opt, "ilqr.codegen_enabled", 0);
@@ -282,7 +282,7 @@ void IterativeLQR::setResidual(std::vector<int> indices,
     add_param_to_map(residual);
 
     // create cost entity
-    auto c = std::make_shared<IntermediateResidualEntity>();
+    auto c = std::make_shared<IntermediateCostEntity>();
 
     // add to map
     _cost_map[residual.name()] = c;
@@ -294,17 +294,61 @@ void IterativeLQR::setResidual(std::vector<int> indices,
     c->indices = indices;
 
     // set cost and derivatives
-    auto cost = residual;
-    auto jac = IntermediateResidualEntity::Jacobian(cost);
+    auto res = residual;
+    auto jac = IntermediateResidualEntity::Jacobian(res);
 
     // codegen if required (we skip it for quadratic costs)
     if(_codegen_enabled)
     {
-        cost = utils::codegen(cost, _codegen_workdir);
+        res = utils::codegen(res, _codegen_workdir);
         jac = utils::codegen(jac, _codegen_workdir);
     }
 
-    c->setResidual(cost, jac);
+    // local syms to evaluate residual and jacobian
+    auto x_mx = casadi::MX::sym("x", _nx);
+    auto u_mx = casadi::MX::sym("u", _nu);
+    std::vector<casadi::MX> vars = {x_mx, u_mx};
+    std::vector<std::string> var_names = {"x", "u"};
+
+    for(int i = 2; i < residual.n_in(); i++)
+    {
+        vars.push_back(casadi::MX::sym(residual.name_in(i),
+                                       residual.size1_in(i)));
+
+        var_names.push_back(residual.name_in(i));
+    }
+
+    // compute res, Jx, Ju
+    auto r = res(vars)[0];
+    auto J = jac(vars);
+    auto& Jx = J[0];
+    auto& Ju = J[1];
+
+    // functions
+    auto mul = [](auto a, auto b)
+    {
+        return casadi::MX::mtimes(a, b);
+    };
+
+    auto cost_fn = casadi::Function(residual.name() + "_cost",
+                                    vars,
+                                    {0.5 * casadi::MX::sumsqr(r)},
+                                    var_names, {"f"});
+
+    auto grad_fn = casadi::Function(residual.name() + "_grad",
+                                    vars,
+                                    {mul(Jx.T(), r), mul(Ju.T(), r)},
+                                    var_names,
+                                    {"grad_x", "grad_u"});
+
+    auto hess_fn = casadi::Function(residual.name() + "_gn_hess",
+                                    vars,
+                                    {mul(Jx.T(), Jx), mul(Ju.T(), Ju), mul(Ju.T(), Jx)},
+                                    var_names,
+                                    {"hess_x_x", "hess_u_u", "hess_u_x"});
+
+    c->setCost(cost_fn, grad_fn, hess_fn);
+
 
     if(_verbose) std::cout << "adding residual '" << residual << "' at k = ";
 
@@ -544,6 +588,11 @@ const utils::ProfilingInfo& IterativeLQR::getProfilingInfo() const
     return _prof_info;
 }
 
+const std::vector<IterativeLQR::ForwardPassResult>& IterativeLQR::getIterationHistory() const
+{
+    return _fp_res_history;
+}
+
 bool IterativeLQR::solve(int max_iter)
 {
     // set cost value and constraint violation *before* the forward pass
@@ -631,6 +680,8 @@ void IterativeLQR::linearize_quadratize_inner(int i)
     _dyn[i].computeDefect(xi, ui, xnext, i, _dyn[i].d);
     _constraint[i].linearize(xi, ui, i);
     _cost[i].quadratize(xi, ui, i);
+
+    std::cout << _dyn[i].B() << "\n\n";
 
     THROW_NAN(_dyn[i].A());
     THROW_NAN(_dyn[i].B());
