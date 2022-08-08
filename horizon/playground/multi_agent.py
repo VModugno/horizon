@@ -108,7 +108,6 @@ solver = solver.Solver.make_solver('ipopt', prob)
 solver.solve()
 solution = solver.getSolutionDict()
 
-
 # plot
 def plt_sphere(center, radius):
     # draw sphere
@@ -129,8 +128,18 @@ hplt.plotVariables(['x2'], grid=True)
 if isinstance(dt1, horizon.variables.InputVariable):
     hplt.plotVariables(['dt1'], grid=True)
 
+    total_time_1 = np.sum(solution['dt1'])
+    print(total_time_1)
+
+
+
 if isinstance(dt2, horizon.variables.InputVariable):
     hplt.plotVariables(['dt2'], grid=True)
+
+    total_time_2 = np.sum(solution['dt2'])
+    print(total_time_2)
+
+
 plt.figure()
 ax = plt.axes(projection='3d')
 
