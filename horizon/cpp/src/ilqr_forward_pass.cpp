@@ -409,6 +409,9 @@ bool IterativeLQR::line_search(int iter)
     _xtrj = _fp_res->xtrj;
     _utrj = _fp_res->utrj;
 
+    // save result in history
+    _fp_res_history.push_back(*_fp_res);
+
     // note: we should update the lag mult at the solution
     // by including the dx part
 

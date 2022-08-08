@@ -327,6 +327,7 @@ struct IterativeLQR::Temporaries
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> cqr;
     Eigen::BDCSVD<Eigen::MatrixXd> csvd;
     Eigen::MatrixXd codQ;
+    Eigen::PermutationMatrix<Eigen::Dynamic> codP;
 
     // quadratized value function
     Eigen::MatrixXd Huu;
