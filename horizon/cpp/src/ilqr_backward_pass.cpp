@@ -184,6 +184,30 @@ void IterativeLQR::backward_pass_iter(int i)
             u_lam = tmp.ldlt.solve(kx0);
             break;
 
+        case ReducedHessian:
+//            auto R11 = tmp.cqr.matrixR().topLeftCorner(nc, nc).triangularView<Eigen::Upper>();
+//            auto R12 = tmp.cqr.matrixR().topRightCorner(nc, _nu - nc);
+//            Eigen::VectorXd R11inv_h = R11.solve(constr_feas.h);
+//            Eigen::MatrixXd R11inv_C = R11.solve(constr_feas.C);
+//            Eigen::MatrixXd M = -R11.solve(R12);
+//            Eigen::MatrixXd Hzz = tmp.codP.transpose()*tmp.Huu*tmp.codP;
+//            auto& P = tmp.codP;
+//            auto H11 = Hzz.topLeftCorner(nc, nc);
+//            auto H12 = Hzz.topRightCorner(nc, _nu - nc);
+//            auto H22 = Hzz.bottomLeftCorner(_nu - nc,_nu - nc);
+//            Eigen::MatrixXd Hred = H22 + M.transpose()*H11*M +
+//                    M*H12 + H12.transpose()*M.transpose();
+//            Eigen::LLT<Eigen::MatrixXd> llt;
+//            llt.compute(Hred);
+//            Eigen::MatrixXd I_MT; // [I M^T]
+//            Eigen::VectorXd red_grad_0 = I_MT * (P.transpose()*tmp.hu) -
+//                    (H12 + H11*M).transpose()*R11inv_h;
+//            Eigen::MatrixXd red_grad_x = I_MT * (P.transpose()*tmp.Hux)  -
+//                    (H12 + H11*M).transpose()*R11inv_C;
+//            llt.solveInPlace(red_grad_0);
+//            llt.solveInPlace(red_grad_x);
+            break;
+
         default:
              throw std::invalid_argument("kkt decomposition supports only qr, lu, or ldlt");
 
@@ -201,7 +225,6 @@ void IterativeLQR::backward_pass_iter(int i)
                      _constraint_to_go->dim() << "\n";
     }
 
-    THROW_NAN(u_lam);
     TOC(solve_kkt_inner);
 
     // check
@@ -532,13 +555,51 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     }
 
     // decompose constraint into a feasible and infeasible components
-    auto C = _constraint_to_go->C();
-    auto D = _constraint_to_go->D();
-    auto h = _constraint_to_go->h();
+    Eigen::MatrixXd Ctmp = _constraint_to_go->C();
+    Eigen::MatrixXd Dtmp = _constraint_to_go->D();
+    Eigen::VectorXd htmp = _constraint_to_go->h();
     TOC(constraint_prepare_inner);
-    THROW_NAN(C);
-    THROW_NAN(D);
-    THROW_NAN(h);
+    THROW_NAN(Ctmp);
+    THROW_NAN(Dtmp);
+    THROW_NAN(htmp);
+
+    // it is rather common for D to contain zero rows,
+    // we can directly consider them as unsatisfied constr
+    _constraint_to_go->clear();
+    Eigen::MatrixXd C(Ctmp.rows(), Ctmp.cols());
+    Eigen::MatrixXd D(Dtmp.rows(), Dtmp.cols());
+    Eigen::VectorXd h(htmp.size());
+
+    int pruned_idx = 0;
+    for(int j = 0; j < h.size(); j++)
+    {
+        double Dnorm = Dtmp.row(j).lpNorm<Eigen::Infinity>();
+        if(Dnorm < _svd_threshold)
+        {
+            _constraint_to_go->add(Ctmp.row(j),
+                                   htmp.row(j));
+        }
+        else
+        {
+            D.row(pruned_idx) = Dtmp.row(j);
+            C.row(pruned_idx) = Ctmp.row(j);
+            h(pruned_idx) = htmp(j);
+            pruned_idx++;
+        }
+    }
+
+    nc = pruned_idx;
+
+    C.conservativeResize(nc, C.cols());
+    D.conservativeResize(nc, D.cols());
+    h.conservativeResize(nc);
+
+    if(_log)
+    {
+        std::cout << "n_constr[" << i << "] = " <<
+                      pruned_idx << " after pruning \n";
+    }
+
 
     // cod of D
     TIC(constraint_decomp_inner);
@@ -565,6 +626,7 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
                 rank = 0;
             }
             tmp.codQ = qr.matrixQ();
+            tmp.codP = qr.colsPermutation();
             if(_log)
             {
                 std::cout << "matrixR diagonal entries = " <<
@@ -603,18 +665,18 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     Eigen::MatrixXd Cinf = codQ2.transpose()*C;
     Eigen::VectorXd hinf = codQ2.transpose()*h;
 
-    _constraint_to_go->clear();
-
     for(int j = 0; j < hinf.size(); j++)
     {
         // i-th infeasible constraint is in the form 0x = 0
-        if(std::fabs(hinf[j]) < 1e-9 &&
-                Cinf.row(j).lpNorm<Eigen::Infinity>() < 1e-9)
+        double hnorm = std::fabs(hinf[j]);
+        double Cnorm = Cinf.row(j).lpNorm<Eigen::Infinity>();
+        if(hnorm < 1e-9 && Cnorm < 1e-9)
         {
             if(_verbose)
             {
                 std::cout << "warn at k = " << i <<
-                             ": removing linearly dependent constraint \n";
+                             ": removing linearly dependent constraint with " <<
+                             "|Ci| = " << Cnorm << ", |hi| = " << hnorm << "\n";
             }
             continue;
         }
