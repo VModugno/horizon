@@ -1569,7 +1569,10 @@ class Aggregate(AbstractAggregate):
         """
         var_list = list()
         for var in self.var_list:
-            var_list.append(var.getVarOffset(offset))
+            if isinstance(var, (Variable, RecedingVariable)):
+                var_list.append(var.getVarOffset(offset))
+            else:
+                var_list.append(var)
 
         return OffsetAggregate(*var_list)
 
