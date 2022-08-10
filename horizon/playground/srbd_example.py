@@ -22,7 +22,7 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 from scipy.spatial.transform import Rotation as R
 
-SOLVER = lambda: 'ipopt'
+SOLVER = lambda: 'gnsqp'
 
 def cost(K, fun):
     if SOLVER() == 'gnsqp':
@@ -462,13 +462,7 @@ for i in range(0, nc):
 """
 Formulate discrete time dynamics using multiple_shooting and RK2 integrator
 """
-
-#TODO: BUG: there dependency on the base orientation w_R_b!
-# because I am writing Euler equation in the world frame then I would have:
-#           I_base =      w_R_b * b_I_base * w_R_b.T
-# I_base is constant (i.e. time invariant) only in expressed in the base (local) frame!
-
-x, xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars(), base_velocity_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
+xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars(), base_velocity_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 prb.setDynamics(xdot)
 prb.setDt(T/ns)
 transcription_method = rospy.get_param("transcription_method", 'multiple_shooting')  # can choose between 'multiple_shooting' and 'direct_collocation'
@@ -791,44 +785,7 @@ opts = {
         'print_time': 0
 }
 if SOLVER() == 'gnsqp':
-    opts = {"gnsqp.qp_solver": "osqp",
-            "max_iter": 5,
-            "alpha_min": 1e-9,
-            'beta': 1.,
-            "use_golden_ratio_update": True,
-            'solution_convergence': 1e-3,
-            'merit_derivative_tolerance': 1e-4,
-            'constraint_violation_tolerance': ns * 1e-5,
-
-            'warm_start_primal': True,
-            'warm_start_dual': True,
-            'osqp.polish': True, # without this
-            'osqp.polish_refine_iter': 100,
-            'osqp.eps_abs': 1e-3,
-            'osqp.eps_rel': 1e-3,
-            'osqp.verbose': False,
-            'osqp.rho': 1e-6,
-            #'osqp.adaptive_rho': 1,
-            'osqp.sigma': 1e-6,
-            'osqp.scaling': 1,
-            'osqp.scaled_termination': True
-
-            # 'sparse': True,
-            # 'enableEqualities': True,
-            # 'enableInertiaCorrection': True,
-            # 'linsol_plugin': "ma27",
-            # 'numRefinementSteps': 0,
-            #
-            # 'initialStatusBounds': "inactive",
-            # 'enableDriftCorrection': 0,
-            # 'terminationTolerance': 10e9 * 1e-16,
-            # 'enableFlippingBounds': False,
-            # 'enableNZCTests': False,
-            # 'enableRamping':  False,
-            # 'enableRegularisation': True,
-            # 'numRegularisationSteps': 2,
-            # 'epsRegularisation': 5. * 10e3 * 1e-16
-
+    opts = {"gnsqp.max_iter": 5,
     }
 
 

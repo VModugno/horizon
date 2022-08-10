@@ -18,7 +18,11 @@ class GNSQPSolver(Solver):
 
     def __init__(self, prb: Problem, opts: Dict, qp_solver_plugin: str) -> None:
 
-        super().__init__(prb, opts=opts)
+        filtered_opts = None
+        if opts is not None:
+            filtered_opts = {k[6:]: opts[k] for k in opts.keys() if k.startswith('gnsqp.')}
+
+        super().__init__(prb, opts=filtered_opts)
 
         if self.opts['qp_solver'] == 'osqp':
             if 'osqp.verbose' not in self.opts:
