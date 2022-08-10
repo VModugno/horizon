@@ -133,7 +133,7 @@ def second_order_resample_integrator(p, v, u, node_time, dt, dae):
     i = 0
     node = 0
     while i < u_res.shape[1]-1:
-        x_resi = F_integrator(x0=x_res[:, i], p=u[:, node], time=dt)['xf'].toarray().flatten()
+        x_resi = F_integrator(x=x_res[:, i], u=u[:, node], dt=dt)['f'].toarray().flatten()
 
         t += dt
         i += 1
@@ -157,7 +157,7 @@ def second_order_resample_integrator(p, v, u, node_time, dt, dae):
 
             # then, if the dt is big enough, recompute by using the new input starting from the state at the node
             if new_dt >= 1e-6:
-                x_resi = F_integrator(x0=x_res[:, i], p=u[:, node], time=new_dt)['xf'].toarray().flatten()
+                x_resi = F_integrator(x=x_res[:, i], u=u[:, node], dt=new_dt)['f'].toarray().flatten()
 
                 x_res[:, i] = x_resi
                 p_res[:, i] = x_resi[0:p.shape[0]]
