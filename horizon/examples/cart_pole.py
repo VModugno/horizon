@@ -102,9 +102,9 @@ def main(args):
     if torque_input:
         fd = kindyn.aba()  # this is the forward dynamics function:
         qddot = fd(q=q, v=qdot, tau=tau)['a']  # qddot = M^-1(tau - h)
-        xdot = utils.double_integrator(qdot, qddot)  # xdot = [qdot, qddot]
+        xdot = utils.double_integrator(q, qdot, qddot)  # xdot = [qdot, qddot]
     else:
-        xdot = utils.double_integrator(qdot, qddot)
+        xdot = utils.double_integrator(q, qdot, qddot)
 
     if minimize_t:
         # Create final time variable

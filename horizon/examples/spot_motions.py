@@ -189,9 +189,9 @@ def main(args):
             nodes_stance = k_stance_front if frame in ['lf_foot', 'rf_foot'] else k_stance_hind
             nodes_swing = k_swing_front if frame in ['lf_foot', 'rf_foot'] else k_swing_hind
 
-        FK = cs.Function.deserialize(kindyn.fk(frame))
-        DFK = cs.Function.deserialize(kindyn.frameVelocity(frame, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED))
-        DDFK = cs.Function.deserialize(kindyn.frameAcceleration(frame, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED))
+        FK = kindyn.fk(frame)
+        DFK = kindyn.frameVelocity(frame, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
+        DDFK = kindyn.frameAcceleration(frame, cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 
         p = FK(q=q)['ee_pos']
         p_start = FK(q=q_init)['ee_pos']
@@ -352,7 +352,7 @@ def main(args):
             ax = fig.add_subplot(gs[i])
             ax.set_title('{}'.format(contact))
             i += 1
-            FK = cs.Function.deserialize(kindyn.fk(contact))
+            FK = kindyn.fk(contact)
             pos = FK(q=solution['q'])['ee_pos']
             for dim in range(n_f):
                 ax.plot(np.atleast_2d(cumulative_dt), np.array(pos[dim, :]), marker="x", markersize=3,
@@ -360,7 +360,7 @@ def main(args):
 
         plt.figure()
         for contact in contacts_name:
-            FK = cs.Function.deserialize(kindyn.fk(contact))
+            FK = kindyn.fk(contact)
             pos = FK(q=solution['q'])['ee_pos']
 
             plt.title(f'feet position - plane_xy')
@@ -368,7 +368,7 @@ def main(args):
 
         plt.figure()
         for contact in contacts_name:
-            FK = cs.Function.deserialize(kindyn.fk(contact))
+            FK = kindyn.fk(contact)
             pos = FK(q=solution['q'])['ee_pos']
 
             plt.title(f'feet position - plane_xz')

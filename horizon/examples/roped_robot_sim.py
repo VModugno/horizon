@@ -167,7 +167,7 @@ def main(args):
     x_prev = prb.getState().getVarOffset(-1).getVars()
     x = prb.getState().getVars()
 
-    x_int = F_integrator(x0=x_prev, p=input_prev[0], time=dt)
+    x_int = F_integrator(x=x_prev, u=input_prev[0], dt=dt)
 
 
     if rope_mode == 'swing':
@@ -179,9 +179,9 @@ def main(args):
         x_pprev = prb.getState().getVarOffset(-2).getVars()
 
         x_int2 = F_integrator_LEAPFROG(x0=x_prev, x0_prev=x_pprev, p=input_prev[0], time=dt)
-        prb.createConstraint("multiple_shooting2", x_int2["xf"] - x, nodes=range(2, n_nodes + 1))
+        prb.createConstraint("multiple_shooting2", x_int2["f"] - x, nodes=range(2, n_nodes + 1))
     else:
-        prb.createConstraint("multiple_shooting", x_int["xf"] - x, nodes=range(1, n_nodes + 1))
+        prb.createConstraint("multiple_shooting", x_int["f"] - x, nodes=range(1, n_nodes + 1))
 
     # Constraints
     prb.createConstraint("q_init", q - q_init, nodes=0)
@@ -211,7 +211,7 @@ def main(args):
 
     prb.createConstraint("inverse_dynamics", tau, nodes=range(0, n_nodes), bounds=dict(lb=tau_min, ub=tau_max))
 
-    FKRope = cs.Function.deserialize(kindyn.fk('rope_anchor2'))
+    FKRope = kindyn.fk('rope_anchor2')
 
     p_rope_init = FKRope(q=q_init)['ee_pos']
     p_rope = FKRope(q=q)['ee_pos']
