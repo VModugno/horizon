@@ -66,7 +66,7 @@ class ActionManager:
         self.opts = opts
 
         self.prb = self.ti.prb
-        self.contact_map = self.ti.model.fmap
+        self.contact_map = self.ti.model.cmap
 
         self.N = self.prb.getNNodes() - 1
         # todo list of contact is fixed?
@@ -77,7 +77,7 @@ class ActionManager:
         self.contacts = self.contact_map.keys()
         self.nc = len(self.contacts)
 
-        self.kd = self.ti.kd
+        self.kd = self.ti.model.kd
 
         # todo: how to set these options?
         # f0 = opts.get('f0', np.array([0, 0, 250]))
@@ -89,18 +89,21 @@ class ActionManager:
         self.default_foot_z = dict()
         for i, frame in enumerate(self.contacts):
             # fk functions and evaluated vars
-            fk = cs.Function.deserialize(self.ti.kd.fk(frame))
-            dfk = cs.Function.deserialize(self.ti.kd.frameVelocity(frame, self.ti.kd_frame))
+            fk = self.ti.model.kd.fk(frame)
+            dfk = self.ti.model.kd.frameVelocity(frame, self.ti.model.kd_frame)
 
             # save foot height
-            self.default_foot_z[frame] = (fk(q=self.ti.q0)['ee_pos'][2]).toarray()
+            self.default_foot_z[frame] = (fk(q=self.ti.model.q0)['ee_pos'][2]).toarray()
 
         self.k0 = 0
 
+        # TODO: action manager requires some tasks from the ti. It searches them by NAME.
         self.required_tasks = dict()
         self.required_tasks['foot_contact'] = {contact: self.ti.getTask(f"foot_contact_{contact}") for contact in self.contacts}
         self.required_tasks['foot_z'] = {contact: self.ti.getTask(f"foot_z_{contact}") for contact in self.contacts}
         self.required_tasks['foot_xy'] = {contact: self.ti.getTask(f"foot_xy_{contact}") for contact in self.contacts}
+        # TODO: merge the foot_z and the foot_xy?
+        # self.required_tasks['foot_cartesian'] = {contact: self.ti.getTask(f"foot_cartesian_{contact}") for contact in self.contacts}
 
         self.task_type = self._check_required_tasks_type(['Cartesian', 'Contact'])
         self.init_constraints()
@@ -141,11 +144,11 @@ class ActionManager:
             self.foot_tgt_constr_nodes[frame] = []
 
         for frame, param in self._foot_z_param.items():
-            self._foot_z_param[frame] = np.empty((1, self.N + 1))
+            self._foot_z_param[frame] = np.empty((7, self.N + 1))
             self._foot_z_param[frame][:] = np.NaN
 
         for frame, param in self._foot_tgt_params.items():
-            self._foot_tgt_params[frame] = np.empty((2, self.N + 1))
+            self._foot_tgt_params[frame] = np.empty((7, self.N + 1))
             self._foot_tgt_params[frame][:] = np.NaN
 
         # clearance nodes
@@ -224,7 +227,6 @@ class ActionManager:
             self.z_constr[frame] = self.required_tasks['foot_z'][frame]
             self.foot_tgt_constr[frame] = self.required_tasks['foot_xy'][frame]
 
-            print(self.z_constr[frame])
 
     def setContact(self, frame, nodes):
         """
@@ -306,10 +308,14 @@ class ActionManager:
 
         z_traj = self.compute_polynomial_trajectory(k_start, swing_nodes_in_horizon, n_swing, start, goal, s.clearance,
                                                     dim=2)
+
+        cart_mask_z = np.zeros([7, len(swing_nodes_in_horizon)])
+        cart_mask_z[2, :] = z_traj[:len(swing_nodes_in_horizon)]
+
         # adding param
-        self._foot_z_param[frame][:, swing_nodes_in_horizon] = z_traj[:len(swing_nodes_in_horizon)]
-        self.z_constr[frame].setRef(self._foot_z_param[frame][:, self.z_constr_nodes[frame]])  # z_traj
+        self._foot_z_param[frame][:, swing_nodes_in_horizon] = cart_mask_z
         self.z_constr[frame].setNodes(self.z_constr_nodes[frame])  # swing_nodes_in_horizon
+        self.z_constr[frame].setRef(self._foot_z_param[frame][:, self.z_constr_nodes[frame]])  # z_traj
 
     # todo unify the actions below, these are just different pattern of actions
     def _jump(self, nodes):
@@ -370,11 +376,11 @@ class ActionManager:
         for s_i in step_list:
             am.setStep(s_i)
 
-    def execute(self, solver):
+    def execute(self, bootstrap_solution):
         """
         set the actions and spin
         """
-        self._update_initial_state(solver, -1)
+        self._update_initial_state(bootstrap_solution, -1)
 
         self._set_default_action()
         k0 = 1
@@ -401,10 +407,10 @@ class ActionManager:
         ## todo should implement --> removeNodes()
         ## todo should implement a function to reset to default values
 
-    def _update_initial_state(self, solver: Solver, shift_num):
+    def _update_initial_state(self, bootstrap_solution, shift_num):
 
-        x_opt = solver.getSolutionState()
-        u_opt = solver.getSolutionInput()
+        x_opt = bootstrap_solution['x_opt']
+        u_opt = bootstrap_solution['u_opt']
 
         xig = np.roll(x_opt, shift_num, axis=1)
 
@@ -459,10 +465,10 @@ if __name__ == '__main__':
     model_description = 'whole_body'
 
     # todo for now, there are three ways to add contacts:
-        # contacts=contacts
-        # setContactFrame(contact)
-        # interactionTask
-    ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description) #contacts=contacts
+    #  contacts=contacts CORRECT
+    #  setContactFrame(contact) WRONG, does not update dynamics
+    #  interactionTask WRONG, does not update dynamics
+    ti = TaskInterface(urdf, q_init, base_init, problem_opts, model_description, contacts=contacts) #
     ti.loadPlugins(['horizon.rhc.plugins.contactTaskSpot'])
 
     # [ti.model.setContactFrame(contact) for contact in contacts]
@@ -531,7 +537,7 @@ if __name__ == '__main__':
 
         subtask_cartesian = {'type': 'Cartesian',
                              'name': f'zero_velocity_{frame}',
-                             'frame': frame,
+                             'distal_link': frame,
                              'indices': [0, 1, 2],
                              'cartesian_type': 'velocity'}
 
@@ -541,14 +547,14 @@ if __name__ == '__main__':
 
         z_task_node = {'type': 'Cartesian',
                        'name': f'foot_z_{frame}',
-                       'frame': frame,
+                       'distal_link': frame,
                        'indices': [2],
                        'fun_type': 'constraint',
                        'cartesian_type': 'position'}
 
         foot_tgt_task_node = {'type': 'Cartesian',
                               'name': f'foot_xy_{frame}',
-                              'frame': frame,
+                              'distal_link': frame,
                               'indices': [0, 1],
                               'fun_type': 'constraint',
                               'cartesian_type': 'position'}

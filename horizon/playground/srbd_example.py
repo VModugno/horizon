@@ -462,6 +462,12 @@ for i in range(0, nc):
 """
 Formulate discrete time dynamics using multiple_shooting and RK2 integrator
 """
+
+#TODO: BUG: there dependency on the base orientation w_R_b!
+# because I am writing Euler equation in the world frame then I would have:
+#           I_base =      w_R_b * b_I_base * w_R_b.T
+# I_base is constant (i.e. time invariant) only in expressed in the base (local) frame!
+
 x, xdot = utils.double_integrator_with_floating_base(q.getVars(), qdot.getVars(), qddot.getVars(), base_velocity_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED)
 prb.setDynamics(xdot)
 prb.setDt(T/ns)

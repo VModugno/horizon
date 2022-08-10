@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 
-utils::Timer::TocCallback on_timer_toc;
+utils::Timer::TocCallback on_timer_toc = [](const char*, double){};
 
 template<class V>
 std::type_info const& var_type(V const& v){
@@ -69,8 +69,8 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _svd_threshold(1e-6),
     _constraint_violation_threshold(1e-6),
     _defect_norm_threshold(1e-6),
-    _merit_der_threshold(1e-6),
-    _step_length_threshold(1e-6),
+    _merit_der_threshold(1e-3),
+    _step_length_threshold(1e-9),
     _cost(N+1, IntermediateCost(_nx, _nu)),
     _constraint(N+1, Constraint(_nx, _nu)),
     _value(N+1, ValueFunction(_nx)),
@@ -102,8 +102,8 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     _svd_threshold = value_or(opt, "ilqr.svd_threshold", 1e-6);
     _constraint_violation_threshold = value_or(opt, "ilqr.constraint_violation_threshold", 1e-6);
     _defect_norm_threshold = value_or(opt, "ilqr.defect_norm_threshold", 1e-6);
-    _merit_der_threshold = value_or(opt, "ilqr.merit_der_threshold", 1e-6);
-    _step_length_threshold = value_or(opt, "ilqr.step_length_threshold", 1e-6);
+    _merit_der_threshold = value_or(opt, "ilqr.merit_der_threshold", 1e-3);
+    _step_length_threshold = value_or(opt, "ilqr.step_length_threshold", 1e-9);
     _closed_loop_forward_pass = value_or(opt, "ilqr.closed_loop_forward_pass", 1);
     _codegen_workdir = value_or<std::string>(opt, "ilqr.codegen_workdir", "/tmp");
     _codegen_enabled = value_or(opt, "ilqr.codegen_enabled", 0);
@@ -118,6 +118,8 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
 
     decomp_type_str = value_or<std::string>(opt, "ilqr.kkt_decomp_type", "lu");
     _kkt_decomp_type = str_to_decomp_type(decomp_type_str);
+
+    int n_threads = value_or(opt, "ilqr.n_threads", 0);
 
     // initialize hxx from base value
     _hxx_reg = std::max(_hxx_reg_base, _hxx_reg);
@@ -183,6 +185,12 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
 
         _cost[i].addCost(al);
 
+    }
+
+    // worker threads
+    if(n_threads > 0)
+    {
+        init_thread_pool(n_threads);
     }
 }
 
@@ -274,7 +282,7 @@ void IterativeLQR::setResidual(std::vector<int> indices,
     add_param_to_map(residual);
 
     // create cost entity
-    auto c = std::make_shared<IntermediateResidualEntity>();
+    auto c = std::make_shared<IntermediateCostEntity>();
 
     // add to map
     _cost_map[residual.name()] = c;
@@ -286,19 +294,63 @@ void IterativeLQR::setResidual(std::vector<int> indices,
     c->indices = indices;
 
     // set cost and derivatives
-    auto cost = residual;
-    auto jac = IntermediateResidualEntity::Jacobian(cost);
+    auto res = residual;
+    auto jac = IntermediateResidualEntity::Jacobian(res);
 
     // codegen if required (we skip it for quadratic costs)
     if(_codegen_enabled)
     {
-        cost = utils::codegen(cost, _codegen_workdir);
+        res = utils::codegen(res, _codegen_workdir);
         jac = utils::codegen(jac, _codegen_workdir);
     }
 
-    c->setResidual(cost, jac);
+    // local syms to evaluate residual and jacobian
+    auto x_mx = casadi::MX::sym("x", _nx);
+    auto u_mx = casadi::MX::sym("u", _nu);
+    std::vector<casadi::MX> vars = {x_mx, u_mx};
+    std::vector<std::string> var_names = {"x", "u"};
 
-    if(_verbose) std::cout << "adding residual '" << cost << "' at k = ";
+    for(int i = 2; i < residual.n_in(); i++)
+    {
+        vars.push_back(casadi::MX::sym(residual.name_in(i),
+                                       residual.size1_in(i)));
+
+        var_names.push_back(residual.name_in(i));
+    }
+
+    // compute res, Jx, Ju
+    auto r = res(vars)[0];
+    auto J = jac(vars);
+    auto& Jx = J[0];
+    auto& Ju = J[1];
+
+    // functions
+    auto mul = [](auto a, auto b)
+    {
+        return casadi::MX::mtimes(a, b);
+    };
+
+    auto cost_fn = casadi::Function(residual.name() + "_cost",
+                                    vars,
+                                    {0.5 * casadi::MX::sumsqr(r)},
+                                    var_names, {"f"});
+
+    auto grad_fn = casadi::Function(residual.name() + "_grad",
+                                    vars,
+                                    {mul(Jx.T(), r), mul(Ju.T(), r)},
+                                    var_names,
+                                    {"grad_x", "grad_u"});
+
+    auto hess_fn = casadi::Function(residual.name() + "_gn_hess",
+                                    vars,
+                                    {mul(Jx.T(), Jx), mul(Ju.T(), Ju), mul(Ju.T(), Jx)},
+                                    var_names,
+                                    {"hess_x_x", "hess_u_u", "hess_u_x"});
+
+    c->setCost(cost_fn, grad_fn, hess_fn);
+
+
+    if(_verbose) std::cout << "adding residual '" << residual << "' at k = ";
 
     for(int k : indices)
     {
@@ -464,8 +516,13 @@ void IterativeLQR::setParameterValue(const std::string& pname, const Eigen::Matr
     if(it->second.rows() != value.rows() ||
             it->second.cols() != value.cols())
     {
-        throw std::invalid_argument("wrong parameter value size for parameter name '"
-            + pname + "'");
+        std::ostringstream oss;
+
+        oss << "parameter '" << pname << "' has wrong size: expected "
+            << it->second.rows() << "x" << it->second.cols() << " != " 
+            << value.rows() << "x" << value.cols();
+
+        throw std::invalid_argument(oss.str());
     }
 
     it->second = value;
@@ -531,6 +588,11 @@ const utils::ProfilingInfo& IterativeLQR::getProfilingInfo() const
     return _prof_info;
 }
 
+const std::vector<IterativeLQR::ForwardPassResult>& IterativeLQR::getIterationHistory() const
+{
+    return _fp_res_history;
+}
+
 bool IterativeLQR::solve(int max_iter)
 {
     // set cost value and constraint violation *before* the forward pass
@@ -587,41 +649,108 @@ bool IterativeLQR::solve(int max_iter)
 
 void IterativeLQR::linearize_quadratize()
 {
-    TIC(linearize_quadratize)
+    TIC(linearize_quadratize);
+
+    if(_th_pool.size() > 0)
+    {
+        linearize_quadratize_mt();
+        return;
+    }
 
     for(int i = 0; i < _N; i++)
     {
         TIC(linearize_quadratize_inner)
-
-        auto xi = state(i);
-        auto ui = input(i);
-        auto xnext = state(i+1);
-
-        _dyn[i].linearize(xi, ui, i);
-        _dyn[i].computeDefect(xi, ui, xnext, i, _dyn[i].d);
-        _constraint[i].linearize(xi, ui, i);
-        _cost[i].quadratize(xi, ui, i);
-
-        THROW_NAN(_dyn[i].A());
-        THROW_NAN(_dyn[i].B());
-        THROW_NAN(_dyn[i].d);
-
-        THROW_NAN(_constraint[i].C());
-        THROW_NAN(_constraint[i].D());
-        THROW_NAN(_constraint[i].h());
-
-        THROW_NAN(_cost[i].Q());
-        THROW_NAN(_cost[i].R());
-        THROW_NAN(_cost[i].P());
-        THROW_NAN(_cost[i].r());
-        THROW_NAN(_cost[i].q());
-
+        linearize_quadratize_inner(i);
     }
 
     // handle final cost and constraint
     // note: these are only function of the state!
     _cost.back().quadratize(state(_N), input(_N-1), _N); // note: input not used here!
     _constraint.back().linearize(state(_N), input(_N-1), _N); // note: input not used here!
+}
+
+void IterativeLQR::linearize_quadratize_inner(int i)
+{
+
+    auto xi = state(i);
+    auto ui = input(i);
+    auto xnext = state(i+1);
+
+    _dyn[i].linearize(xi, ui, i);
+    _dyn[i].computeDefect(xi, ui, xnext, i, _dyn[i].d);
+    _constraint[i].linearize(xi, ui, i);
+    _cost[i].quadratize(xi, ui, i);
+
+    std::cout << _dyn[i].B() << "\n\n";
+
+    THROW_NAN(_dyn[i].A());
+    THROW_NAN(_dyn[i].B());
+    THROW_NAN(_dyn[i].d);
+
+    THROW_NAN(_constraint[i].C());
+    THROW_NAN(_constraint[i].D());
+    THROW_NAN(_constraint[i].h());
+
+    THROW_NAN(_cost[i].Q());
+    THROW_NAN(_cost[i].R());
+    THROW_NAN(_cost[i].P());
+    THROW_NAN(_cost[i].r());
+    THROW_NAN(_cost[i].q());
+}
+
+void IterativeLQR::linearize_quadratize_mt()
+{
+    {
+        // wake up workers
+        std::unique_lock lg(_th_work_avail_mtx);
+        _th_work_available_flag = _th_pool.size();
+        _th_work_avail_cond.notify_all();
+    }
+
+    // do our part
+    int istart = _th_pool.size() * (_N / _th_pool.size());
+
+    for(int i = istart; i < _N; i++)
+    {
+        linearize_quadratize_inner(i);
+    }
+
+    // handle final cost and constraint
+    // note: these are only function of the state!
+    _cost.back().quadratize(state(_N), input(_N-1), _N); // note: input not used here!
+    _constraint.back().linearize(state(_N), input(_N-1), _N); // note: input not used here!
+
+    {
+        // wait workers
+        std::unique_lock lg(_th_work_done_mtx);
+        _th_work_done_cond.wait(lg,
+                                 [this](){ return _th_done_flag == _th_pool.size(); });
+        _th_done_flag = 0;
+    }
+
+}
+
+void IterativeLQR::linearize_quadratize_thread_main(int istart, int iend)
+{
+    while(!_th_exit)
+    {
+        {
+            std::unique_lock lg1(_th_work_avail_mtx);
+            _th_work_avail_cond.wait(lg1,
+                                     [this](){ return _th_work_available_flag > 0; });
+            _th_work_available_flag--;
+        }
+
+        for(int i = istart; i < iend; i++)
+        {
+            linearize_quadratize_inner(i);
+        }
+
+        std::unique_lock lg2(_th_work_done_mtx);
+        _th_done_flag++;
+        _th_work_done_cond.notify_all();
+
+    }
 }
 
 void IterativeLQR::report_result(const IterativeLQR::ForwardPassResult& fpres)
@@ -709,12 +838,39 @@ MatConstRef IterativeLQR::gain(int i) const
     return _bp_res[i].Lu;
 }
 
+void IterativeLQR::init_thread_pool(int pool_size)
+{
+    int n_th = pool_size;
+
+    int nodes_per_th = _N / n_th;
+
+    _th_done_flag = 0;
+    _th_work_available_flag = 0;
+    _th_exit = false;
+
+    for(int k = 0; k < pool_size; k++)
+    {
+        std::cout << "worker " << k << " started, will handle nodes in range [" <<
+               k*nodes_per_th << ", "  <<   (k + 1)*nodes_per_th << ") \n";
+
+        auto th_func = [this, k, nodes_per_th]()
+        {
+            linearize_quadratize_thread_main(k*nodes_per_th,
+                                             (k + 1)*nodes_per_th);
+
+            std::cout << "worker " << k << " exiting.. \n";
+        };
+
+        _th_pool.emplace_back(th_func);
+    }
+}
+
 void IterativeLQR::add_param_to_map(const casadi::Function& f)
 {
     // add parameters from this function
     for(int i = 2; i < f.n_in(); i++)
     {
-        const int param_size = f.size1_in(2);
+        const int param_size = f.size1_in(i);
 
         // check if already exists
         if(_param_map->count(f.name()))
@@ -804,9 +960,6 @@ IterativeLQR::BoundAuglagCostEntity::BoundAuglagCostEntity(int N,
                                                            VecConstRef uub):
     _xlb(xlb), _xub(xub), _ulb(ulb), _uub(uub), _N(N)
 {
-    _Q.setZero(xlb.size(), xlb.size());
-    _R.setZero(ulb.size(), ulb.size());
-    _P.setZero(ulb.size(), xlb.size());
     _r.setZero(ulb.size());
     _q.setZero(xlb.size());
     _xlam.setZero(xlb.size());
@@ -841,7 +994,10 @@ double IterativeLQR::BoundAuglagCostEntity::evaluate(VecConstRef x,
 
 void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
                                                      VecConstRef u,
-                                                     int k)
+                                                     int k,
+                                                     Eigen::MatrixXd& Q,
+                                                     Eigen::MatrixXd& R,
+                                                     Eigen::MatrixXd& P)
 {
     evaluate(x, u, k);
 
@@ -849,7 +1005,7 @@ void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
 
     for(int i = 0; i < x.size(); i++)
     {
-        _Q(i, i) = _x_violation(i) != 0.0 ? _rho : 0.0;
+        Q(i, i) += _x_violation(i) != 0.0 ? _rho : 0.0;
     }
 
     if(k < _N)
@@ -858,7 +1014,7 @@ void IterativeLQR::BoundAuglagCostEntity::quadratize(VecConstRef x,
 
         for(int i = 0; i < u.size(); i++)
         {
-            _R(i, i) = _u_violation(i) != 0.0 ? _rho : 0.0;
+            R(i, i) += _u_violation(i) != 0.0 ? _rho : 0.0;
         }
     }
 }
@@ -897,29 +1053,14 @@ void IterativeLQR::IntermediateCostEntity::setCost(casadi::Function _l,
     ddl = _ddl;
 }
 
-const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::Q() const
-{
-    return ddl.getOutput(0);
-}
-
 Eigen::Ref<const Eigen::VectorXd> IterativeLQR::IntermediateCostEntity::q() const
 {
     return dl.getOutput(0).col(0);
 }
 
-const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::R() const
-{
-    return ddl.getOutput(1);
-}
-
 Eigen::Ref<const Eigen::VectorXd> IterativeLQR::IntermediateCostEntity::r() const
 {
     return dl.getOutput(1).col(0);
-}
-
-const Eigen::MatrixXd& IterativeLQR::IntermediateCostEntity::P() const
-{
-    return ddl.getOutput(2);
 }
 
 double IterativeLQR::IntermediateCostEntity::evaluate(VecConstRef x,
@@ -937,8 +1078,16 @@ double IterativeLQR::IntermediateCostEntity::evaluate(VecConstRef x,
 
 void IterativeLQR::IntermediateCostEntity::quadratize(VecConstRef x,
                                                       VecConstRef u,
-                                                      int k)
+                                                      int k,
+                                                      Eigen::MatrixXd& Q,
+                                                      Eigen::MatrixXd& R,
+                                                      Eigen::MatrixXd& P)
 {
+#ifdef HORIZON_PROFILING
+    horizon::utils::Timer tm("quadratize_" + l.function().name() + "_inner",
+                             on_timer_toc);
+#endif
+
     // compute cost gradient
     dl.setInput(0, x);
     dl.setInput(1, u);
@@ -949,7 +1098,9 @@ void IterativeLQR::IntermediateCostEntity::quadratize(VecConstRef x,
     ddl.setInput(0, x);
     ddl.setInput(1, u);
     set_param_inputs(param, k, ddl);
-    ddl.call();
+
+    std::vector<Eigen::Ref<Eigen::MatrixXd>> out = {Q, R, P};
+    ddl.call_accumulate(out);
 
 }
 
@@ -976,9 +1127,6 @@ void IterativeLQR::IntermediateResidualEntity::setResidual(casadi::Function _res
     int nx = _res.size1_in(0);
     int nu = _res.size1_in(1);
 
-    _Q.setZero(nx, nx);
-    _R.setZero(nu, nu);
-    _P.setZero(nu, nx);
     _q.setZero(nx);
     _r.setZero(nu);
 }
@@ -997,8 +1145,16 @@ double IterativeLQR::IntermediateResidualEntity::evaluate(VecConstRef x,
 
 void IterativeLQR::IntermediateResidualEntity::quadratize(VecConstRef x,
                                                           VecConstRef u,
-                                                          int k)
+                                                          int k,
+                                                          Eigen::MatrixXd& Q,
+                                                          Eigen::MatrixXd& R,
+                                                          Eigen::MatrixXd& P)
 {
+#ifdef HORIZON_PROFILING
+    horizon::utils::Timer tm("quadratize_" + res.function().name() + "_inner",
+                             on_timer_toc);
+#endif
+
     evaluate(x, u, k);
 
     // compute residual jacobian
@@ -1023,9 +1179,9 @@ void IterativeLQR::IntermediateResidualEntity::quadratize(VecConstRef x,
 
     _q.noalias() = 2.0 * Jx.transpose()*r;
     _r.noalias() = 2.0 * Ju.transpose()*r;
-    _Q.noalias() = 2.0 * Jx.transpose()*Jx;
-    _R.noalias() = 2.0 * Ju.transpose()*Ju;
-    _P.noalias() = 2.0 * Ju.transpose()*Jx;
+    Q.noalias() += 2.0 * Jx.transpose()*Jx;
+    R.noalias() += 2.0 * Ju.transpose()*Ju;
+    P.noalias() += 2.0 * Ju.transpose()*Jx;
 }
 
 casadi::Function IterativeLQR::IntermediateResidualEntity::Jacobian(const casadi::Function &f)
@@ -1102,10 +1258,7 @@ void IterativeLQR::IntermediateCost::quadratize(VecConstRef x,
 
     for(auto& it : items)
     {
-        it->quadratize(x, u, k);
-        _Q += it->Q();
-        _R += it->R();
-        _P += it->P();
+        it->quadratize(x, u, k, _Q, _R, _P);
         _q += it->q();
         _r += it->r();
     }
@@ -1151,8 +1304,8 @@ IterativeLQR::ForwardPassResult::ForwardPassResult(int nx, int nu, int N):
 
 void IterativeLQR::ForwardPassResult::print() const
 {
-    printf("%2.2d al=%.3e  reg=%.1e  rho=%.1e  m=%.3e  dm=%.3e  mu_f=%.1e  mu_c=%.1e  mu_b=%.1e  cost=%.3e  du=%.3e  con=%.3e  bound=%.3e  gap=%.3e \n",
-           iter, alpha, hxx_reg, rho, merit, merit_der, mu_f, mu_c, mu_b, cost, step_length, constraint_violation, bound_violation, defect_norm);
+    printf("%2.2d al=%.1e  reg=%.1e  rho=%.1e  m=%.3e  f=%.3e  df=%.3e  mu_f=%.1e  mu_c=%.1e  mu_b=%.1e  du=%.3e  con=%.3e  bound=%.3e  gap=%.3e \n",
+           iter, alpha, hxx_reg, rho, merit, cost, f_der, mu_f, mu_c, mu_b, step_length, constraint_violation, bound_violation, defect_norm);
 }
 
 IterativeLQR::ConstraintToGo::ConstraintToGo(int nx, int nu):
@@ -1294,6 +1447,11 @@ void IterativeLQR::ConstraintEntity::linearize(VecConstRef x, VecConstRef u, int
     {
         return;
     }
+
+#ifdef HORIZON_PROFILING
+    horizon::utils::Timer tm("linearize_" + f.function().name() + "_inner",
+                             on_timer_toc);
+#endif
 
     // compute constraint value
     evaluate(x, u, k);

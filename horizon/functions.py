@@ -59,7 +59,7 @@ class AbstractFunction:
 
         # create function of CASADI, dependent on (in order) [all_vars, all_pars]
         all_input = self.vars + self.pars
-        all_names = [i.getName() for i in all_input]
+        all_names = [f'{i.getName()}_{str(i.getOffset())}' for i in all_input]
 
         self._fun = cs.Function(name, self.vars + self.pars, [self._f], all_names, ['f'])
 
@@ -108,7 +108,13 @@ class AbstractFunction:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
-        # print(f'setting nodes from {misc.getNodesFromBinary(self._active_nodes_array)} to {nodes}')
+        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
+        # todo check for repetition in setted nodes? otherwise this does not work
+        # todo this way of checking is not robust
+        if len(pos_nodes) != len(nodes):
+            feas_nodes = misc.getNodesFromBinary(self._feas_nodes_array)
+            raise Exception(f'You are trying to set nodes of the function where it is NOT defined. Available nodes: {feas_nodes}. If you want to change the nodes freely in the horizon, use the receding mode.')
+
         if erasing:
             self._active_nodes_array[:] = 0
 
@@ -161,10 +167,12 @@ class AbstractFunction:
             used_var_impl = self._getUsedVarImpl()
             used_par_impl = self._getUsedParImpl()
             all_vars = used_var_impl + used_par_impl
+
             fun_eval = self._fun_map(*all_vars)
             self._fun_impl = fun_eval
 
     def _getUsedElemImpl(self, elem_container):
+        # todo there should be an option to specify which nodes i'm querying (right now it's searching all the feaasible nodes)
         # todo throw with a meaningful error when nodes inserted are wrong
 
         used_elem_impl = list()
@@ -277,7 +285,7 @@ class Function(AbstractFunction):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         # I have to convert the input nodes to the corresponding column position:
         # function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
@@ -319,12 +327,8 @@ class Function(AbstractFunction):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
-        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
-        if len(pos_nodes) != len(nodes):
-            feas_nodes = misc.getNodesFromBinary(self._feas_nodes_array)
-            raise Exception(f'You are trying to set nodes of the function where it is NOT defined. Available nodes: {feas_nodes}. If you want to change the nodes freely in the horizon, use the receding mode.')
-
-        super().setNodes(pos_nodes, erasing)
+        # todo check for repetition in setted nodes?
+        super().setNodes(nodes, erasing)
         # usually the number of nodes stays the same, while the active nodes of a function may change.
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
         self._project()
@@ -360,7 +364,7 @@ class RecedingFunction(AbstractFunction):
         temp_nodes = total_nodes.copy()
 
         # IF RECEDING, it is important to define two concepts:
-        # - function EXISTS: the function exists only on the nodes where ALL the variables of the function are defined.
+        # - function EXISTS: the function exists only on the nodes where ALL the variables and parameters of the function are defined.
         # - function is ACTIVE: the function can be activated/disabled on the nodes where it exists
         for var in vars:
             # getNodes() in a OffsetVariable returns the nodes of the base variable.
@@ -414,6 +418,7 @@ class RecedingFunction(AbstractFunction):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo check for repetition in setted nodes?
         super().setNodes(nodes, erasing)
         # usually the number of nodes stays the same, while the active nodes of a function may change.
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
@@ -566,6 +571,7 @@ class AbstractBounds:
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo check for repetition in setted nodes?
         # todo think about this, it depends on how the mechanics of the receding works
         if erasing:
             self.bounds['lb'][:] = -np.inf
@@ -610,7 +616,7 @@ class Constraint(Function, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
 
@@ -621,7 +627,7 @@ class Constraint(Function, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
 
@@ -641,6 +647,7 @@ class Constraint(Function, AbstractBounds):
             nodes: list of desired active nodes.
             erasing: choose if the inserted nodes overrides the previous active nodes of the function. 'False' if not specified.
         """
+        # todo check for repetition in setted nodes?
         Function.setNodes(self, nodes, erasing)
         # todo am I wrong?
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
@@ -698,7 +705,7 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes = misc.checkNodes(nodes, self._feas_nodes_array)
+            nodes, _ = misc.checkNodes(nodes, self._feas_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
@@ -711,10 +718,8 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         return val_type
 
     def setNodes(self, nodes, erasing=False):
-
+        # todo check for repetition in setted nodes?
         RecedingFunction.setNodes(self, nodes, erasing)
-
-        # todo am I wrong?
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
         AbstractBounds.setNodes(self, pos_nodes, erasing)
@@ -802,13 +807,16 @@ class RecedingCost(RecedingFunction):
 
         super().__init__(name, f, used_vars, used_pars, active_nodes_array, thread_map_num)
 
-    def _setWeightMask(self, casadi_type):
-        self.weight_mask = sv.RecedingParameter(f'{self.getName()}_weight_mask', self.getDim(), self._feas_nodes_array, casadi_type)
-        self.pars.append(self.weight_mask)
+    def _setWeightMask(self, casadi_type, abstract_casadi_type):
 
-        nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
-        nodes_mask[:, misc.getNodesFromBinary(self._active_nodes_array)] = 1.
-        self.weight_mask.assign(nodes_mask)
+        dim_weight_mask = 1
+        self.weight_mask = sv.RecedingParameter(f'{self.getName()}_weight_mask',
+                                                dim_weight_mask,
+                                                self._feas_nodes_array,
+                                                casadi_type,
+                                                abstract_casadi_type)
+
+        self.pars.append(self.weight_mask)
 
         # override _f and _fun
         self._f = self.weight_mask * self._f
@@ -816,23 +824,25 @@ class RecedingCost(RecedingFunction):
         all_names = [i.getName() for i in all_input]
         self._fun = cs.Function(self.getName(), self.vars + self.pars, [self._f], all_names, ['f'])
 
+        self.setNodes(misc.getNodesFromBinary(self._active_nodes_array))
+
     def _getWeightMask(self):
         return self.weight_mask
 
     def setNodes(self, nodes, erasing=False):
         super().setNodes(nodes, erasing)
         # eliminate/enable cost functions by setting their weight
-        nodes_mask = np.zeros([self.getDim(), np.sum(self._feas_nodes_array).astype(int)])
+        nodes_mask = np.zeros([self.weight_mask.getDim(), np.sum(self._feas_nodes_array).astype(int)])
         nodes_mask[:, nodes] = 1.
         self.weight_mask.assign(nodes_mask)
 
     # def shift(self):
-        # pass
-        # shift_num = -1
+    # pass
+    # shift_num = -1
 
-        # print(f'============= COST ================')
-        # print(f'NAME: {self.getName()}')
-        # print(f'NEW VALUES:\n {self.weight_mask.getValues()}')
+    # print(f'============= COST ================')
+    # print(f'NAME: {self.getName()}')
+    # print(f'NEW VALUES:\n {self.weight_mask.getValues()}')
 
 class Residual(Cost):
     """

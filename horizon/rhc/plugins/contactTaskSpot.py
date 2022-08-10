@@ -17,12 +17,13 @@ class ContactTaskSpot(Task):
         # todo what if I want a default value for these subtasks?
         # if 'Force' not in subtasks:
 
-        self.interaction_task = subtask['Force']
-        self.cartesian_task = subtask['Cartesian']
+        self.interaction_task: InteractionTask = Task.subtask_by_class(subtask, InteractionTask)
+        self.cartesian_task: CartesianTask = Task.subtask_by_class(subtask, CartesianTask)
+
         super().__init__(*args, **kwargs)
 
-        self.force = self.interaction_task.f
-        self.frame = self.cartesian_task.frame
+        self.force = self.interaction_task.getWrench()
+        self.frame = self.cartesian_task.distal_link
 
         # todo: this is not the right way, as I'm not sure that f_ + self.frame is the right force
         # self.force = self.prb.getVariables('f_' + self.frame)
@@ -143,10 +144,11 @@ class ContactTaskSpot(Task):
         f = self.force
         mu = 0.5
         fcost = barrier_fun(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
-        barrier = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost, nodes=active_nodes)
+        barrier = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost, nodes=active_nodes)
         return barrier
 
     def _reset(self):
+
         nodes = list(range(self.prb.getNNodes()))
         # todo reset task
         # task.reset()

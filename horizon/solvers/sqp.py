@@ -20,6 +20,13 @@ class GNSQPSolver(Solver):
 
         super().__init__(prb, opts=opts)
 
+        if self.opts['qp_solver'] == 'osqp':
+            if 'osqp.verbose' not in self.opts:
+                self.opts['osqp.verbose'] = False
+
+            if 'osqp.polish' not in self.opts:
+                self.opts['osqp.polish'] = True
+
         self.prb = prb
 
         # generate problem to be solved
@@ -67,6 +74,8 @@ class GNSQPSolver(Solver):
         print(self.opts)
         self.solver = SQPGaussNewtonSX('gnsqp', qp_solver_plugin, F, G, self.opts)
 
+        self.set_iteration_callback()
+
 
     def set_iteration_callback(self, cb=None):
         if cb is None:
@@ -76,11 +85,8 @@ class GNSQPSolver(Solver):
 
     def _iter_callback(self, fpres):
             if not fpres.accepted:
-                pass
-            fmt = ' <#09.3e'
-            fmtf = ' <#04.2f'
-            star = '*' if fpres.accepted else ' '
-            fpres.print()
+                return
+            fpres.print(self.prb.getNNodes()-1)
 
 
     def solve(self) -> bool:

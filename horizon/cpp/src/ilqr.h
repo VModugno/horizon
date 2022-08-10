@@ -5,6 +5,10 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <variant>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+#include <atomic>
 
 #include "profiling.h"
 #include "iterate_filter.h"
@@ -118,6 +122,8 @@ public:
 
     const utils::ProfilingInfo& getProfilingInfo() const;
 
+    const std::vector<ForwardPassResult>& getIterationHistory() const;
+
     VecConstRef state(int i) const;
 
     VecConstRef input(int i) const;
@@ -140,6 +146,7 @@ public:
         double mu_f;
         double mu_c;
         double mu_b;
+        double f_der;
         double merit_der;
         double step_length;
         double constraint_violation;
@@ -151,6 +158,7 @@ public:
         Eigen::MatrixXd defect_values;
 
         ForwardPassResult(int nx, int nu, int N);
+
         void print() const;
     };
 
@@ -191,37 +199,83 @@ private:
     typedef std::map<std::string, std::shared_ptr<ConstraintEntity>>
         ConstraintPtrMap;
 
+    void init_thread_pool(int pool_size);
+
     void add_param_to_map(const casadi::Function& f);
+
     void linearize_quadratize();
+
+    void linearize_quadratize_inner(int i);
+
+    void linearize_quadratize_mt();
+
+    void linearize_quadratize_thread_main(int istart, int iend);
+
     void report_result(const ForwardPassResult& fpres);
+
     void backward_pass();
+
     void backward_pass_iter(int i);
+
     void optimize_initial_state();
+
     void increase_regularization();
+
     void reduce_regularization();
+
     FeasibleConstraint handle_constraints(int i);
+
     void add_bound_constraint(int k);
+
     bool auglag_update();
-    void compute_constrained_input(Temporaries& tmp, BackwardPassResult& res);
-    void compute_constrained_input_svd(Temporaries& tmp, BackwardPassResult& res);
-    void compute_constrained_input_qr(Temporaries& tmp, BackwardPassResult& res);
-    double compute_merit_value(double mu_f, double mu_c, double cost, double defect_norm, double constr_viol);
-    double compute_merit_slope(double mu_f, double mu_c, double defect_norm, double constr_viol);
-    std::pair<double, double> compute_merit_weights();
-    double compute_cost(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
-    double compute_bound_penalty(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
-    double compute_constr(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
-    double compute_defect(const Eigen::MatrixXd& xtrj, const Eigen::MatrixXd& utrj);
+
+    double compute_merit_value(double mu_f,
+                               double mu_c,
+                               double cost,
+                               double defect_norm,
+                               double constr_viol);
+
+    double compute_merit_slope(double cost_slope,
+                               double mu_f,
+                               double mu_c,
+                               double defect_norm,
+                               double constr_viol);
+
+    double compute_cost_slope();
+
+    std::pair<double, double> compute_merit_weights(double cost_der, double defect_norm, double constr_viol);
+
+    double compute_cost(const Eigen::MatrixXd& xtrj,
+                        const Eigen::MatrixXd& utrj);
+
+    double compute_bound_penalty(const Eigen::MatrixXd& xtrj,
+                                 const Eigen::MatrixXd& utrj);
+
+    double compute_constr(const Eigen::MatrixXd& xtrj,
+                          const Eigen::MatrixXd& utrj);
+
+    double compute_defect(const Eigen::MatrixXd& xtrj,
+                          const Eigen::MatrixXd& utrj);
+
     bool forward_pass(double alpha);
+
     void forward_pass_iter(int i, double alpha);
+
     bool line_search(int iter);
+
+    void reset_iterate_filter();
+
     bool should_stop();
+
     void set_default_cost();
+
     bool fixed_initial_state();
+
+
 
     enum DecompositionType
     {
-        Ldlt, Qr, Lu, Cod, Svd
+        Ldlt, Qr, Lu, Cod, Svd, ReducedHessian
     };
 
     static DecompositionType str_to_decomp_type(const std::string& dt_str);
@@ -288,8 +342,19 @@ private:
 
     std::vector<Temporaries> _tmp;
 
+    std::vector<std::thread> _th_pool;
+    std::condition_variable _th_work_avail_cond;
+    std::mutex _th_work_avail_mtx;
+    std::condition_variable _th_work_done_cond;
+    std::mutex _th_work_done_mtx;
+    int _th_done_flag;
+    int _th_work_available_flag;
+    std::atomic<bool> _th_exit;
+
     CallbackType _iter_cb;
     utils::ProfilingInfo _prof_info;
+
+    std::vector<ForwardPassResult> _fp_res_history;
 };
 
 

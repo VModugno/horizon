@@ -44,6 +44,7 @@ PYBIND11_MODULE(pyilqr, m) {
             .def("input", &IterativeLQR::input)
             .def("gain", &IterativeLQR::gain)
             .def("getProfilingInfo", &IterativeLQR::getProfilingInfo)
+            .def("getIterationHistory", &IterativeLQR::getIterationHistory)
             .def("setIterationCallback", &IterativeLQR::setIterationCallback)
             .def("getStateTrajectory", &IterativeLQR::getStateTrajectory)
             .def("getInputTrajectory", &IterativeLQR::getInputTrajectory)
