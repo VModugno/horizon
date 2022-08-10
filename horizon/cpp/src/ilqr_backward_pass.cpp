@@ -105,8 +105,8 @@ void IterativeLQR::backward_pass_iter(int i)
     const auto& d = dyn.d;
 
     // ..value function
-    const auto& value_next = _value[i+1];
-    const auto& Snext = value_next.S;
+    auto& value_next = _value[i+1];
+    auto& Snext = value_next.S;
     const auto& snext = value_next.s;
 
     THROW_NAN(Snext);
@@ -137,8 +137,28 @@ void IterativeLQR::backward_pass_iter(int i)
     // print
     if(_log)
     {
+        Eigen::MatrixXd H(_nu+_nx, _nu+_nx);
+        H << tmp.Hxx, tmp.Hux.transpose(),
+             tmp.Hux, tmp.Huu;
+        Eigen::VectorXd eigH = H.eigenvalues().real();
+        std::cout << "eig(H[" << i << "]) in [" <<
+                     eigH.minCoeff() << ", " << eigH.maxCoeff() << "] \n";
+
+        std::cout << "H symmetry error = " <<
+                     (H - H.transpose()).lpNorm<Eigen::Infinity>() << "\n";
+
+        Eigen::MatrixXd V(_nu+_nx, _nu+_nx);
+        V << Q, P.transpose(),
+             P, R;
+        Eigen::VectorXd eigV = V.eigenvalues().real();
+        std::cout << "eig(V[" << i << "]) in [" <<
+                     eigV.minCoeff() << ", " << eigV.maxCoeff() << "] \n";
+
+        std::cout << "V symmetry error = " <<
+                     (V - V.transpose()).lpNorm<Eigen::Infinity>() << "\n";
+
         Eigen::VectorXd eigS = Snext.eigenvalues().real();
-        std::cout << "eig(Hxx[" << i+1 << "]) in [" <<
+        std::cout << "eig(S[" << i+1 << "]) in [" <<
                      eigS.minCoeff() << ", " << eigS.maxCoeff() << "] \n";
 
         Eigen::VectorXd eigHuu = tmp.Huu.eigenvalues().real();
@@ -238,6 +258,8 @@ void IterativeLQR::backward_pass_iter(int i)
     auto& Lu = res.Lu;
     auto& lu = res.lu;
     auto& lam = res.glam;
+    auto Lmu = u_lam.bottomLeftCorner(nc, _nx);
+    auto lmu = u_lam.col(_nx).tail(nc);
     Lu = u_lam.topLeftCorner(_nu, _nx);
     lu = u_lam.col(_nx).head(_nu);
     lam = u_lam.col(_nx).tail(nc);
@@ -248,12 +270,21 @@ void IterativeLQR::backward_pass_iter(int i)
     auto& S = value.S;
     auto& s = value.s;
 
-    S.noalias() = tmp.Hxx + Lu.transpose()*(tmp.Huu*Lu + tmp.Hux) + tmp.Hux.transpose()*Lu;
+    S.noalias() = tmp.Hxx + tmp.Hux.transpose()*Lu + Lu.transpose()*tmp.Hux +
+            Lu.transpose()*tmp.Huu*Lu;
+
+    S.noalias() = tmp.Hxx + tmp.Hux.transpose()*Lu + constr_feas.C.transpose()*Lmu;
+
     S = 0.5*(S + S.transpose());  // note: symmetrize
+
     s.noalias() = tmp.hx + tmp.Hux.transpose()*lu + Lu.transpose()*(tmp.hu + tmp.Huu*lu);
+
+    s.noalias() = tmp.hx + tmp.Hux.transpose()*lu + constr_feas.C.transpose()*lmu;
+
     THROW_NAN(S);
     THROW_NAN(s);
     TOC(upd_value_fn_inner);
+
 
 }
 
@@ -276,6 +307,17 @@ void IterativeLQR::optimize_initial_state()
     // constraints and bounds
     auto C = _constraint_to_go->C();
     auto h = _constraint_to_go->h();
+
+    if(_log)
+    {
+        std::cout << "n_constr_x[0] = " << C.rows() << "\n";
+
+        auto Csvd = C.jacobiSvd();
+        Csvd.setThreshold(_svd_threshold);
+        Eigen::VectorXd svC = Csvd.singularValues();
+        std::cout << "sv(C[" << 0 << "]) in [" <<
+                     svC.minCoeff() << ", " << svC.maxCoeff() << "], rank = " << Csvd.rank() <<  "\n";
+    }
 
     // construct kkt matrix
     TIC(construct_state_kkt);
@@ -312,7 +354,8 @@ void IterativeLQR::optimize_initial_state()
             break;
 
         case Qr:
-
+        
+            qr.compute(K);
             dx_lam = qr.solve(k);
             break;
 
@@ -331,6 +374,10 @@ void IterativeLQR::optimize_initial_state()
 
     if(_log)
     {
+        Eigen::VectorXd eigS = S.eigenvalues().real();
+        std::cout << "eig(S[" << 0 << "]) in [" <<
+                     eigS.minCoeff() << ", " << eigS.maxCoeff() << "] \n";
+
         std::cout << "state_kkt_err = " <<
                      (K*dx_lam - k).lpNorm<Eigen::Infinity>() << "\n";
     }

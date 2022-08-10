@@ -3,11 +3,14 @@ solver:
   ipopt.linear_solver: ma57
   # ipopt.hessian_approximation: limited-memory
   ilqr.verbose: true
+  # ilqr.log: true
+  ilqr.svd_threshold: 1e-12
   ilqr.codegen_enabled: true
   ilqr.codegen_workdir: /tmp/miao
   ilqr.enable_gn: true
-  ilqr.max_iter: 200
-  ilqr.hxx_reg_base: 0.0
+  # ilqr.max_iter: 1
+  ilqr.hxx_reg_growth_factor: 10.
+  # ilqr.hxx_reg_base: 0.01
   ilqr.n_threads: 0
 
 
@@ -25,6 +28,8 @@ constraints:
 costs: 
   - joint_posture
   - joint_regularization
+  # - base_velocity
+
   # - final_posture
   # - base_posture
 
@@ -35,18 +40,28 @@ final_base_x:
   indices: [0]
   nodes: final
 
+
+base_velocity:
+  type: Cartesian
+  distal_link: base_link
+  indices: [0, 1]
+  nodes: ${range(1, N)}
+  cartesian_type: velocity
+  weight: 10.0
+
+
 rot_l_sole:
   type: Cartesian
   distal_link: l_sole
   indices: [3, 4, 5]
-  nodes: ${range(1, N)}
+  nodes: ${range(1, N+1)}
   cartesian_type: velocity
 
 rot_r_sole:
   type: Cartesian
   distal_link: r_sole
   indices: [3, 4, 5]
-  nodes: ${range(1, N)}
+  nodes: ${range(1, N+1)}
   cartesian_type: velocity
 
 # ===============================
@@ -117,7 +132,7 @@ joint_regularization:
   nodes: all
   weight:
 #    velocity: 1.
-    acceleration: .1 # 0.01
+    a: .1 # 0.01
     force: 0.01 # todo <----- how to do? if there are more forces...
 
 foot_z_l_sole:

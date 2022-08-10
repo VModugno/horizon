@@ -159,7 +159,7 @@ public:
 
         ForwardPassResult(int nx, int nu, int N);
 
-        void print() const;
+        void print(int N = 1) const;
     };
 
 
