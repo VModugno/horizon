@@ -706,20 +706,15 @@ i_opts = {
         'ipopt.fast_step_computation': 'no',
 }
 if SOLVER() == 'gnsqp':
-    i_opts = {"gnsqp.qp_solver": "osqp",
-            "max_iter": 1000,
-            "alpha_min": 1e-9,
-            "use_golden_ratio_update": False,
-            'warm_start_primal': False,
-            'warm_start_dual': False,
-            'solution_convergence': 1e-3,
-            'merit_derivative_tolerance': 1e-4,
-            'constraint_violation_tolerance': ns * 1e-5,
-            'osqp.polish': True, # without this
-            #'osqp.delta': 1e-6,  # and this, it does not converge!
-            'osqp.verbose': False,
-            #'osqp.rho': 0.02,
-            'osqp.scaled_termination': False
+    i_opts = {
+            "gnsqp.max_iter": 1000,
+            "gnsqp.alpha_min": 1e-9,
+            'gnsqp.solution_convergence': 1e-3,
+            'gnsqp.merit_derivative_tolerance': 1e-4,
+            'gnsqp.constraint_violation_tolerance': ns * 1e-5,
+            'gnsqp.osqp.polish': True, # without this
+            'gnsqp.osqp.verbose': False,
+            'gnsqp.osqp.scaled_termination': False
     }
 
 solver_offline = solver.Solver.make_solver(SOLVER(), prb, i_opts)
@@ -785,7 +780,8 @@ opts = {
         'print_time': 0
 }
 if SOLVER() == 'gnsqp':
-    opts = {"gnsqp.max_iter": 5,
+    opts = {"gnsqp.max_iter": 1,
+            'gnsqp.osqp.scaled_termination': True
     }
 
 
