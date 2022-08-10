@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 
-utils::Timer::TocCallback on_timer_toc;
+utils::Timer::TocCallback on_timer_toc = [](const char*, double){};
 
 template<class V>
 std::type_info const& var_type(V const& v){
