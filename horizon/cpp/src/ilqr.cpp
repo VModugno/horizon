@@ -174,10 +174,11 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     // add auglag cost
     for(int i = 0; i < _N+1; i++)
     {
+        int ui = std::min(i, _N-1);
         auto al = std::make_shared<BoundAuglagCostEntity>(
                     _N,
                     _x_lb.col(i), _x_ub.col(i),
-                    _u_lb.col(i), _u_ub.col(i));
+                    _u_lb.col(ui), _u_ub.col(ui));
 
         al->setRho(_rho);
 
@@ -680,8 +681,6 @@ void IterativeLQR::linearize_quadratize_inner(int i)
     _dyn[i].computeDefect(xi, ui, xnext, i, _dyn[i].d);
     _constraint[i].linearize(xi, ui, i);
     _cost[i].quadratize(xi, ui, i);
-
-    std::cout << _dyn[i].B() << "\n\n";
 
     THROW_NAN(_dyn[i].A());
     THROW_NAN(_dyn[i].B());
@@ -1302,10 +1301,10 @@ IterativeLQR::ForwardPassResult::ForwardPassResult(int nx, int nu, int N):
     mu_b = 0;
 }
 
-void IterativeLQR::ForwardPassResult::print() const
+void IterativeLQR::ForwardPassResult::print(int N) const
 {
     printf("%2.2d al=%.1e  reg=%.1e  rho=%.1e  m=%.3e  f=%.3e  df=%.3e  mu_f=%.1e  mu_c=%.1e  mu_b=%.1e  du=%.3e  con=%.3e  bound=%.3e  gap=%.3e \n",
-           iter, alpha, hxx_reg, rho, merit, cost, f_der, mu_f, mu_c, mu_b, step_length, constraint_violation, bound_violation, defect_norm);
+           iter, alpha, hxx_reg, rho, merit/N, cost/N, f_der/N, mu_f, mu_c, mu_b, step_length, constraint_violation/N, bound_violation, defect_norm/N);
 }
 
 IterativeLQR::ConstraintToGo::ConstraintToGo(int nx, int nu):
