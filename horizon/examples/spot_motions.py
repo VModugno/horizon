@@ -87,7 +87,6 @@ def main(args):
     # joint names
     joint_names = kindyn.joint_names()
     if 'universe' in joint_names: joint_names.remove('universe')
-    if 'floating_base_joint' in joint_names: joint_names.remove('floating_base_joint')
 
     contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
 
@@ -199,7 +198,7 @@ def main(args):
         a = DDFK(q=q, qdot=q_dot)['ee_acc_linear']
 
         prb.createConstraint(f"{frame}_vel", v, nodes=nodes_stance)
-        prb.createIntermediateCost(f'{frame}_fn', barrier(f[2] - 25.0))
+        prb.createIntermediateResidual(f'{frame}_fn', barrier(f[2] - 25.0))
 
 
         if action == 'leap':
