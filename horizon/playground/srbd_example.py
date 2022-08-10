@@ -22,13 +22,7 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 from scipy.spatial.transform import Rotation as R
 
-SOLVER = lambda: 'gnsqp'
-
-def cost(K, fun):
-    if SOLVER() == 'gnsqp':
-        return K * fun
-    return K * K * cs.sumsqr(fun)
-
+SOLVER = lambda: 'ipopt'
 
 class steps_phase:
     def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, number_of_legs, contact_model, max_force, max_velocity):
@@ -562,35 +556,35 @@ rz_tracking is used to keep the com height around the initial value
 """
 rz_tracking_gain = rospy.get_param("rz_tracking_gain", 2e3)
 print(f"rz_tracking_gain: {rz_tracking_gain}")
-prb.createCost("rz_tracking", cost(np.sqrt(rz_tracking_gain),  r[2] - com[2]), nodes=range(1, ns+1))
+prb.createResidual("rz_tracking", np.sqrt(rz_tracking_gain) *  (r[2] - com[2]), nodes=range(1, ns+1))
 
 """
 o_tracking is used to keep the base orientation at identity, its gain is initialize at 0 and set to non-0 only when a button is pressed
 """
 Wo = prb.createParameter('Wo', 1)
 Wo.assign(0.)
-prb.createCost("o_tracking", cost(cs.sqrt(Wo), o - joint_init[3:7]), nodes=range(1, ns+1))
+prb.createResidual("o_tracking", Wo * (o - joint_init[3:7]), nodes=range(1, ns+1))
 
 """
 rdot_tracking is used to track a desired velocity of the CoM
 """
 rdot_tracking_gain = rospy.get_param("rdot_tracking_gain", 1e4)
 print(f"rdot_tracking_gain: {rdot_tracking_gain}")
-prb.createCost("rdot_tracking", cost(np.sqrt(rdot_tracking_gain), rdot - rdot_ref), nodes=range(1, ns+1))
+prb.createResidual("rdot_tracking", np.sqrt(rdot_tracking_gain) * (rdot - rdot_ref), nodes=range(1, ns+1))
 
 """
 w_tracking is used to track a desired angular velocity of the base
 """
 w_tracking_gain = rospy.get_param("w_tracking_gain", 1e4)
 print(f"w_tracking_gain: {w_tracking_gain}")
-prb.createCost("w_tracking", cost(np.sqrt(w_tracking_gain), w - w_ref), nodes=range(1, ns+1))
+prb.createResidual("w_tracking", np.sqrt(w_tracking_gain) * (w - w_ref), nodes=range(1, ns+1))
 
 """
 min_qddot is to minimize the acceleration control effort
 """
 min_qddot_gain = rospy.get_param("min_qddot_gain", 1e0)
 print(f"min_qddot_gain: {min_qddot_gain}")
-prb.createCost("min_qddot", cost(np.sqrt(min_qddot_gain), qddot.getVars()), nodes=list(range(0, ns)))
+prb.createResidual("min_qddot", np.sqrt(min_qddot_gain) * (qddot.getVars()), nodes=list(range(0, ns)))
 
 #for i in range(len(cdot)):
 #    prb.createCost("min_cdot" + str(i), 1e2 * cs.sumsqr(cdot[i]))
@@ -622,14 +616,14 @@ for l in range(0, number_of_legs):
 
 d_initial_1 = -(initial_foot_position[fpi[0]][0:2] - initial_foot_position[fpi[2]][0:2])
 #relative_pos_y_1_4 = prb.createConstraint("relative_pos_y_1_4", -c[fpi[0]][1] + c[fpi[2]][1], bounds=dict(ub= d_initial_1[1], lb=d_initial_1[1] - max_clearance_y))
-relative_pos_y_1_4 = prb.createCost("relative_pos_y_1_4", cost(1e2, -c[fpi[0]][1] + c[fpi[2]][1] - d_initial_1[1]))
+relative_pos_y_1_4 = prb.createResidual("relative_pos_y_1_4", 1e2 * (-c[fpi[0]][1] + c[fpi[2]][1] - d_initial_1[1]))
 #relative_pos_x_1_4 = prb.createConstraint("relative_pos_x_1_4", -c[fpi[0]][0] + c[fpi[2]][0], bounds=dict(ub= d_initial_1[0] + max_clearance_x, lb=d_initial_1[0] - max_clearance_x))
-relative_pos_x_1_4 = prb.createCost("relative_pos_x_1_4", cost(1e2, -c[fpi[0]][0] + c[fpi[2]][0] - d_initial_1[0]))
+relative_pos_x_1_4 = prb.createResidual("relative_pos_x_1_4", 1e2 * (-c[fpi[0]][0] + c[fpi[2]][0] - d_initial_1[0]))
 d_initial_2 = -(initial_foot_position[fpi[1]][0:2] - initial_foot_position[fpi[3]][0:2])
 #relative_pos_y_3_6 = prb.createConstraint("relative_pos_y_3_6", -c[fpi[1]][1] + c[fpi[3]][1], bounds=dict(ub= d_initial_2[1], lb=d_initial_2[1] - max_clearance_y))
-relative_pos_y_3_6 = prb.createCost("relative_pos_y_3_6", cost(1e2, -c[fpi[1]][1] + c[fpi[3]][1] - d_initial_2[1]))
+relative_pos_y_3_6 = prb.createResidual("relative_pos_y_3_6", 1e2 * (-c[fpi[1]][1] + c[fpi[3]][1] - d_initial_2[1]))
 #relative_pos_x_3_6 = prb.createConstraint("relative_pos_x_3_6", -c[fpi[1]][0] + c[fpi[3]][0], bounds=dict(ub= d_initial_2[0] + max_clearance_x, lb=d_initial_2[0] - max_clearance_x))
-relative_pos_x_3_6 = prb.createCost("relative_pos_x_3_6", cost(1e2, -c[fpi[1]][0] + c[fpi[3]][0] - d_initial_2[0]))
+relative_pos_x_3_6 = prb.createResidual("relative_pos_x_3_6", 1e2 * (-c[fpi[1]][0] + c[fpi[3]][0] - d_initial_2[0]))
 
 min_f_gain = rospy.get_param("min_f_gain", 1e-2)
 print(f"min_f_gain: {min_f_gain}")
@@ -638,7 +632,7 @@ for i in range(0, nc):
     """
     min_f try to minimze the contact forces (can be seen as distribute equally the contact forces)
     """
-    prb.createCost("min_f" + str(i), cost(np.sqrt(min_f_gain), f[i]), nodes=list(range(0, ns)))
+    prb.createResidual("min_f" + str(i), np.sqrt(min_f_gain) * f[i], nodes=list(range(0, ns)))
 
     """
     cz_tracking is used to track the z reference for the feet: notice that is a constraint
@@ -820,7 +814,7 @@ while not rospy.is_shutdown():
     w_ref.assign([1. * joy_msg.axes[6], -1. * joy_msg.axes[4], 1. * joy_msg.axes[3]], nodes=range(1, ns + 1)) #base angular velocities
 
     if(joy_msg.buttons[3]):
-        Wo.assign(1e5)
+        Wo.assign(cs.sqrt(1e5))
     else:
         Wo.assign(0.)
 
@@ -854,8 +848,7 @@ while not rospy.is_shutdown():
 
 
     tic()
-    if not solver.solve():
-        print("UNABLE TO SOLVE")
+    solver.solve()
 
     #print(f"line search: {solver.getLineSearchComputationTime()}")
     #print(f"QP: {solver.getQPComputationTime()}")
