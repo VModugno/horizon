@@ -36,17 +36,26 @@ class replay_trajectory:
             q_replay: joints position to replay
             frame_force_mapping: map between forces and frames where the force is acting
             force_reference_frame: frame w.r.t. the force is expressed. If LOCAL_WORLD_ALIGNED then forces are rotated in LOCAL frame before being published
-            kindyn: needed if forces are in LOCAL_WORLD_ALIGNED
+            kindyn: casadi_kin_dyn obj
+
+            #TODO: move kindyn before optional params!
         """
+        if kindyn is None:
+            raise Exception('kindyn input can not be None')
+
         if frame_force_mapping is None:
             frame_force_mapping = {}
 
         self.dt = dt
+
+
         self.joints_1dof = [j for j in joint_list if kindyn.joint_nq(j) == 1]
         self.joints_floating = [j for j in joint_list if kindyn.joint_nq(j) == 7]
         self.iq_1dof = [kindyn.joint_iq(j) for j in self.joints_1dof]
         self.iq_floating = [kindyn.joint_iq(j) for j in self.joints_floating]
         self.parent_child_floating = [(kindyn.parentLink(j), kindyn.childLink(j)) for j in self.joints_floating]
+
+
         self.q_replay = q_replay
         self.__sleep = 0.
         self.force_pub = []
@@ -59,8 +68,6 @@ class replay_trajectory:
 
         # WE CHECK IF WE HAVE TO ROTATE CONTACT FORCES:
         if force_reference_frame is cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED:
-            if kindyn is None:
-                raise Exception('kindyn input can not be None if force_reference_frame is LOCAL_WORLD_ALIGNED!')
             for frame in self.frame_force_mapping.keys(): # WE LOOP ON FRAMES
                 FK = kindyn.fk(frame)
                 self.frame_fk[frame] = FK
