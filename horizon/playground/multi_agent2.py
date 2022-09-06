@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from horizon.utils import resampler_trajectory
+import math as m
+import copy
 
 n_nodes = 4
 prob = prb.Problem(n_nodes, casadi_type=cs.SX)
@@ -40,8 +42,8 @@ v2 = prob.createInputVariable('v2', dim=1)
 # a2 = prob.createInputVariable('a2', dim=1)
 
 # dt.setBounds(0.0, 10.0)
-alpha1.setBounds(0.0, 1000.0)
-alpha2.setBounds(0.0, 1000.0)
+alpha1.setBounds(0.04, 1000.0)
+alpha2.setBounds(0.04, 1000.0)
 
 alpha1.setInitialGuess(0.0)
 alpha2.setInitialGuess(1.0)
@@ -94,8 +96,8 @@ solution = solver.getSolutionDict()
 
 print("total time x1", np.sum(solution['alpha1'] * dt))
 print("total time x2", np.sum(solution['alpha2'] * dt))
-t1 = solution['t1']
-t2 = solution['t2']
+t1 = solution['t1'].flatten()
+t2 = solution['t2'].flatten()
 print("cumulated t1: ", t1)
 print("cumulated t2: ", t2)
 
@@ -115,7 +117,7 @@ plt.grid()
 # plt.show()
 
 # resampling
-resampling = True
+resampling = False
 if resampling:
     dt1_before_res = (solution['alpha1'] * dt).flatten()
     dt2_before_res = (solution['alpha2'] * dt).flatten()
@@ -143,10 +145,45 @@ if resampling:
     plt.show()
         
 ##### 2nd round
-import math 
+dt_new = 0.01
+tf_new = t1[-1].item()
+tf_new = m.ceil(tf_new * 100) / 100.0
+print("tf_new: ", tf_new)
+n_nodes_new = m.ceil(tf_new/dt_new)
+print("n_nodes_new: ", n_nodes_new)
 
-dt_new = 0.001
-tf_new = t1[-1]
-for t in solution['t1']:
-    k = math.floor(t/dt_new)
+prob_new = prob
+# prob_new = prb.Problem(n_nodes_new, casadi_type=cs.SX)
+prob_new.setNNodes(n_nodes_new)
+
+x_old = prob.getState()
+vars = prob.getVariables()
+x_to_remove = ('t1', 't2')
+for entry in x_to_remove:
+    x_old.removeVariable(entry)
+    vars.pop(entry)
+u_old = prob.getInput()
+u_to_remove = ('alpha1', 'alpha2')
+for entry in u_to_remove:
+    u_old.removeVariable(entry)
+    vars.pop(entry)
+
+for k,v in x_old.getVars().items():
+    k = prob_new.createStateVariable(k, v.getDim())
+for k,v in u_old.getVars().items():
+    k = prob_new.createInputVariable(k, v.getDim())
+
+x = prob_new.getState()
+u = prob_new.getInput()
+    
+for node in range(n_nodes+1):
+    t = solution['t1'][node]
+    print(t)
+    k = m.floor(t/dt_new)
     print("significative k: ", k)
+    lb, ub = x_old.getBounds(node)
+    x.setBounds(lb, ub, nodes=[k])
+    lb, ub = u_old.getBounds(node)
+    u.setBounds(lb, ub, nodes=[k])
+
+prob_new.createFinalCost('min_u', u)
