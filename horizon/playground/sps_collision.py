@@ -24,7 +24,7 @@ def rot_error_cost(R, Rdes):
     return cs.trace(np.eye(3) - Re)  # proportional to sin(th_err/2)^2
 
 # options
-solver_type = 'ilqr'
+solver_type = 'ipopt'
 use_orientation_as_constraint = True
 transcription_method = 'multiple_shooting'
 transcription_opts = dict(integrator='RK4')
@@ -67,11 +67,11 @@ if 'universe' in joint_names: joint_names.remove('universe')
 if 'floating_base_joint' in joint_names: joint_names.remove('floating_base_joint')
 
 # define dynamics
-prb = problem.Problem(n_nodes, receding=True) #, casadi_type=cs.SX)
+prb = problem.Problem(n_nodes, receding=True, abstract_casadi_type=cs.MX) #, casadi_type=cs.SX)
 q = prb.createStateVariable('q', nq)
 q_dot = prb.createStateVariable('q_dot', nv)
 q_ddot = prb.createInputVariable('q_ddot', nv)
-x, x_dot = utils.double_integrator(q, q_dot, q_ddot)
+x_dot = utils.double_integrator(q, q_dot, q_ddot)
 prb.setDynamics(x_dot)
 prb.setDt(dt)
 
@@ -208,6 +208,13 @@ except:
 # solver
 tic = time.time()
 prb_solver.solve()
+
+if solver_type=='ipopt':
+    ee_tgt_A_rot.setNodes([n_nodes])
+    ee_tgt_B_rot.setNodes([n_nodes])
+    prb.getState().setInitialGuess(prb_solver.x_opt)
+    prb.getInput().setInitialGuess(prb_solver.u_opt)
+    prb_solver.solve()
 
 # if ILQR, do more iterations
 if solver_type=='ilqr':
