@@ -163,7 +163,7 @@ class AbstractFunction:
             self._fun_impl = None
         else:
             # mapping the function to use more cpu threads
-            self._fun_map = self._fun.map(num_nodes, 'thread', thread_map_num)
+            self._fun_map = self._fun.map(num_nodes) #, 'thread', thread_map_num)
             used_var_impl = self._getUsedVarImpl()
             used_par_impl = self._getUsedParImpl()
             all_vars = used_var_impl + used_par_impl
