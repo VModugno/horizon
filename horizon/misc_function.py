@@ -47,6 +47,7 @@ def checkNodes(nodes, nodes_array=None):
         checked_nodes = np.ma.masked_array(nodes_vec, mask=np.logical_not(nodes_array[nodes_vec])).compressed()
         discarded_nodes = np.ma.masked_array(nodes_vec, mask=nodes_array[nodes_vec]).compressed()
 
+        # todo: this sucks, as it does not tells you which item calls this
         if checked_nodes.size != nodes_vec.size:
             warnings.warn(f'Element requested is not defined/active on node: {discarded_nodes}.')
 
@@ -78,7 +79,7 @@ def getBinaryFromNodes(total_nodes: int, active_nodes: list):
     # if not isinstance(nodes, list):
     #     raise TypeError('input must be a list of nodes')
 
-    nodes_array = np.zeros(total_nodes)
+    nodes_array = np.zeros(total_nodes).astype(int)
     nodes_array[active_nodes] = 1
 
     return nodes_array

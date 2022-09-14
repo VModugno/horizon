@@ -32,7 +32,7 @@ class AbstractVariable(ABC):
 
     def __init__(self, tag: str, dim: int, abstract_casadi_type):
         """
-        Initialize the Abstract Variable. Inherits from the symbolic CASADI varaible SX.
+        Initialize the Abstract Variable. Inherits from the symbolic CASADI variable SX or MX.
 
         Args:
             tag: name of the variable
@@ -42,7 +42,7 @@ class AbstractVariable(ABC):
         # dynamically add casadi_type as base class 
         class AVClass(self.__class__, abstract_casadi_type):
             pass
-        
+
         self.__class__ = AVClass
 
         # save the cs type
@@ -429,6 +429,11 @@ class Parameter(AbstractVariable):
         self._nodes = list(n_nodes)
         self._project()
 
+    def _setNodes(self, node_array):
+
+        self._nodes_array = node_array
+        self._project()
+
     def assign(self, val, nodes=None, indices=None):
         """
        Assign a value to the parameter at a desired node. Can be assigned also after the problem is built, before solving the problem.
@@ -551,7 +556,7 @@ class Parameter(AbstractVariable):
             createTag = lambda name, node: name + str(node) if node is not None else name
 
             new_tag = createTag(self._tag, node)
-            par = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl, self._abstract_casadi_type)
+            par = OffsetTemplate(self._tag, new_tag, self._dim, int(node), self._nodes_array, self._impl, self._casadi_type, self._abstract_casadi_type)
 
             self._par_offset[node] = par
         return par
@@ -827,6 +832,10 @@ class SingleVariable(AbstractVariable):
         """
         return self._tag
 
+    def toParameter(self):
+        # self, tag, dim, nodes_array, casadi_type, abstract_casadi_type
+        return SingleParameter(self._tag, self.getDim(), self._nodes_array, self._casadi_type, self._abstract_casadi_type)
+
     def __getitem__(self, item):
         var_slice = super().__getitem__(item)
         view = SingleVariableView(self, var_slice, item)
@@ -1045,6 +1054,10 @@ class Variable(AbstractVariable):
         self._nodes_array = list(n_nodes)
         self._project()
 
+    def _setNodes(self, node_array):
+
+        self._nodes_array = node_array
+        self._project()
     # def _project(self):
     #     """
     #     Implements the variable along the horizon nodes.
@@ -1221,6 +1234,10 @@ class Variable(AbstractVariable):
             name of the variable
         """
         return self._tag
+
+    def toParameter(self):
+        # self, tag, dim, nodes_array, casadi_type, abstract_casadi_type
+        return Parameter(self._tag, self.getDim(), self._nodes_array, self._casadi_type, self._abstract_casadi_type)
 
     def __getitem__(self, item):
         var_slice = super().__getitem__(item)
@@ -1791,6 +1808,10 @@ class InputAggregate(Aggregate):
 default_abstract_casadi_type = cs.SX
 default_casadi_type = cs.MX
 
+class ItemContainer:
+    def __init__(self, item):
+        self.item = item
+
 class VariablesContainer:
     """
     Container of all the variables of Horizon.
@@ -2123,6 +2144,14 @@ class VariablesContainer:
 
 if __name__ == '__main__':
 
+    x = Variable('x', 4, [1, 1, 0, 1, 1, 1], casadi_type=cs.SX, abstract_casadi_type=cs.SX)
+    x_par = x.toParameter()
+
+    print(isinstance(x, SingleVariable), x)
+    print(isinstance(x_par, SingleParameter), x_par)
+
+
+    exit()
     # N = 10
     # # a = cs.MX.sym('a', 3, 1)
     # a = 5 * np.ones([3, 10])
@@ -2217,8 +2246,8 @@ if __name__ == '__main__':
     # print(x[0:2]+2)
     # print(f'type: {type(x[-1])}')
     # x.setUpperBounds([2,2,2,2,2,2])
-    x = Variable('x', 4, [1, 1, 0, 1, 1, 1], casadi_type=cs.SX)
-    x_prev = x.getVarOffset(-1)
+    # x = Variable('x', 4, [1, 1, 0, 1, 1, 1], casadi_type=cs.SX)
+    # x_prev = x.getVarOffset(-1)
     # print(x)
 
     # print(x.getImpl(4))

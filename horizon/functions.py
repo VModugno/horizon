@@ -51,9 +51,10 @@ class AbstractFunction:
         """
         self._f = f
         self._name = name
-        self._active_nodes_array = active_nodes_array
-        self._feas_nodes_array = active_nodes_array
+        self._active_nodes_array = active_nodes_array.copy()
+        self._feas_nodes_array = active_nodes_array.copy()
         # todo isn't there another way to get the variables from the function g?
+        # todo these are copies, but it is wrong, they should be exactly the objects pointed in var_container
         self.vars = used_vars
         self.pars = used_pars
 
@@ -119,6 +120,21 @@ class AbstractFunction:
             self._active_nodes_array[:] = 0
 
         self._active_nodes_array[nodes] = 1
+
+    def _getFeasNodes(self):
+        """
+        advanced method.
+        Get the FEASIBLE node array of the function.
+        """
+        return self._feas_nodes_array.copy()
+    def _setFeasNodes(self, feas_nodes_array):
+        """
+        Caution, advanced method.
+        Change the FEASIBLE node array of the function.
+        Reset the ACTIVE nodes.
+        """
+        self._feas_nodes_array = feas_nodes_array.copy()
+        self._active_nodes_array = feas_nodes_array.copy()
 
     def getVariables(self, offset=True) -> list:
         """
@@ -333,6 +349,12 @@ class Function(AbstractFunction):
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
         self._project()
 
+    def _setFeasNodes(self, feas_nodes_array):
+        """
+        Caution, advanced method.
+        Change the FEASIBLE node array of the function.
+        """
+        super()._setFeasNodes(feas_nodes_array)
 
 class RecedingFunction(AbstractFunction):
 
@@ -348,7 +370,7 @@ class RecedingFunction(AbstractFunction):
         self.weight_mask = None
 
         total_nodes = np.array(range(self._active_nodes_array.size))
-        self._feas_nodes_array = self._getFeasNodes(used_vars, used_pars, total_nodes)
+        self._feas_nodes_array = self._computeFeasNodes(used_vars, used_pars, total_nodes)
 
         # if the function is active (self._nodes_array) in some nodes where the variables it involves are not defined (self._var_nodes) throw an error.
         # this is true for the offset variables also: an offset variable of a variable defined on [0, 1, 2] is only valid at [1, 2].
@@ -359,7 +381,7 @@ class RecedingFunction(AbstractFunction):
         self._fun_impl = None
         self._project()
 
-    def _getFeasNodes(self, vars, pars, total_nodes):
+    def _computeFeasNodes(self, vars, pars, total_nodes):
 
         temp_nodes = total_nodes.copy()
 
@@ -435,6 +457,8 @@ class AbstractBounds:
 
         Args:
         """
+
+        # set_bounds exist to reset to old value the bounds of restored non-active nodes
         self.bounds = dict()
         self.set_bounds = dict()
 
@@ -628,7 +652,7 @@ class Constraint(Function, AbstractBounds):
         else:
             nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
-        pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
+        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
         super()._setVals(val_type, val, pos_nodes)
 
@@ -639,7 +663,7 @@ class Constraint(Function, AbstractBounds):
         else:
             nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
-        pos_nodes = misc.convertNodestoPos(nodes, self._active_nodes_array)
+        pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
         # todo what is this???
         if len(nodes) == 0:
@@ -705,8 +729,9 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
 
         # useful to deactivate nodes if lb and ub are -inf/inf
         active_nodes = misc.getNodesFromBinary(self._active_nodes_array)
+        pos_nodes = misc.convertNodestoPos(active_nodes, self._feas_nodes_array)
 
-        for node in active_nodes:
+        for node in pos_nodes:
             if np.isinf(self.bounds['lb'][:, node]).all() and np.isinf(self.bounds['ub'][:, node]).all():
                 self._active_nodes_array[node] = 0
 
@@ -715,16 +740,35 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
+            # todo: I BELIEVE THIS SHOULD BE self._feas_nodes_array
             nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
         super()._setVals(val_type, val, pos_nodes)
         # todo put it also in normal constraint
+        # todo if setting bounds DEACTIVATE a node, maybe it should be able to ACTIVATE it too
         self._checkActiveNodes()
 
     def _getVals(self, val_type, nodes=None):
         # todo return the bounds on all nodes always??
+        # todo: this should return only active nodes
+
+        # if nodes is None:
+        #     nodes = misc.getNodesFromBinary(self._active_nodes_array)
+        # else:
+        #     nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
+        #
+        # pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
+        #
+        # # todo what is this???
+        # if len(nodes) == 0:
+        #     return np.zeros((self.getDim(), 0))
+        #
+        # vals = val_type[:, pos_nodes]
+        #
+        # return vals
+
         return val_type
 
     def setNodes(self, nodes, erasing=True):
@@ -741,6 +785,21 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
         #     print(f'lb_{dim}:', list(getRanges(misc.getNodesFromBinary(np.isfinite(self.bounds['lb'][dim, :]).astype(int)))))
         # for dim in range(self.bounds['ub'].shape[0]):
         #     print(f'ub_{dim}:', list(getRanges(misc.getNodesFromBinary(np.isfinite(self.bounds['ub'][dim, :]).astype(int)))))
+
+    def _setFeasNodes(self, feas_nodes_array):
+        """
+        Caution, advanced method.
+        Change the FEASIBLE node array of the function.
+        Reset the ACTIVE nodes and the bounds
+        """
+        super()._setFeasNodes(feas_nodes_array)
+
+        n_nodes = int(np.sum(self._feas_nodes_array))
+        self.bounds['lb'] = np.full((self.getDim(), n_nodes), 0.)
+        self.bounds['ub'] = np.full((self.getDim(), n_nodes), 0.)
+
+        self.set_bounds['lb'] = np.full((self.getDim(), n_nodes), 0.)
+        self.set_bounds['ub'] = np.full((self.getDim(), n_nodes), 0.)
 
     def shift(self):
         shift_num = -1
@@ -843,7 +902,7 @@ class RecedingCost(RecedingFunction):
         super().setNodes(nodes, erasing)
         # eliminate/enable cost functions by setting their weight
         nodes_mask = np.zeros([self.weight_mask.getDim(), np.sum(self._feas_nodes_array).astype(int)])
-        nodes_mask[:, nodes] = 1.
+        nodes_mask[:, nodes] = 1
         self.weight_mask.assign(nodes_mask)
 
     # def shift(self):
