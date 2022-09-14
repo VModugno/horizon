@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import time
 
-path_to_examples = os.path.abspath(__file__ + "/../../examples")
+# this file uses data_spawner.mat
+path_to_examples = os.path.abspath(__file__ + "/../../../examples")
 urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
 urdf = open(urdffile, 'r').read()
 kindyn = cas_kin_dyn.CasadiKinDyn(urdf)
@@ -23,7 +24,7 @@ n_q = kindyn.nq()
 n_v = kindyn.nv()
 n_f = 3
 
-ms = mat_storer.matStorer(f'data_spawner.mat')
+ms = mat_storer.matStorer(f'/home/francesco/hhcm_workspace/src/horizon/horizon/utils/resampler_playground/data_spawner.mat')
 solution = ms.load()
 
 contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
@@ -60,7 +61,7 @@ solution['tau'] = tau_sol
 # ALL OF THIS IS JUST FOR THE RESAMPLER. THIS IS CRAZY =============================================
 # ==================================================================================================
 # define the resampled dt
-dt_res = 0.06
+dt_res = 0.55
 print(f'resampling from {dt[0]} to {dt_res}')
 
 # define the dynamics of the system for the integrator
@@ -83,12 +84,12 @@ n_nodes_res = u_res.shape[1]
 dae = {'x': x, 'p': u, 'ode': x_dot, 'quad': 1}
 print('elapsed_time:')
 tic = time.time()
-x_res1 = resampler_trajectory.resampler(solution['x_opt'], solution['u_opt'], dt, dt_res, dae=dae, f_int=None)
+x_res1 = resampler_trajectory.resampler_old(solution['x_opt'], solution['u_opt'], dt, dt_res, dae=dae, f_int=None)
 elapsed_time = time.time() - tic
 print('old method:', elapsed_time)
 
 tic = time.time()
-x_res = resampler_trajectory.resampler_new(solution['x_opt'], solution['u_opt'], dt, dt_res, dae=dae, f_int=None)
+x_res = resampler_trajectory.resampler(solution['x_opt'], solution['u_opt'], dt, dt_res, dae=dae, f_int=None)
 elapsed_time = time.time() - tic
 print('new method:', elapsed_time)
 
