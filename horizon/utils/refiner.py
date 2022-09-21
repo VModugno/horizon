@@ -34,9 +34,11 @@ def group_elements(vec):
 
     return ranges_vec
 
-def resample(solution, prb, dt_res):
+def resample(solution, prb, dt_res, contacts_name):
 
     n_nodes = prb.getNNodes()
+
+    prev_f_list = [prev_solution[f'force_{c_name}'] for c_name in contacts_name]
 
     solution_res = dict()
     u_res = resampler_trajectory.resample_input(
@@ -936,16 +938,16 @@ if __name__ == '__main__':
     solver = solver.Solver.make_solver('ipopt', prb, opts)
 
     ms = mat_storer.matStorer('refiner_data_100.mat')
-
     # ========================================== direct solve ==========================================================
-    # solver.solve()
-    # prev_solution = solver.getSolutionDict()
-    # prev_solution.update(solver.getConstraintSolutionDict())
-    # n_nodes = prb.getNNodes() - 1
-    # prev_dt = solver.getDt().flatten()
+    solver.solve()
+    prev_solution = solver.getSolutionDict()
+    prev_solution.update(solver.getConstraintSolutionDict())
+    n_nodes = prb.getNNodes() - 1
+    prev_dt = solver.getDt().flatten()
 
+    # exit()
     # ========================================= from stored data =======================================================
-    prev_solution = ms.load()
+    # prev_solution = ms.load()
 
     # ==================================================================================================================
     prev_q = prev_solution['q']
@@ -955,11 +957,12 @@ if __name__ == '__main__':
 
     # RESAMPLE
     dt_res = 0.001
-    prev_solution_res, nodes_vec, nodes_vec_res, num_samples = resample(prev_solution, prb, dt_res)
+    prev_solution_res, nodes_vec, nodes_vec_res, num_samples = resample(prev_solution, prb, dt_res, contacts_name)
     #
-    # info_dict = dict(n_nodes=prb.getNNodes(), times=nodes_vec, times_res=nodes_vec_res, dt=prev_dt, dt_res=dt_res)
-    # ms.store({**prev_solution, **prev_solution_res, **info_dict})
+    info_dict = dict(n_nodes=prb.getNNodes(), times=nodes_vec, times_res=nodes_vec_res, dt=prev_dt, dt_res=dt_res)
+    ms.store({**prev_solution, **prev_solution_res, **info_dict})
 
+    exit()
     contacts_name = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
     prev_contact_map = dict(zip(contacts_name, prev_f_list))
 
