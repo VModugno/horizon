@@ -11,7 +11,7 @@ np.set_printoptions(precision=3, suppress=True)
 
 class FullModelInverseDynamics:
     
-    def __init__(self, problem, kd, q_init, base_init, floating_base=True, fixed_joint_map=None, **kwargs):
+    def __init__(self, problem, kd, q_init, base_init=None, floating_base=True, fixed_joint_map=None, **kwargs):
 
         if fixed_joint_map is None:
             fixed_joint_map = {}
