@@ -46,7 +46,7 @@ final_base_xy:
   indices: [0, 1]
   nodes: final
 # ===============================
-
+# point contact
 force_contact_1:
   type: VertexForce
   frame: contact_1

@@ -6,14 +6,14 @@ import numpy as np
 from typing import Callable, Dict, Any, List
 import casadi as cs
 
+
 class InteractionTask(Task):
-    def __init__(self, 
+    def __init__(self,
                  frame,
                  friction_coeff=None,
                  fn_min=0.0,
                  enable_fc=False,
                  *args, **kwargs):
-
         self.frame = frame
         self.friction_coeff = friction_coeff
         self.fn_min = fn_min
@@ -22,19 +22,20 @@ class InteractionTask(Task):
         super().__init__(*args, **kwargs)
 
         # TODO what to do with it?
-        self.indices = np.array([0, 1, 2, 3, 4, 5]).astype(int) if self.indices is None else np.array(self.indices).astype(int)
+        self.indices = np.array([0, 1, 2, 3, 4, 5]).astype(int) if self.indices is None else np.array(
+            self.indices).astype(int)
 
         self.fc_constr = self.make_friction_cone() if enable_fc else None
-    
+
     @abstractmethod
     def getWrench(self):
         pass
 
     def make_cop(self):
-        pass 
+        pass
 
     def make_friction_cone(self):
-        pass 
+        pass
 
     def setContact(self, nodes):
         pass
@@ -60,11 +61,11 @@ class InteractionTask(Task):
 
 
 class SurfaceContact(InteractionTask):
-    def __init__(self, 
-                 frame, 
-                 shape='box', 
-                 dimensions=None, 
-                 enable_cop=True, 
+    def __init__(self,
+                 frame,
+                 shape='box',
+                 dimensions=None,
+                 enable_cop=True,
                  *args, **kwargs):
 
         # init base
@@ -82,7 +83,7 @@ class SurfaceContact(InteractionTask):
         self.cop_constr = self.make_cop() if enable_cop else None
 
         self.fn_barrier = self.make_fn_barrier()
-        
+
     def make_fn_barrier(self):
         fn_barrier_cost = barrier_fun(self.wrench[2] - self.fn_min)
         fn_barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e1 * fn_barrier_cost, self.all_nodes)
@@ -117,7 +118,7 @@ class SurfaceContact(InteractionTask):
         # add constraint
         cop_consrt = self.prb.createIntermediateConstraint(f'cop_{frame}', rot_M_cop)
         cop_consrt.setLowerBounds(-np.inf * np.ones(4))
-        
+
         return cop_consrt
 
     def make_friction_cone(self):
@@ -130,12 +131,12 @@ class SurfaceContact(InteractionTask):
     def setContact(self, nodes):
 
         good_nodes = [n for n in nodes if n <= self.all_nodes[-1]]
-        
+
         # start with all swing
         self._set_zero(self.all_nodes)
 
         # no force bounds when in contact
-        self.wrench.setBounds(lb=np.full(self.wrench.getDim(), -np.inf), 
+        self.wrench.setBounds(lb=np.full(self.wrench.getDim(), -np.inf),
                               ub=np.full(self.wrench.getDim(), np.inf),
                               nodes=good_nodes)
 
@@ -151,7 +152,6 @@ class SurfaceContact(InteractionTask):
 
         if self.fc_constr:
             self.fc_constr.setNodes(good_nodes)
-
 
     def getWrench(self):
         return self.wrench
@@ -175,22 +175,24 @@ class VertexContact(InteractionTask):
         super().__init__(frame, *args, **kwargs)
 
         # ask model to create vertex forces
-        self.forces = self.model.setContactFrame(frame, 
-                    'vertex', 
-                    {
-                        'vertex_frames': vertex_frames
-                    })
+        self.forces = self.model.setContactFrame(frame,
+                                                 'vertex',
+                                                 {
+                                                     'vertex_frames': vertex_frames
+                                                 })
 
         self.all_nodes = self.forces[0].getNodes()
-        
+
         self.fn_barrier = self.make_fn_barrier()
+
+        self.vertical_to = self.make_vertical_takeoff()
 
     def make_fn_barrier(self):
         fn_barrier_cost = []
         for f in self.forces:
             fn_barrier_cost.append(barrier_fun(f[2] - self.fn_min))
         fn_barrier_cost = cs.vertcat(*fn_barrier_cost)
-        fn_barrier = self.prb.createResidual(f'{self.frame}_unil_barrier', 1e1 * fn_barrier_cost, self.all_nodes)
+        fn_barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e-3 * fn_barrier_cost, self.all_nodes)
         return fn_barrier
 
     def make_friction_cone(self):
@@ -201,21 +203,33 @@ class VertexContact(InteractionTask):
             fcost.append(fcost)
 
         fcost = cs.vertcat(*fcost)
-        fc = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost)
+        fc = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost)
         return fc
-    
+
+    def make_vertical_takeoff(self):
+
+        dfk = self.kin_dyn.frameVelocity(self.frame, self.kd_frame)
+        ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
+        ee_v_ang = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_angular']
+        lat_vel = cs.vertcat(ee_v[0:2], ee_v_ang)
+        vert = self.prb.createConstraint(f"{self.frame}_vert", lat_vel)
+        vert.setNodes([])
+
+        return vert
+
     def setContact(self, nodes):
 
         good_nodes = [n for n in nodes if n <= self.all_nodes[-1]]
+        off_nodes = [k for k in list(range(self.all_nodes[-1])) if k not in good_nodes]
 
         # start with all swing
-        
+
         self._set_zero(self.all_nodes)
 
         for f in self.forces:
             # no force bounds when in contact
             f.setBounds(lb=np.full(f.getDim(), -np.inf),
-                        ub=np.full(f.getDim(), np.inf) ,
+                        ub=np.full(f.getDim(), np.inf),
                         nodes=good_nodes)
 
         # add normal force constraint
@@ -224,7 +238,12 @@ class VertexContact(InteractionTask):
         # set friction cone
         if self.fc_constr:
             self.fc_constr.setNodes(good_nodes)
-       
+
+        if off_nodes:
+            nodes_ver = list()
+            nodes_ver_temp = [off_nodes[0], off_nodes[-1]]
+            [nodes_ver.append(n) for n in nodes_ver_temp if n not in nodes_ver]
+            self.vertical_to.setNodes(nodes_ver)
 
     def getWrench(self):
         return self.forces
