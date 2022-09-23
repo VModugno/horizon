@@ -185,14 +185,12 @@ class VertexContact(InteractionTask):
 
         self.fn_barrier = self.make_fn_barrier()
 
-        self.vertical_to = self.make_vertical_takeoff()
-
     def make_fn_barrier(self):
         fn_barrier_cost = []
         for f in self.forces:
             fn_barrier_cost.append(barrier_fun(f[2] - self.fn_min))
         fn_barrier_cost = cs.vertcat(*fn_barrier_cost)
-        fn_barrier = self.prb.createCost(f'{self.frame}_unil_barrier', 1e-3 * fn_barrier_cost, self.all_nodes)
+        fn_barrier = self.prb.createResidual(f'{self.frame}_unil_barrier', 1e1 * fn_barrier_cost, self.all_nodes)
         return fn_barrier
 
     def make_friction_cone(self):
@@ -203,24 +201,12 @@ class VertexContact(InteractionTask):
             fcost.append(fcost)
 
         fcost = cs.vertcat(*fcost)
-        fc = self.prb.createIntermediateCost(f'{self.frame}_fc', 1e-3 * fcost)
+        fc = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost)
         return fc
-
-    def make_vertical_takeoff(self):
-
-        dfk = self.kin_dyn.frameVelocity(self.frame, self.kd_frame)
-        ee_v = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_linear']
-        ee_v_ang = dfk(q=self.prb.getVariables('q'), qdot=self.prb.getVariables('v'))['ee_vel_angular']
-        lat_vel = cs.vertcat(ee_v[0:2], ee_v_ang)
-        vert = self.prb.createConstraint(f"{self.frame}_vert", lat_vel)
-        vert.setNodes([])
-
-        return vert
 
     def setContact(self, nodes):
 
         good_nodes = [n for n in nodes if n <= self.all_nodes[-1]]
-        off_nodes = [k for k in list(range(self.all_nodes[-1])) if k not in good_nodes]
 
         # start with all swing
 
@@ -238,12 +224,6 @@ class VertexContact(InteractionTask):
         # set friction cone
         if self.fc_constr:
             self.fc_constr.setNodes(good_nodes)
-
-        if off_nodes:
-            nodes_ver = list()
-            nodes_ver_temp = [off_nodes[0], off_nodes[-1]]
-            [nodes_ver.append(n) for n in nodes_ver_temp if n not in nodes_ver]
-            self.vertical_to.setNodes(nodes_ver)
 
     def getWrench(self):
         return self.forces
