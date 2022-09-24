@@ -51,9 +51,11 @@ contacts = [f'arm_{i + 1}_TCP' for i in range(3)]
 
 ti = TaskInterface(prb, model)
 
+# this adds the vertical takeoff to the interactionTask VertexForce
+ti.loadPlugins(['horizon.rhc.plugins.interactionTaskMirror'])
 
 for frame in contacts:
-    subtask_force = {'type': 'VertexForce',
+    subtask_force = {'type': 'VertexForceMirror',
                      'name': f'interaction_{frame}',
                      'frame': frame,
                      'fn_min': 10.0,
@@ -217,6 +219,12 @@ opts_rti['ilqr.enable_line_search'] = False
 opts_rti['ilqr.max_iter'] = 4
 
 
+print('CONSTRAINTS:')
+for cnsrt, obj in ti.prb.getConstraints().items():
+    print(cnsrt,':', type(obj))
+    print(obj.getNodes())
+
+exit()
 # solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
 # solver_rti = Solver.make_solver(solver_type, ti.prb, opts_rti)
 
