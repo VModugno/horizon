@@ -9,8 +9,6 @@ from horizon.utils import utils, kin_dyn
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
 from horizon.rhc.tasks.cartesianTask import CartesianTask
-from horizon.rhc.plugins.contactTaskSpot import ContactTaskSpot
-from horizon.rhc.plugins.contactTaskMirror import ContactTaskMirror
 from horizon.ros import replay_trajectory
 from horizon.rhc.taskInterface import TaskInterface
 import rospy
