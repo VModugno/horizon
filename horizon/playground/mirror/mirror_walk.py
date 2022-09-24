@@ -66,7 +66,7 @@ task_base_y = {'type': 'Cartesian',
                'distal_link': 'base_link',
                'name': 'final_base_y',
                'indices': [1],
-               'nodes': [ns],
+               'nodes': list(range(ns+1)),
                'fun_type': 'residual',
                'weight': 1e3}
 
@@ -123,26 +123,20 @@ f0 = np.array([0, 0, 300])
 v.setBounds(v0, v0, nodes=ns)
 # regularization costs
 
-# final base x
-# ti.prb.createFinalConstraint("final_base_x", 1e3 * (q[0] - q0[0]))
-
-# final base y
-# ti.prb.createFinalResidual("final_base_y", 1e3 * (q[1] - q0[1]))
-
 # base rotation
 ti.prb.createResidual("min_rot", 1e-4 * (q[3:5] - q0[3:5]))
 
 # joint posture
-ti.prb.createResidual("min_q", 5e-1 * (q[7:] - q0[7:]))
+ti.prb.createFinalResidual("min_q", 1e-1 * (q[7:] - q0[7:]))
 
 # joint velocity
-ti.prb.createResidual("min_v", 1e0 * v)
+ti.prb.createResidual("min_v", 1e-2 * v)
 
 # final posture
-ti.prb.createFinalResidual("min_qf", 1e1 * (q[7:] - q0[7:]))
+ti.prb.createResidual("min_qf", 1e1 * (q[7:] - q0[7:]))
 
 # regularize input
-ti.prb.createIntermediateResidual("min_q_ddot", 1e-2 * a)
+ti.prb.createIntermediateResidual("min_q_ddot", 1e0 * a)
 
 # regularize forces
 for f in forces:
@@ -161,7 +155,7 @@ for i, frame in enumerate(contacts):
 
     # vertical contact frame
     rot_err = cs.sumsqr(ee_rot[2, :2])
-    ti.prb.createIntermediateCost(f'{frame}_rot', 1e1 * rot_err)
+    ti.prb.createIntermediateCost(f'{frame}_rot', 1e4 * rot_err)
 
 # set initial condition and initial guess
 q.setBounds(q0, q0, nodes=0)
@@ -213,25 +207,25 @@ opts_rti['ilqr.max_iter'] = 4
 ti.setSolverOptions(opts)
 ti.finalize()
 
-print('VARIABLES:')
-for var_name, obj in ti.prb.getVariables().items():
-    print(var_name, ':', type(obj))
-    print(obj)
-    print(obj.getNodes().tolist())
-    print(obj.getBounds())
-
-print('CONSTRAINTS:')
-for cnsrt, obj in ti.prb.getConstraints().items():
-    print(cnsrt,':', type(obj))
-    print(obj.getFunction())
-    print(obj._fun_impl)
-    print(obj.getNodes())
-    print(obj.getBounds())
-
-print('COSTS:')
-for cnsrt, obj in ti.prb.getCosts().items():
-    print(cnsrt,':', obj.getNodes(), type(obj))
-
+# print('VARIABLES:')
+# for var_name, obj in ti.prb.getVariables().items():
+#     print(var_name, ':', type(obj))
+#     print(obj)
+#     print(obj.getNodes().tolist())
+#     print(obj.getBounds())
+#
+# print('CONSTRAINTS:')
+# for cnsrt, obj in ti.prb.getConstraints().items():
+#     print(cnsrt,':', type(obj))
+#     print(obj.getFunction())
+#     print(obj._fun_impl)
+#     print(obj.getNodes())
+#     print(obj.getBounds())
+#
+# print('COSTS:')
+# for cnsrt, obj in ti.prb.getCosts().items():
+#     print(cnsrt,':', obj.getNodes(), type(obj))
+#
 
 ti.bootstrap()
 solution = ti.solution
