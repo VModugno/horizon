@@ -66,7 +66,7 @@ task_base_y = {'type': 'Cartesian',
                'distal_link': 'base_link',
                'name': 'final_base_y',
                'indices': [1],
-               'nodes': list(range(ns+1)),
+               'nodes': [ns],
                'fun_type': 'residual',
                'weight': 1e3}
 
@@ -127,12 +127,13 @@ v.setBounds(v0, v0, nodes=ns)
 ti.prb.createResidual("min_rot", 1e-4 * (q[3:5] - q0[3:5]))
 
 # joint posture
-ti.prb.createFinalResidual("min_q", 1e-1 * (q[7:] - q0[7:]))
+ti.prb.createResidual("min_q", 1e-1 * (q[7:] - q0[7:]))
 
 # joint velocity
 ti.prb.createResidual("min_v", 1e-2 * v)
 
 # final posture
+# todo: incredible, this is the problem. if it's FinalResidual, everything goes tho whores
 ti.prb.createResidual("min_qf", 1e1 * (q[7:] - q0[7:]))
 
 # regularize input
