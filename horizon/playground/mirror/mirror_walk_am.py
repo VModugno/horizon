@@ -4,7 +4,7 @@ from horizon.ros import replay_trajectory
 from horizon.solvers.solver import Solver
 from horizon.rhc.taskInterface import TaskInterface
 from horizon.rhc.model_description import *
-from horizon.utils.actionManager import ActionManager
+from horizon.utils.actionManager import ActionManager, Step
 import numpy as np
 import rospkg
 import casadi as cs
@@ -50,8 +50,7 @@ model = FullModelInverseDynamics(problem=prb,
 contacts = [f'arm_{i + 1}_TCP' for i in range(3)]
 
 ti = TaskInterface(prb, model)
-# register my plugin 'Contact'
-# ti.loadPlugins(['horizon.rhc.plugins.contactTaskMirror'])
+
 
 for frame in contacts:
     subtask_force = {'type': 'VertexForce',
@@ -133,7 +132,7 @@ ti.prb.createResidual("min_q", 1e-1 * (q[7:] - q0[7:]))
 ti.prb.createResidual("min_v", 1e-2 * v)
 
 # final posture
-ti.prb.createFinalResidual("min_qf", 1e1 * (q[7:] - q0[7:]))
+ti.prb.createResidual("min_qf", 1e1 * (q[7:] - q0[7:]))
 
 # regularize input
 ti.prb.createIntermediateResidual("min_q_ddot", 1e0 * a)
@@ -141,12 +140,6 @@ ti.prb.createIntermediateResidual("min_q_ddot", 1e0 * a)
 # regularize forces
 for f in forces:
     ti.prb.createIntermediateResidual(f"min_{f.getName()}", 1e-3 * (f - f0))
-
-# costs and constraints implementing a gait schedule
-com_fn = kd.centerOfMass()
-
-# save default foot height
-default_foot_z = dict()
 
 # contact velocity is zero, and normal force is positive
 for i, frame in enumerate(contacts):
@@ -157,9 +150,6 @@ for i, frame in enumerate(contacts):
     ee_p = fk(q=q)['ee_pos']
     ee_rot = fk(q=q)['ee_rot']
     ee_v = dfk(q=q, qdot=v)['ee_vel_linear']
-
-    # save foot height
-    default_foot_z[frame] = (fk(q=q0)['ee_pos'][2]).toarray()
 
     # vertical contact frame
     rot_err = cs.sumsqr(ee_rot[2, :2])
@@ -172,8 +162,8 @@ for i, frame in enumerate(contacts):
     # clearance
     # xy goal
 
+
 opts = dict()
-opts['default_foot_z'] = default_foot_z
 am = ActionManager(ti, opts)
 
 # set initial condition and initial guess
@@ -193,6 +183,7 @@ for f in forces:
 am._walk([10, 200], step_pattern=[0, 2, 1], step_nodes_duration=10)
 # am._trot([50, 100])
 # am._jump([55, 65])
+
 
 # create solver and solve initial seed
 # print('===========executing ...========================')
@@ -219,7 +210,7 @@ opts_rti = opts.copy()
 opts_rti['ilqr.enable_line_search'] = False
 opts_rti['ilqr.max_iter'] = 4
 
-opts['type'] = 'ilqr'
+opts['type'] = 'ipopt'
 
 opts_rti = opts.copy()
 opts_rti['ilqr.enable_line_search'] = False
