@@ -102,11 +102,10 @@ urdf = urdf.replace('continuous', 'revolute')
 
 kd = pycasadi_kin_dyn.CasadiKinDyn(urdf, fixed_joints=fixed_joint_map)
 kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-joint_names = kd.joint_names()[2:]
 q_init = {k: v for k, v in q_init.items() if k not in fixed_joint_map.keys()}
 
 # set up problem
-N = 1000
+N = 100
 tf = 10.0
 dt = tf / N
 
@@ -202,8 +201,8 @@ ti.bootstrap()
 solution = ti.solution
 ti.resample(0.001)
 ti.save_solution('/tmp/dioboy.mat')
-# ti.replay_trajectory()
-
+ti.replay_trajectory()
+exit()
 
 n_nodes = ti.prb.getNNodes()
 nodes_vec = np.zeros([n_nodes])
