@@ -150,7 +150,7 @@ solution = ti.solution
 
 
 q_sol = solution['q']
-repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[1:], q_sol)
+repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[1:], q_sol, kindyn=kd)
 repl.sleep(1.)
 repl.replay(is_floating_base=False)
 
