@@ -229,8 +229,8 @@ if plot_sol:
     plt.show()
 
 
-repl = replay_trajectory.replay_trajectory(dt, ti.kd.joint_names()[2:], np.array([]), {k: None for k in ti.model.fmap.keys()},
-                                           ti.kd_frame, ti.kd)
+repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in model.fmap.keys()},
+                                           model.kd_frame, kd)
 iteration = 0
 
 

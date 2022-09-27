@@ -218,13 +218,13 @@ opts_rti = opts.copy()
 opts_rti['ilqr.enable_line_search'] = False
 opts_rti['ilqr.max_iter'] = 4
 
+#
+# print('CONSTRAINTS:')
+# for cnsrt, obj in ti.prb.getConstraints().items():
+#     print(cnsrt,':', type(obj))
+#     print(obj.getNodes())
 
-print('CONSTRAINTS:')
-for cnsrt, obj in ti.prb.getConstraints().items():
-    print(cnsrt,':', type(obj))
-    print(obj.getNodes())
-
-exit()
+# exit()
 # solver_bs = Solver.make_solver(solver_type, ti.prb, opts)
 # solver_rti = Solver.make_solver(solver_type, ti.prb, opts_rti)
 
