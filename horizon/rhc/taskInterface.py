@@ -196,10 +196,9 @@ class TaskInterface:
     def replay_trajectory(self):
 
         # single replay
-        joint_names = self.model.kd.joint_names()[2:]
-
+        joint_names = self.model.kd.joint_names()
         q_sol = self.solution['q']
-        q_sol_minimal = np.zeros([len(joint_names)+7, self.prb.getNNodes()])
+        q_sol_minimal = np.zeros([q_sol.shape[0], self.prb.getNNodes()])
 
         # if q is not minimal (continuous joints are present) make it minimal
         for col in range(q_sol.shape[1]):
