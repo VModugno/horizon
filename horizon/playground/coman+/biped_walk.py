@@ -138,7 +138,6 @@ q = ti.prb.getVariables('q')
 v = ti.prb.getVariables('v')
 a = ti.prb.getVariables('a')
 
-import casadi as cs
 cd_fun = ti.model.kd.computeCentroidalDynamics()
 
 # adding minimization of angular momentum
@@ -164,7 +163,7 @@ ti.prb.createFinalConstraint('final_v', v)
 # ===================== stuff to wrap ============================
 # ================================================================
 # ================================================================
-import subprocess, rospy
+import rospy
 from horizon.ros import replay_trajectory
 
 ti.finalize()
@@ -178,10 +177,12 @@ if replay_motion:
 
     # single replay
     q_sol = solution['q_res']
-    frame_force_mapping = {cname: solution[f.getName()+'_res'] for cname, f in ti.model.fmap.items()}
-    repl = replay_trajectory.replay_trajectory(0.001, ti.model.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.model.kd_frame, ti.model.kd)
+    frame_force_mapping = {cname: solution[f.getName()+'_res'] for cname, f in model.fmap.items()}
+    repl = replay_trajectory.replay_trajectory(0.001, model.kd.joint_names(), q_sol, frame_force_mapping, model.kd_frame, model.kd)
     repl.sleep(1.)
     repl.replay(is_floating_base=True)
+
+exit()
 # =========================================================================
 if plot_sol:
     from horizon.utils import plotter
@@ -189,7 +190,7 @@ if plot_sol:
     from matplotlib import gridspec
     import casadi as cs
 
-    hplt = plotter.PlotterHorizon(ti.prb, solution)
+    hplt = plotter.PlotterHorizon(prb, solution)
     hplt.plotVariables([elem.getName() for elem in forces], show_bounds=False, gather=2, legend=False, dim=[0, 1, 2])
     hplt.plotVariables([elem.getName() for elem in forces], show_bounds=True, gather=2, legend=False, dim=[3, 4, 5])
 
@@ -229,7 +230,7 @@ if plot_sol:
     plt.show()
 
 
-repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in model.fmap.keys()},
+repl = replay_trajectory.replay_trajectory(dt, kd.joint_names(), np.array([]), {k: None for k in model.fmap.keys()},
                                            model.kd_frame, kd)
 iteration = 0
 

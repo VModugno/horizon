@@ -131,7 +131,7 @@ rospy.loginfo("'spot' visualization started.")
 # repl.replay(is_floating_base=True)
 # exit()
 # =========================================================================
-repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], np.array([]), {k: None for k in contacts}, kd_frame, kd)
+repl = replay_trajectory.replay_trajectory(dt, kd.joint_names(), np.array([]), {k: None for k in contacts}, kd_frame, kd)
 iteration = 0
 
 # solver_rti.solution_dict['x_opt'] = solver_bs.getSolutionState()

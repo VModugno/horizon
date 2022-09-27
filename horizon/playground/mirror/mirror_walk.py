@@ -243,7 +243,7 @@ solution = ti.solution
 ## single replay
 q_sol = solution['q']
 frame_force_mapping = {contacts[i]: solution[forces[i].getName()] for i in range(3)}
-repl = replay_trajectory.replay_trajectory(dt, kd.joint_names()[2:], q_sol, frame_force_mapping, kd_frame, kd)
+repl = replay_trajectory.replay_trajectory(dt, kd.joint_names(), q_sol, frame_force_mapping, kd_frame, kd)
 repl.sleep(1.)
 repl.replay(is_floating_base=True)
 exit()
