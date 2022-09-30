@@ -89,16 +89,16 @@ prb.setDt(dt)
 
 
 # set up model
-model = FullModelInverseDynamics(problem=prb,
-                                 kd=kd,
-                                 q_init=q_init,
-                                 base_init=base_init)
+# model = FullModelInverseDynamics(problem=prb,
+#                                  kd=kd,
+#                                  q_init=q_init,
+#                                  base_init=base_init)
 # else:
-# model = SingleRigidBodyDynamicsModel(problem=prb,
-#                                      kd=kd,
-#                                      q_init=q_init,
-#                                      base_init=base_init,
-#                                      contact_dict=contact_dict)
+model = SingleRigidBodyDynamicsModel(problem=prb,
+                                     kd=kd,
+                                     q_init=q_init,
+                                     base_init=base_init,
+                                     contact_dict=contact_dict)
 
 ti = TaskInterface(prb=prb,
                    model=model)
