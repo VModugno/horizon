@@ -282,6 +282,7 @@ class TaskInterface:
         task_description_mod['kin_dyn'] = self.model.kd
         task_description_mod['model'] = self.model
 
+        # todo horrible to do it here
         # add specific context
         if task_description_mod['type'] == 'Postural':
             task_description_mod['postural_ref'] = self.model.q0
