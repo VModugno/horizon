@@ -18,8 +18,6 @@ solver:
 
 
 constraints:
- - final_arm_ee          # required to set xy-target for the walk
- - z_arm_ee
  - foot_contact_lf_foot        # required from the ActionManager
  - foot_contact_lh_foot        # required from the ActionManager
  - foot_contact_rf_foot        # required from the ActionManager
@@ -34,30 +32,29 @@ constraints:
  - foot_xy_rh_foot        # required from the ActionManager
  -
 costs:
-  - joint_posture
+  - final_arm_ee          # required to set xy-target for the walk
+  - joint_posture_dog
+  - joint_posture_arm
 #  - joint_posture_ankles
   - joint_regularization
   # - final_posture
 #  - base_posture
 
-
-final_base_xy:
-  type: Cartesian
-  distal_link: base_link
-  indices: [0, 1]
-  nodes: 50
+#
+#final_base_xy:
+#  type: Cartesian
+#  distal_link: base_link
+#  indices: [0, 1]
+#  nodes: 50
+#  weight: 50
 
 final_arm_ee:
   type: Cartesian
   distal_link: teleop2_link6
-  indices: [0, 1]
-  nodes: 50
+  indices: [0, 1, 2]
+  nodes: ${range(10, 20)}
+  weight: 1e2
 
-z_arm_ee:
-  type: Cartesian
-  distal_link: teleop2_link6
-  indices: [2]
-  nodes: [40, 41, 42, 43, 44, 45, 46, 47, 48, 47, 49, 50]
 # ===============================
 # point contact
 force_lf_foot:
@@ -137,9 +134,16 @@ foot_contact_rh_foot:
   type: Contact
   subtask: [force_rh_foot, zero_velocity_rh_foot]
 
-joint_posture:
+joint_posture_dog:
   type: Postural
-  weight: 5 # 10
+  weight: 2 # 10
+  nodes: all
+  indices: ${range(6, 18)}
+
+joint_posture_arm:
+  type: Postural
+  weight: 2 # 10
+  indices: ${range(0, 6)}
   nodes: all
 
 #base_posture:
