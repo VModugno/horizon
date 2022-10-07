@@ -24,7 +24,7 @@ urdffile = os.path.join(path_to_examples, 'urdf', 'centauro.urdf')
 urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
 
-ms = mat_storer.matStorer('centauro_up.mat')
+ms = mat_storer.matStorer('centauro_up_nice2.mat')
 solution = ms.load()
 
 var_q = 'q_res'
