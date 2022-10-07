@@ -85,6 +85,7 @@ IterativeLQR::IterativeLQR(cs::Function fdyn,
     // set options _hxx_reg_base
     _verbose = value_or(opt, "ilqr.verbose", 0);
     _log = value_or(opt, "ilqr.log", 0);
+    _rti = value_or(opt, "ilqr.rti", 0);
     _step_length = value_or(opt, "ilqr.step_length", 1.0);
 
     _rho_base = value_or(opt, "ilqr.rho_base", 0.0);
