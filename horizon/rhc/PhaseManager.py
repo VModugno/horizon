@@ -15,7 +15,7 @@ import rospy
 import os
 import subprocess
 import itertools
-
+import time
 class Phase:
     def __init__(self, phase_name, n_nodes_phase):
         self.name = phase_name
@@ -23,6 +23,15 @@ class Phase:
 
     def setDuration(self):
         pass
+
+class PhaseToken(Phase):
+    def __init__(self, phase_name, n_nodes_phase):
+        super().__init__(phase_name, n_nodes_phase)
+
+        self.id = 'cazzi'
+        # self.active_nodes = np.zeros(n_nodes_phase).astype(int)
+        self.active_nodes = [] * n_nodes_phase
+
 
 """
 1. add a phase starting from a specific node
@@ -38,11 +47,12 @@ class PhaseManager:
         # prb: Problem, urdf, kindyn, contacts_map, default_foot_z
 
         # self.prb = problem
-        self.phase_container = dict()
-        self.phase_dict = dict()
+        self.registered_phases = dict() # container of all the registered phases
+        self.phase_dict = dict() # map of phase - identifier
         self.n_tot = nodes # self.prb.getNNodes() + 1
 
-        self.phase_list = list()
+        self.phases = list()
+        self.active_phase_list = list() # list of all the active phases
         self.activated_nodes = list()
         self.horizon_nodes = np.nan * np.ones(self.n_tot)
 
@@ -81,15 +91,15 @@ class PhaseManager:
     def registerPhase(self, p):
 
         # todo: add unique number identifier?
-        self.phase_dict[p.name] = len(self.phase_container)
-        self.phase_container[p.name] = p
+        self.phase_dict[p.name] = len(self.registered_phases)
+        self.registered_phases[p.name] = p
 
     def getRegisteredPhase(self, p=None):
 
         if p is None:
-            return list(self.phase_container.items())
+            return list(self.registered_phases.items())
         else:
-            return self.phase_container[p] if p in self.phase_container else None
+            return self.registered_phases[p] if p in self.registered_phases else None
 
     def addPhase(self, phases, pos=None):
 
@@ -101,18 +111,44 @@ class PhaseManager:
             assert isinstance(phases, Phase)
             phases = [phases]
 
+        phases_to_add = [PhaseToken(phase.name, phase.n_nodes) for phase in phases]
+
         # append or insert
         if pos is None:
-            self.phase_list.extend(phases)
+            self.phases.extend(phases_to_add)
         else:
-            self.phase_list[pos:pos] = phases
+            self.phases[pos:pos] = phases_to_add
 
+        # active_nodes_list = np.concatenate([ap.active_nodes for ap in self.phases])
+        active_nodes_list = []
+        active_nodes_list[0:0] = [ap.active_nodes for ap in self.phases]
+
+        print(active_nodes_list)
+        exit()
+
+        active_nodes_list[:] = [0]
+        active_nodes_list[0:self.n_tot] = [1]
+
+
+        i = 0
+        for ap in self.phases:
+            ap.active_nodes = active_nodes_list[i:i+ap.n_nodes]
+            i += ap.n_nodes
+
+
+        self.active_phase_list = [phase for phase in self.phases if np.isin(1, phase.active_nodes)]
+
+
+        # self._update_active_nodes_from_phases(self.active_phase_list)
         # expand phases
-        self._expand_phases_in_horizon(self.phase_list)
+        self._expand_phases_in_horizon()
 
-    def getPhaseList(self):
+    def getActivePhase(self, phase=None):
 
-        return self.phase_list.copy()
+        if phase is None:
+            return self.active_phase_list.copy()
+        else:
+            return self.active_phase_list[phase]
 
     def setPattern(self, pattern, n_start=None, n_stop=None):
 
@@ -121,16 +157,11 @@ class PhaseManager:
 
         self.current_pattern = pattern
 
-        self._expand_phases_in_horizon(pattern, n_start, n_stop)
+        self._expand_phases_in_horizon(n_start, n_stop)
 
-    def _expand_phases_in_horizon(self, phases, n_start=None, n_stop=None):
+    def _expand_phases_in_horizon(self, n_start=None, n_stop=None):
 
         # adds phases to future horizon (keep track of all the phases, also outside the problem horizon)
-        self.activated_nodes = []
-        for phase in phases:
-            phase_num = self.phase_dict[phase.name]
-            self.activated_nodes.extend([phase_num] * self.phase_container[phase.name].n_nodes)
-
         n_start = 0
         n_stop = len(self.activated_nodes) if len(self.activated_nodes) <= self.n_tot else self.n_tot
 
@@ -147,7 +178,26 @@ class PhaseManager:
         # todo wrong implementation of slice nodes
         # reset to default action
         self.horizon_nodes[slice_node] = self.phase_dict['default']
-        self.horizon_nodes[slice_node] = self.activated_nodes[slice_node]
+
+        # todo enhance
+        #   if slice_node has a bigger dimension than self.activated_nodes, what happens?
+        n_stop_activated = n_stop if n_stop < len(self.activated_nodes) else len(self.activated_nodes)
+        self.horizon_nodes[n_start:n_stop_activated] = self.activated_nodes[n_start:n_stop_activated]
+
+        # todo where to put?
+
+    def _update_active_nodes(self, phases):
+
+        self.activated_nodes = []
+        for phase in phases:
+            phase_num = self.phase_dict[phase.name]
+            self.activated_nodes.extend([phase_num] * self.registered_phases[phase.name].n_nodes)
+
+    # def update_phases_from_active_nodes(self, active_nodes):
+    #
+    #     for phase in self.active_phase_list:
+    #         if self.phase_dict[phase.name] not in active_nodes:
+    #             self.active_phase_list.remove(phase)
 
     def getHorizonNodes(self):
 
@@ -156,8 +206,21 @@ class PhaseManager:
 
     def _shift_phases(self, shift_num):
         # burn the first 'shift_num' elements
-        self.activated_nodes = self.activated_nodes[shift_num:]
-        self._update_horizon()
+        # phase_nodes = np.concatenate([ap.active_nodes for ap in self.phases])
+        # phase_nodes = np.hstack((0, phase_nodes))
+        phase_nodes = [ap.active_nodes for ap in self.phases]
+        phase_nodes = phase_nodes.insert(0, 0)
+
+        print(phase_nodes)
+        exit()
+
+        i = 0
+        for ap in self.phases:
+            ap.active_nodes = phase_nodes[i:i + ap.n_nodes]
+            i += ap.n_nodes
+
+        self.active_phase_list = [phase for phase in self.phases if 1 in phase.active_nodes]
+        # self._update_horizon()
 
     # def execute(self, bootstrap_solution):
     #     """
@@ -212,11 +275,11 @@ class PhaseManager:
 
 if __name__ == '__main__':
 
-    pm = PhaseManager(30)
+    pm = PhaseManager(10)
 
-    in_p = Phase('initial', 10)
-    st_p = Phase('stance', 10)
-    fl_p = Phase('flight', 10)
+    in_p = Phase('initial', 5)
+    st_p = Phase('stance', 5)
+    fl_p = Phase('flight', 2)
 
     pm.registerPhase(in_p)
     pm.registerPhase(st_p)
@@ -224,19 +287,89 @@ if __name__ == '__main__':
 
     phase_stance = pm.getRegisteredPhase('stance')
 
-    print(pm.getHorizonNodes())
+    print('starting horizon:', pm.getHorizonNodes())
     pm.addPhase(in_p)
-    print(pm.getHorizonNodes())
-    print(pm.getPhaseList())
+    # print('added phase 1:', pm.getHorizonNodes())
+    # print('phase list:', pm.getActivePhase())
     pm.addPhase(st_p)
-    print(pm.getHorizonNodes())
-    pm.addPhase(fl_p, 1)
-    print(pm.getHorizonNodes())
-    # pattern = [in_p, st_p, in_p, fl_p]
+    pm.addPhase(st_p)
+    pm.addPhase(fl_p)
 
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+    print('-----------------------')
+    for phase in pm.phases:
+        print(phase.name, phase.active_nodes)
+    # print('added phase 2:', pm.getHorizonNodes())
+    # print('added phase 3 before phase 2:', pm.getHorizonNodes())
+    # pattern = [in_p, st_p, in_p, fl_p]\
+    tic = time.time()
+    for i in range(1000):
+        pm._shift_phases(1)
+    toc = time.time() - tic
+    print(toc)
+    exit()
+    print('--------- shifting --------------')
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+    pm._shift_phases(1)
+
+    print('--------- shifting --------------')
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+    pm._shift_phases(1)
+
+    print('--------- shifting --------------')
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+
+    pm._shift_phases(1)
+
+    print('--------- shifting --------------')
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+
+    pm._shift_phases(1)
+    print('--------- shifting --------------')
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+    pm._shift_phases(1)
+    print('--------- shifting --------------')
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+    exit()
+    pm._shift_phases(1)
+    pm._shift_phases(1)
+    pm._shift_phases(1)
+
+    for phase in pm.phases:
+        print(phase.name, phase.active_nodes)
+
+    for phase in pm.active_phase_list:
+        print(phase.name, phase.active_nodes)
+
+    exit()
     # pm.setPattern(pattern)
 
-
-    for i in range(2):
+    for i in range(10):
         pm._shift_phases(1)
-        print(pm.getHorizonNodes())
+        print('shift phases:', pm.getHorizonNodes())
+
+        if i >= 9:
+            print('adding phase "stance"')
+            pm.addPhase(st_p)
+
+    print('final situation:', pm.getHorizonNodes())
+    print('phase list:', pm.getActivePhase())
+
+    for i in range(6):
+        pm._shift_phases(1)
+        print('shift phases:', pm.getHorizonNodes())
+
