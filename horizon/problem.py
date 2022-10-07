@@ -866,7 +866,7 @@ class Problem:
             var_name = var.getName()
             # careful about ordering
             # todo this is very ugly, but what can I do (wanted to do it without the if)
-            if isinstance(var, sv.SingleVariable):
+            if True or isinstance(var, sv.SingleVariable):
                 all_vars.append(solution[var_name])
             else:
                 # this is required because:
@@ -884,7 +884,7 @@ class Problem:
         for par in fun.getParameters():
             # careful about ordering
             # todo this is very ugly, but what can I do (wanted to do it without the if)
-            if isinstance(par, sv.SingleParameter):
+            if True or isinstance(par, sv.SingleParameter):
                 all_pars.append(par.getValues())
             else:
                 par_matrix = np.reshape(par.getValues(), (par.getDim(), len(par.getNodes())), order='F')
