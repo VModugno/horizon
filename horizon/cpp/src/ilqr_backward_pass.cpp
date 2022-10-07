@@ -270,14 +270,9 @@ void IterativeLQR::backward_pass_iter(int i)
     auto& S = value.S;
     auto& s = value.s;
 
-    S.noalias() = tmp.Hxx + tmp.Hux.transpose()*Lu + Lu.transpose()*tmp.Hux +
-            Lu.transpose()*tmp.Huu*Lu;
-
     S.noalias() = tmp.Hxx + tmp.Hux.transpose()*Lu + constr_feas.C.transpose()*Lmu;
 
     S = 0.5*(S + S.transpose());  // note: symmetrize
-
-    s.noalias() = tmp.hx + tmp.Hux.transpose()*lu + Lu.transpose()*(tmp.hu + tmp.Huu*lu);
 
     s.noalias() = tmp.hx + tmp.Hux.transpose()*lu + constr_feas.C.transpose()*lmu;
 
@@ -285,6 +280,42 @@ void IterativeLQR::backward_pass_iter(int i)
     THROW_NAN(s);
     TOC(upd_value_fn_inner);
 
+    if(tmp.hinf.size() > 0)
+    {
+        // propagate infeasible constraint
+//        std::cout << "Cinf = \n" << tmp.Cinf.format(3) << "\n";
+//        std::cout << "Dinf = \n" << tmp.Dinf.format(3) << "\n";
+//        std::cout << "hinf = \n" << tmp.hinf.format(3) << "\n\n";
+
+        tmp.Cinf += tmp.Dinf * Lu;
+        tmp.hinf += tmp.Dinf * lu;
+
+        // propagate infeasible constraint
+//        std::cout << "Lu = \n" << Lu.format(3) << "\n";
+//        std::cout << "Cinf_upd = \n" << tmp.Cinf.format(3) << "\n";
+//        std::cout << "hinf_upd = \n" << tmp.hinf.format(3) << "\n\n";
+
+        // check linear dependence
+        for(int j = 0; j < tmp.hinf.size(); j++)
+        {
+            // i-th infeasible constraint is in the form 0x = 0
+            double hnorm = std::fabs(tmp.hinf[j]);
+            double Cnorm = tmp.Cinf.row(j).lpNorm<Eigen::Infinity>();
+            if(hnorm < 1e-16 && Cnorm < 1e-16)
+            {
+                if(_verbose)
+                {
+                    std::cout << "warn at k = " << i <<
+                                 ": removing linearly dependent constraint with " <<
+                                 "|Ci| = " << Cnorm << ", |hi| = " << hnorm << "\n";
+                }
+                continue;
+            }
+
+            _constraint_to_go->add(tmp.Cinf.row(j),
+                                   tmp.hinf.row(j));
+        }
+    }
 
 }
 
@@ -584,7 +615,7 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
 
     // number of constraints
     int nc = _constraint_to_go->dim();
-    res.nc = nc;
+
 
     if(_log)
     {
@@ -598,6 +629,7 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
         Cf.setZero(0, _nx);
         Df.setZero(0, _nu);
         hf.setZero(0);
+        tmp.hinf.setZero(0);
         return FeasibleConstraint{Cf, Df, hf};
     }
 
@@ -610,7 +642,11 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     THROW_NAN(Dtmp);
     THROW_NAN(htmp);
 
-    // it is rather common for D to contain zero rows,
+//    std::cout << "C = \n" << Ctmp.format(3) << "\n";
+//    std::cout << "D = \n" << Dtmp.format(3) << "\n";
+//    std::cout << "h = \n" << htmp.format(3) << "\n";
+
+    // it is rather common for D to contain exact zero rows,
     // we can directly consider them as unsatisfied constr
     _constraint_to_go->clear();
     Eigen::MatrixXd C(Ctmp.rows(), Ctmp.cols());
@@ -621,7 +657,7 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     for(int j = 0; j < h.size(); j++)
     {
         double Dnorm = Dtmp.row(j).lpNorm<Eigen::Infinity>();
-        if(Dnorm < _svd_threshold)
+        if(Dnorm == 0)
         {
             _constraint_to_go->add(Ctmp.row(j),
                                    htmp.row(j));
@@ -636,16 +672,29 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     }
 
     nc = pruned_idx;
+    res.nc = nc;
+
+    if(_log)
+    {
+        std::cout << "n_constr[" << i << "] = " <<
+                      nc << " after pruning \n";
+    }
+
+    // no constraint to handle, do nothing
+    if(nc == 0)
+    {
+        Cf.setZero(0, _nx);
+        Df.setZero(0, _nu);
+        hf.setZero(0);
+        tmp.hinf.setZero(0);
+        return FeasibleConstraint{Cf, Df, hf};
+    }
 
     C.conservativeResize(nc, C.cols());
     D.conservativeResize(nc, D.cols());
     h.conservativeResize(nc);
 
-    if(_log)
-    {
-        std::cout << "n_constr[" << i << "] = " <<
-                      pruned_idx << " after pruning \n";
-    }
+
 
 
     // cod of D
@@ -709,28 +758,39 @@ IterativeLQR::FeasibleConstraint IterativeLQR::handle_constraints(int i)
     hf.noalias() = codQ1.transpose()*h;
 
     // infeasible part
-    Eigen::MatrixXd Cinf = codQ2.transpose()*C;
-    Eigen::VectorXd hinf = codQ2.transpose()*h;
+    tmp.Dinf = codQ2.transpose()*D;
+    tmp.Cinf = codQ2.transpose()*C;
+    tmp.hinf = codQ2.transpose()*h;
 
-    for(int j = 0; j < hinf.size(); j++)
-    {
-        // i-th infeasible constraint is in the form 0x = 0
-        double hnorm = std::fabs(hinf[j]);
-        double Cnorm = Cinf.row(j).lpNorm<Eigen::Infinity>();
-        if(hnorm < 1e-9 && Cnorm < 1e-9)
-        {
-            if(_verbose)
-            {
-                std::cout << "warn at k = " << i <<
-                             ": removing linearly dependent constraint with " <<
-                             "|Ci| = " << Cnorm << ", |hi| = " << hnorm << "\n";
-            }
-            continue;
-        }
+//    std::cout << "Cfeas = \n" << Cf.format(3) << "\n";
+//    std::cout << "Dfeas = \n" << Df.format(3) << "\n";
+//    std::cout << "hfeas = \n" << hf.format(3) << "\n";
 
-        _constraint_to_go->add(Cinf.row(j),
-                               hinf.row(j));
-    }
+//    // regularize feasible part
+//    for(int j = 0; j < rank; j++)
+//    {
+//        double rjj = qr.matrixR()(j, j);
+//        double r_mult = _svd_threshold*(1 + qr.maxPivot())/std::fabs(rjj);
+
+//        if(r_mult <= 1.0)
+//        {
+//            continue;
+//        }
+
+//        tmp.Dinf.conservativeResize(tmp.Dinf.rows()+1, tmp.Dinf.cols());
+//        tmp.Dinf.bottomRows<1>() = Df.row(j);
+
+//        tmp.Cinf.conservativeResize(tmp.Cinf.rows()+1, tmp.Cinf.cols());
+//        tmp.Cinf.bottomRows<1>() = Cf.row(j);
+
+//        tmp.hinf.conservativeResize(tmp.hinf.size() + 1);
+//        tmp.hinf(tmp.hinf.size() - 1) = hf(j);
+
+//        Df.row(j) *= std::sqrt(r_mult);
+
+//    }
+
+//    std::cout << "Dfeas_upd = \n" << Df.format(3) << "\n";
 
     return FeasibleConstraint{Cf, Df, hf};
 

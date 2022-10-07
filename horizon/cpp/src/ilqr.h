@@ -282,6 +282,7 @@ private:
 
     bool _verbose;
     bool _log;
+    bool _rti;
 
     const int _nx;
     const int _nu;
