@@ -79,7 +79,8 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6),_alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _merit_eps(1e-6)
+        _eps_regularization(0.0),
+        _eps_regularization_base(0.0)
     {
 
         _f = f;
@@ -130,7 +131,8 @@ public:
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6), _alpha_min(1e-3),
         _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _merit_eps(1e-6)
+        _eps_regularization(0.0),
+        _eps_regularization_base(0.0)
     {
         _f = casadi::Function("f", {x}, {f}, {"x"}, {"f"});
         _df = _f.function().factory("df", {"x"}, {"jac:f:x"});
@@ -204,13 +206,6 @@ public:
             _use_gr = _qp_opts.at("use_golden_ratio_update");
             _qp_opts.erase("use_golden_ratio_update");
         }
-
-        if(_qp_opts.count("merit_eps"))
-        {
-            _merit_eps = _qp_opts.at("merit_eps");
-            _qp_opts.erase("merit_eps");
-        }
-
     }
 
     void printConicOptions(std::ostream &stream=casadi::uout()) const
@@ -512,8 +507,8 @@ private:
     double _constraint_violation_tolerance;
     double _merit_derivative_tolerance;
 
-    double _eps_regularization = 0.0;
-    double _eps_regularization_base = 0.0;
+    double _eps_regularization;
+    double _eps_regularization_base;
 
     bool _use_gr;
 
@@ -522,7 +517,6 @@ private:
     Eigen::VectorXd _x0_;
     casadi::DM _x_;
     Eigen::VectorXd _g_;
-    double _merit_eps;
 
 
 };

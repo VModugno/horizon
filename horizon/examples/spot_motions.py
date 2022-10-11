@@ -9,6 +9,7 @@ import os, argparse
 from itertools import filterfalse
 import numpy as np
 import casadi as cs
+import time
 
 def str2bool(v):
   #susendberg's function
@@ -278,9 +279,10 @@ def main(args):
     if solver_type == 'gnsqp':
         qp_solver = 'osqp'
         if qp_solver == 'osqp':
-            opts['gnsqp.qp_solver'] = 'osqp'
+            opts['qp_solver'] = 'osqp'
             opts['warm_start_primal'] = True
             opts['warm_start_dual'] = True
+            opts['gnsqp.eps_regularization'] = 1e-4
             opts['merit_derivative_tolerance'] = 1e-3
             opts['constraint_violation_tolerance'] = n_nodes * 1e-3
             opts['osqp.polish'] = True # without this
@@ -311,7 +313,9 @@ def main(args):
     except:
         pass
 
+    t = time.time()
     solv.solve()
+    print("solve time: ", time.time() - t)
 
     if solver_type == 'ilqr':
         solv.print_timings()
