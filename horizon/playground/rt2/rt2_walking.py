@@ -16,6 +16,9 @@ from xbot_interface import xbot_interface as xbot
 import time
 
 
+# 1. rviz / roscore
+# 2. rosrun cartesian_interface marker_spawner
+
 class CartesioSolver:
 
     def __init__(self, urdf, srdf, pb, kd, solver) -> None:
