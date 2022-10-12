@@ -43,11 +43,6 @@ public:
 
     void update_values(const Eigen::SparseMatrix<T>& E)
     {
-        if(E.rows() != _C.rows()) throw std::runtime_error("E.rows() != C.rows()");
-        if(E.cols() != _C.columns()) throw std::runtime_error("E.cols() != C.cols()");
-        if(E.nonZeros() != _C.nnz()) throw std::runtime_error("E.nnz() != C.nnz()");
-
-
         std::memcpy(_C->data(), E.valuePtr(), sizeof(T)*E.nonZeros());
     }
 
@@ -136,6 +131,9 @@ private:
                               const std::vector<casadi_int>&  sp_cols,
                               const std::vector<double>& data,
                               Eigen::SparseMatrix<double>& matrix);
+
+    void csc_update_sparse_matrix(const std::vector<double>& data,
+                                  Eigen::SparseMatrix<double>& matrix);
 
     std::vector<const double *> _in_buf;
     std::vector<std::vector<double>> _out_data;

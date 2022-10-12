@@ -49,6 +49,9 @@ WrappedFunction &WrappedFunction::operator=(casadi::Function f)
         sp.get_triplet(rows, cols);
         _rows.push_back(rows);
         _cols.push_back(cols);
+
+        std::vector<double> data(_rows[i].size(), 1.);
+        csc_to_sparse_matrix(sp, _rows[i], _cols[i], data, _out_matrix_sparse[i]);
     }
 
     for(int i = _f.n_out(); i < _f.sz_res(); i++)
@@ -108,10 +111,11 @@ void WrappedFunction::call(bool sparse)
 
         if(sparse)
         {
-            csc_to_sparse_matrix(_f.sparsity_out(i),
-                                 _rows[i], _cols[i],
-                                 _out_data[i],
-                                 _out_matrix_sparse[i]);
+//            csc_to_sparse_matrix(_f.sparsity_out(i),
+//                                 _rows[i], _cols[i],
+//                                 _out_data[i],
+//                                 _out_matrix_sparse[i]);
+            csc_update_sparse_matrix(_out_data[i], _out_matrix_sparse[i]);
         }
         else
         {
@@ -214,6 +218,12 @@ const casadi::Function &WrappedFunction::function() const
 bool WrappedFunction::is_valid() const
 {
     return !_f.is_null();
+}
+
+void WrappedFunction::csc_update_sparse_matrix(const std::vector<double>& data,
+                              Eigen::SparseMatrix<double>& matrix)
+{
+    std::memcpy(matrix.valuePtr(), data.data(), sizeof(double)*matrix.nonZeros());
 }
 
 void WrappedFunction::csc_to_sparse_matrix(const casadi::Sparsity& sp,
