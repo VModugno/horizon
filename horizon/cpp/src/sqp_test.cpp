@@ -29,26 +29,13 @@ int main()
     opts["max_iter"] = 5;
     //opts["printLevel"] = "none";
 
-    /// CONSTRUCTOR 1
-    std::cout<<"USE MAIN CONSTRUCTOR"<<std::endl;
-    horizon::SQPGaussNewton<casadi::SX> sqp("sqp", "osqp", f, g, casadi::SX::vertcat({x, u}), opts);
-
-    auto solution = sqp.solve(x0, casadi::DM(0,0), lb, ub, lb, ub);
-
-    std::cout<<"solution: "<<solution["x"]<<"   f: "<<solution["f"]<<"  g: "<<solution["g"]<<std::endl;
-
-    casadi::DMVector var_trj = sqp.getVariableTrajectory();
-    std::vector<double> objs = sqp.getObjectiveIterations();
-    std::vector<double> cons = sqp.getConstraintNormIterations();
-    for(unsigned int i = 0; i < sqp.getNumberOfIterations(); ++i)
-        std::cout<<"iter "<<i<<"-> sol: "<<var_trj[i]<<"    obj: "<<objs[i]<<"  cons: "<<cons[i]<<std::endl;
 
     /// CONSTRUCTOR 2
     std::cout<<"USE SECOND CONSTRUCTOR"<<std::endl;
     auto F = casadi::Function("f", {casadi::SX::vertcat({x,u})}, {f}, {"x"}, {"f"});
     auto G = casadi::Function("g", {casadi::SX::vertcat({x,u})}, {g}, {"x"}, {"g"});
 
-    horizon::SQPGaussNewton<casadi::SX> sqp2("sqp2", "qpoases", F, G, opts);
+    horizon::SQPGaussNewton<casadi::SX> sqp2("sqp2", "osqp", F, G, opts);
 
     auto solution2 = sqp2.solve(x0, casadi::DM(0,0), lb, ub, lb, ub);
 

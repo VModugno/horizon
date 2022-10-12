@@ -45,8 +45,8 @@ prb.createCost('min_dx_prev', dx_prev, nodes=list(range(N, N+1)))
 
 # Constraints
 du_prev = du.getVarOffset(-1)
-x_int = F_integrator(x0=dx_prev, p=du_prev, time=dt)
-prb.createConstraint("multiple_shooting", x_int["xf"] - dx, nodes=list(range(1, N+1)))
+x_int = F_integrator(x=dx_prev, u=du_prev, dt=dt)
+prb.createConstraint("multiple_shooting", x_int["f"] - dx, nodes=list(range(1, N+1)))
 
 # SQP solver requires cost function in form of residual!
 opts = {#SQP

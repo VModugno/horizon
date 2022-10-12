@@ -65,11 +65,9 @@ bool checkOptions(const std::string& key, py::handle& value, casadi::Dict& dict)
     if(setOption    <double>        (key,   "eps_regularization",               value, dict)) return true;
     if(setOption    <double>        (key,   "alpha_min",                        value, dict)) return true;
     if(setOption    <int>           (key,   "max_iter",                         value, dict)) return true;
-    if(setOption    <bool>          (key,   "reinitialize_qpsolver",            value, dict)) return true;
     if(setOption    <double>        (key,   "merit_derivative_tolerance",       value, dict)) return true;
     if(setOption    <double>        (key,   "constraint_violation_tolerance",   value, dict)) return true;
     if(setOption    <double>        (key,   "solution_convergence",             value, dict)) return true;
-    if(setOption    <bool>          (key,   "use_golden_ratio_update",          value, dict)) return true;
     // -- qpoases options --//
     if(setOption    <bool>          (key,   "sparse",                           value, dict)) return true;
     if(setOption    <bool>          (key,   "schur",                            value, dict)) return true;
@@ -167,25 +165,6 @@ auto constructSX(std::string name, std::string qp_solver,
     return std::make_unique< SQPGaussNewton< casadi::SX > >(name, qp_solver, to_cpp(f), to_cpp(g), casadi_opts);
 }
 
-bool fMX(SQPGaussNewton<casadi::MX>& self, py::object f, bool reinitialize_qp_solver = true)
-{
-    return self.f(to_cpp(f), reinitialize_qp_solver);
-}
-
-bool fSX(SQPGaussNewton<casadi::SX>& self, py::object f, bool reinitialize_qp_solver = true)
-{
-    return self.f(to_cpp(f), reinitialize_qp_solver);
-}
-
-bool gMX(SQPGaussNewton<casadi::MX>& self, py::object g, bool reinitialize_qp_solver = true)
-{
-    return self.f(to_cpp(g), reinitialize_qp_solver);
-}
-
-bool gSX(SQPGaussNewton<casadi::SX>& self, py::object g, bool reinitialize_qp_solver = true)
-{
-    return self.f(to_cpp(g), reinitialize_qp_solver);
-}
 
 auto callMX(SQPGaussNewton<casadi::MX>& self,
             const Eigen::VectorXd& x0,

@@ -12,7 +12,7 @@
 
 #include "ilqr.h"
 
-#define GR 1.61803398875
+
 
 namespace horizon{
 
@@ -24,32 +24,6 @@ template <class CASADI_TYPE> ///casadi::SX or casadi::MX
 class SQPGaussNewton
 {
 public:
-
-    static void setQPOasesOptionsMPC(casadi::Dict& opts)
-    {
-        opts["enableEqualities"] = true;
-        opts["initialStatusBounds"] = "inactive";
-        opts["numRefinementSteps"] = 0;
-        opts["enableDriftCorrection"] = 0;
-        opts["terminationTolerance"] = 10e9 * std::numeric_limits<double>::epsilon();
-        opts["enableFlippingBounds"] = false;
-        opts["enableNZCTests"] = false;
-        opts["enableRamping"] = false;
-        opts["enableRegularisation"] = true;
-        opts["numRegularisationSteps"] = 2;
-        opts["epsRegularisation"] = 5. * 10e3 * std::numeric_limits<double>::epsilon();
-    }
-
-    static void setQPOasesOptionsReliable(casadi::Dict& opts)
-    {
-        opts["enableEqualities"] = false;
-        opts["numRefinementSteps"] = 2;
-        opts["enableFullLITest"] = true;
-        opts["epsLITests"] = 10e5 * std::numeric_limits<double>::epsilon();
-        opts["maxDualJump"] = 10e8;
-        opts["enableCholeskyRefactorisation"] = 1;
-    }
-
 
     struct IODMDict{
         casadi::DMDict input;
@@ -63,10 +37,6 @@ public:
      * @param f cost function as casadi::Function with single input and single output (otherwise throw)
      * @param g constraints as casadi::Function with single input and single output (otherwise throw)
      * @param opts options for SQPGaussNewton and internal conic (check casadi documetation for conic).
-     * NOTE: options for SQPGaussNewton are:
-     *          "max_iter": iterations used to find solution
-     *          "reinitialize_qpsolver": if true the internal qp solver is initialized EVERY iteration
-     *          "solution_convergence": iteration are stoped if solution does not change under this threshold
      */
     SQPGaussNewton(const std::string& name, const std::string& qp_solver,
                    const casadi::Function& f,
@@ -74,10 +44,9 @@ public:
                    const casadi::Dict& opts = casadi::Dict()):
         _name(name), _qp_solver(qp_solver),
         _max_iter(1000),
-        _reinitialize_qp_solver(false),
         _qp_opts(opts),
         _alpha(1.), _beta(1e-4), _solution_convergence(1e-6),_alpha_min(1e-3),
-        _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
+        _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6),
         _fpr(0, 0, 0), ///TODO: this needs to be improved!
         _eps_regularization(0.0),
         _eps_regularization_base(0.0)
@@ -110,46 +79,6 @@ public:
         _fpr.rho = NAN;
     }
 
-    /**
-     * @brief SQPGaussNewton SQP method with Gauss-Newton approximaiton (Hessian = J'J)
-     * @param name solver name
-     * @param qp_solver name internally used with casadi::conic (check casadi documetation for conic)
-     * @param f RESIDUAL of cost function
-     * @param g constraints
-     * @param x variables
-     * @param opts options for SQPGaussNewton and internal conic (check casadi documetation for conic).
-     * NOTE: options for SQPGaussNewton are:
-     *                                          "max_iter": iterations used to find solution
-     *                                          "reinitialize_qpsolver": if true the internal qp solver is initialized EVERY iteration
-     */
-    SQPGaussNewton(const std::string& name, const std::string& qp_solver,
-                   const CASADI_TYPE& f, const CASADI_TYPE& g, const CASADI_TYPE& x, const casadi::Dict& opts = casadi::Dict()):
-        _name(name), _qp_solver(qp_solver),
-        _max_iter(1000),
-        _reinitialize_qp_solver(false),
-        _qp_opts(opts),
-        _alpha(1.), _beta(1e-4), _solution_convergence(1e-6), _alpha_min(1e-3),
-        _constraint_violation_tolerance(1e-6), _merit_derivative_tolerance(1e-6), _use_gr(false),
-        _fpr(0, 0, 0), ///TODO: this needs to be improved!
-        _eps_regularization(0.0),
-        _eps_regularization_base(0.0)
-    {
-        _f = casadi::Function("f", {x}, {f}, {"x"}, {"f"});
-        _df = _f.function().factory("df", {"x"}, {"jac:f:x"});
-
-
-        _g = casadi::Function("g",{x}, {g}, {"x"}, {"g"});
-        _dg = _g.factory("dg", {"x"}, {"jac:g:x"});
-
-        parseOptions();
-
-        _variable_trj.resize(_max_iter+1, casadi::DM(x.rows(), x.columns()));
-
-        _hessian_computation_time.reserve(_max_iter);
-        _qp_computation_time.reserve(_max_iter);
-        _line_search_time.reserve(_max_iter);
-    }
-
     void parseOptions()
     {
         if(_qp_opts.count("beta"))
@@ -177,12 +106,6 @@ public:
             _qp_opts.erase("max_iter");
         }
 
-        if(_qp_opts.count("reinitialize_qpsolver"))
-        {
-            _reinitialize_qp_solver = _qp_opts.at("reinitialize_qpsolver");
-            _qp_opts.erase("reinitialize_qpsolver");
-        }
-
         if(_qp_opts.count("constraint_violation_tolerance"))
         {
             _constraint_violation_tolerance = _qp_opts.at("constraint_violation_tolerance");
@@ -199,12 +122,6 @@ public:
         {
             _solution_convergence = _qp_opts.at("solution_convergence");
             _qp_opts.erase("solution_convergence");
-        }
-
-        if(_qp_opts.count("use_golden_ratio_update"))
-        {
-            _use_gr = _qp_opts.at("use_golden_ratio_update");
-            _qp_opts.erase("use_golden_ratio_update");
         }
     }
 
@@ -265,52 +182,6 @@ public:
     bool lineSearch(Eigen::VectorXd& x, const Eigen::VectorXd& dx, const Eigen::VectorXd& lam_x, const Eigen::VectorXd& lam_a,
                     const casadi::DM& lbg, const casadi::DM& ubg,
                     const casadi::DM& lbx, const casadi::DM& ubx, int iter);
-
-    void f(const CASADI_TYPE& f, const CASADI_TYPE& x, bool reinitialize_qp_solver = true)
-    {
-        _reinitialize_qp_solver = reinitialize_qp_solver;
-
-        _f = casadi::Function("f", {x}, {f}, {"x"}, {"f"});
-        _df = _f.function().factory("df", {"x"}, {"jac:f:x"});
-    }
-
-    void g(const CASADI_TYPE& g, const CASADI_TYPE& x, bool reinitialize_qp_solver = true)
-    {
-        _reinitialize_qp_solver = reinitialize_qp_solver;
-
-        _g = casadi::Function("g",{x}, {g}, {"x"}, {"g"});
-        _dg = _g.factory("dg", {"x"}, {"jac:g:x"});
-    }
-
-    bool f(const casadi::Function& f, bool reinitialize_qp_solver = true)
-    {
-        _reinitialize_qp_solver = reinitialize_qp_solver;
-
-        if(f.n_in() != 1)
-            return false;
-        if(f.n_out() != 1)
-            return false;
-
-        _f = f;
-        _df = f.factory("df", {f.name_in(0)}, {"jac:" + f.name_out(0) +":" + f.name_in(0)});
-
-        return true;
-    }
-
-    bool g(const casadi::Function& g, bool reinitialize_qp_solver = true)
-    {
-        _reinitialize_qp_solver = reinitialize_qp_solver;
-
-        if(g.n_in() != 1)
-            return false;
-        if(g.n_out() != 1)
-            return false;
-
-        _g = g;
-        _dg = g.factory("dg", {g.name_in(0)}, {"jac:" + g.name_out(0) + ":" + g.name_in(0)});
-
-        return true;
-    }
 
     /**
      * @brief getVariableTrajectory
@@ -462,7 +333,6 @@ private:
 
 
     int _max_iter;
-    bool _reinitialize_qp_solver;
 
     std::unique_ptr<casadi::Function> _conic;
     casadi::SpDict _conic_init_input;
@@ -509,8 +379,6 @@ private:
 
     double _eps_regularization;
     double _eps_regularization_base;
-
-    bool _use_gr;
 
     //line search
     Eigen::VectorXd _lbg_, _ubg_, _lbx_, _ubx_;

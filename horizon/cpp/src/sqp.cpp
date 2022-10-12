@@ -83,7 +83,7 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
         else
             H_.update_values(_H);
 
-        if(!_conic || _reinitialize_qp_solver)
+        if(!_conic)
         {
             _conic_init_input["h"] = casadi::Matrix<double>::tril2symm(H_.get()).sparsity();
             _conic_init_input["a"] = A_.sparsity();
@@ -262,10 +262,7 @@ bool SQPGaussNewton<CASADI_TYPE>::lineSearch(
             break;
 
 
-        if(_use_gr)
-            _alpha *= 1./GR;
-        else
-            _alpha *= 0.5;
+        _alpha *= 0.5;
     }
 
     if(!accepted)
