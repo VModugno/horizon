@@ -12,14 +12,6 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
         const casadi::DM& lbg,
         const casadi::DM& ubg)
 {
-    //compress eigen matrices after first run
-    if(_Jt.nonZeros() > 0)
-    {
-        _Jt.makeCompressed();
-        _H.makeCompressed();
-        _I.makeCompressed();
-    }
-
     // clear tic toc entries
     _hessian_computation_time.clear();
     _qp_computation_time.clear();
@@ -66,15 +58,10 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
         _I.setIdentity();
 
 
-//        _H = _eps_regularization * _I;
-//        _H.selfadjointView<Eigen::Lower>().rankUpdate(_Jt, 1.); //This computes lower part of H = H + 1. * J' * J (lower part)
-//        Eigen::SparseMatrix<double> _HH;
+        _H = _eps_regularization * _I;
+        _H.selfadjointView<Eigen::Lower>().rankUpdate(_Jt, 1.); //This computes lower part of H = H + 1. * J' * J (lower part)
 
-//        _HH = _H.selfadjointView<Eigen::Lower>();                               // makes a full selfadjoint matrix from the upper triangular part
-//        _HH.selfadjointView<Eigen::Upper>() = _H.selfadjointView<Eigen::Lower>();      // copies the upper triangular part to the lower triangular part
-
-
-        _H = _Jt * _Jt.transpose() + _eps_regularization * _I;
+//        _H = _Jt * _Jt.transpose() + _eps_regularization * _I;
 
 
         auto toc = std::chrono::high_resolution_clock::now();
@@ -87,13 +74,18 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
         casadi_utils::toCasadiMatrix(_grad, grad_);
 
         if(!H_.is_init())
+        {
+            _Jt.makeCompressed();
+            _H.makeCompressed();
+            _I.makeCompressed();
             H_ = casadi_utils::WrappedSparseMatrix<double>(_H);
+        }
         else
             H_.update_values(_H);
 
         if(!_conic || _reinitialize_qp_solver)
         {
-            _conic_init_input["h"] = H_.get().sparsity();
+            _conic_init_input["h"] = casadi::Matrix<double>::tril2symm(H_.get()).sparsity();
             _conic_init_input["a"] = A_.sparsity();
             _conic = std::make_unique<casadi::Function>(casadi::conic("qp_solver",
                                                                       _qp_solver,
