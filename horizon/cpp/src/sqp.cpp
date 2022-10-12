@@ -12,6 +12,14 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
         const casadi::DM& lbg,
         const casadi::DM& ubg)
 {
+    //compress eigen matrices after first run
+    if(_Jt.nonZeros() > 0)
+    {
+        _Jt.makeCompressed();
+        _H.makeCompressed();
+        _I.makeCompressed();
+    }
+
     // clear tic toc entries
     _hessian_computation_time.clear();
     _qp_computation_time.clear();
@@ -41,7 +49,7 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
         // 1. Cost function is linearized around actual x0
         eval(_f, 0, _sol, false); // cost function
         eval(_df, 0, _sol, true); // cost function Jacobian
-        _J = _df.getSparseOutput(0);
+        _Jt = _df.getSparseOutput(0).transpose();
 
         // 2. Constraints are linearized around actual x0
         _g_dict.input[_g.name_in(0)] = x0_;
@@ -53,17 +61,27 @@ const casadi::DMDict& SQPGaussNewton<CASADI_TYPE>::solve(
 
         // 2. We compute Gauss-Newton Hessian approximation and gradient function
         auto tic = std::chrono::high_resolution_clock::now();
-        _H.resize(_J.cols(), _J.cols());
+        _H.resize(_Jt.rows(), _Jt.rows());
         _I.resize(_H.rows(), _H.cols());
         _I.setIdentity();
-//        _H.selfadjointView<Eigen::Lower>().rankUpdate(_J.transpose());
-        _H = _J.transpose() * _J + _eps_regularization * _I;
+
+
+//        _H = _eps_regularization * _I;
+//        _H.selfadjointView<Eigen::Lower>().rankUpdate(_Jt, 1.); //This computes lower part of H = H + 1. * J' * J (lower part)
+//        Eigen::SparseMatrix<double> _HH;
+
+//        _HH = _H.selfadjointView<Eigen::Lower>();                               // makes a full selfadjoint matrix from the upper triangular part
+//        _HH.selfadjointView<Eigen::Upper>() = _H.selfadjointView<Eigen::Lower>();      // copies the upper triangular part to the lower triangular part
+
+
+        _H = _Jt * _Jt.transpose() + _eps_regularization * _I;
 
 
         auto toc = std::chrono::high_resolution_clock::now();
         _hessian_computation_time.push_back((toc-tic).count()*1E-9);
 
-        _grad = _J.transpose()*_f.getOutput(0);
+        _grad.resize(_Jt.rows());
+        _grad.noalias() = _Jt*_f.getOutput(0);
 
         //3. Setup QP
         casadi_utils::toCasadiMatrix(_grad, grad_);

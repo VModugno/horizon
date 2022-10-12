@@ -475,7 +475,7 @@ private:
     casadi::DMVector _variable_trj;
     std::vector<double> _objective, _constraints_norm;
 
-    Eigen::SparseMatrix<double> _J;
+    Eigen::SparseMatrix<double> _Jt;
     Eigen::SparseMatrix<double> _H;
     Eigen::SparseMatrix<double> _I;
     Eigen::VectorXd _grad;
