@@ -22,7 +22,7 @@ from abc import ABCMeta, abstractmethod
 from std_msgs.msg import Float32
 from scipy.spatial.transform import Rotation as R
 
-SOLVER = lambda: 'ipopt'
+SOLVER = lambda: 'gnsqp'
 
 class steps_phase:
     def __init__(self, f, c, cdot, c_init_z, c_ref, nodes, number_of_legs, contact_model, max_force, max_velocity):
@@ -700,16 +700,19 @@ i_opts = {
         'ipopt.fast_step_computation': 'no',
 }
 if SOLVER() == 'gnsqp':
-    i_opts = {
-            "gnsqp.max_iter": 1000,
-            "gnsqp.alpha_min": 1e-9,
-            'gnsqp.solution_convergence': 1e-3,
-            'gnsqp.merit_derivative_tolerance': 1e-4,
-            'gnsqp.constraint_violation_tolerance': ns * 1e-5,
-            'gnsqp.osqp.polish': True, # without this
-            'gnsqp.osqp.verbose': False,
-            'gnsqp.osqp.scaled_termination': False
-    }
+    i_opts = dict()
+    i_opts['qp_solver'] = 'osqp'
+    i_opts['warm_start_primal'] = True
+    i_opts['warm_start_dual'] = True
+    i_opts['gnsqp.eps_regularization'] = 1e-4
+    i_opts['merit_derivative_tolerance'] = 1e-3
+    i_opts['constraint_violation_tolerance'] = ns * 1e-3
+    i_opts['osqp.polish'] = True # without this
+    i_opts['osqp.delta'] = 1e-6 # and this, it does not converge!
+    i_opts['osqp.verbose'] = False
+    i_opts['osqp.rho'] = 0.02
+    i_opts['osqp.scaled_termination'] = False
+
 
 solver_offline = solver.Solver.make_solver(SOLVER(), prb, i_opts)
 #solver_offline.set_iteration_callback()
@@ -775,7 +778,8 @@ opts = {
 }
 if SOLVER() == 'gnsqp':
     opts = {"gnsqp.max_iter": 1,
-            'gnsqp.osqp.scaled_termination': True
+            'gnsqp.osqp.scaled_termination': True,
+            'gnsqp.eps_regularization': 1e-4,
     }
 
 
