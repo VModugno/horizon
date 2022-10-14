@@ -257,11 +257,11 @@ if __name__ == '__main__':
     u = prb.createInputVariable('u', 2)
     z = prb.createVariable('u', 2, nodes=[3, 4, 5])
 
-    z.getImpl([2, 3, 4])
-    exit()
+    # z.getImpl([2, 3, 4])
+    # exit()
     pm = PhaseManager(n_nodes)
 
-    cnsrt4 = prb.createConstraint('constraint_4', x * z, nodes=[3, 4])
+    # cnsrt4 = prb.createConstraint('constraint_4', x * z, nodes=[3, 4])
     cnsrt1 = prb.createIntermediateConstraint('constraint_1', x - u, [])
     cnsrt2 = prb.createConstraint('constraint_2', x - y, [])
     cnsrt3 = prb.createConstraint('constraint_3', 3 * x, [])
@@ -271,10 +271,10 @@ if __name__ == '__main__':
     st_p = Phase('stance', 6)
     fl_p = Phase('flight', 2)
 
-    in_p.addConstraint(cnsrt4)
+    # in_p.addConstraint(cnsrt4)
     in_p.addConstraint(cnsrt1, nodes=range(0, 2))
     in_p.addConstraint(cnsrt2)
-    in_p.addCost(cost1, nodes=[5, 6])
+    in_p.addCost(cost1, nodes=[3, 4])
 
     st_p.addConstraint(cnsrt3)
 
