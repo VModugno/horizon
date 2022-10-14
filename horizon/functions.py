@@ -173,29 +173,35 @@ class AbstractFunction:
             the implemented function
         """
         num_nodes = np.sum(self._feas_nodes_array).astype(int)
-
         if num_nodes == 0:
             # if the function is not specified on any nodes, don't implement
             self._fun_impl = None
         else:
             # mapping the function to use more cpu threads
             self._fun_map = self._fun.map(num_nodes, 'thread', thread_map_num)
+            # print('usedvar:')
             used_var_impl = self._getUsedVarImpl()
+            # print('usedpar:')
             used_par_impl = self._getUsedParImpl()
             all_vars = used_var_impl + used_par_impl
 
             fun_eval = self._fun_map(*all_vars)
             self._fun_impl = fun_eval
 
+        # exit()
+
     def _getUsedElemImpl(self, elem_container):
         # todo there should be an option to specify which nodes i'm querying (right now it's searching all the feaasible nodes)
         # todo throw with a meaningful error when nodes inserted are wrong
-
         used_elem_impl = list()
         for elem in elem_container:
             impl_nodes = misc.getNodesFromBinary(self._feas_nodes_array)
+            # tic = time.time()
             elem_impl = elem.getImpl(impl_nodes)
+            # print('get_used:', time.time() - tic)
             used_elem_impl.append(elem_impl)
+
+        # exit()
         return used_elem_impl
 
     def _getUsedVarImpl(self):
@@ -294,14 +300,13 @@ class Function(AbstractFunction):
         Returns:
             instance of the CASADI function at the desired node
         """
-
         if self._fun_impl is None:
             return None
 
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes = misc.checkNodes(nodes, self._active_nodes_array)
 
         # I have to convert the input nodes to the corresponding column position:
         # function active on [5, 6, 7] means that the columns are 0, 1, 2 so i have to convert, for example, 6 --> 1
@@ -309,7 +314,6 @@ class Function(AbstractFunction):
 
         # getting the column corresponding to the nodes requested
         fun_impl = cs.vertcat(*[self._fun_impl[:, pos_nodes]])
-
         return fun_impl
 
     def _project(self):
@@ -345,6 +349,7 @@ class Function(AbstractFunction):
         """
         # todo check for repetition in setted nodes?
         super().setNodes(nodes, erasing)
+
         # usually the number of nodes stays the same, while the active nodes of a function may change.
         # If the number of nodes changes, also the variables change. That is when this reprojection is required.
         self._project()
@@ -418,6 +423,7 @@ class RecedingFunction(AbstractFunction):
             instance of the CASADI function at the desired node
         """
         # todo return the implemented function on all nodes always??
+
         return cs.vertcat(*[self._fun_impl])
 
     def _project(self):
@@ -650,7 +656,7 @@ class Constraint(Function, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
@@ -661,7 +667,7 @@ class Constraint(Function, AbstractBounds):
         if nodes is None:
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
-            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
@@ -741,7 +747,7 @@ class RecedingConstraint(RecedingFunction, AbstractBounds):
             nodes = misc.getNodesFromBinary(self._active_nodes_array)
         else:
             # todo: I BELIEVE THIS SHOULD BE self._feas_nodes_array
-            nodes, _ = misc.checkNodes(nodes, self._active_nodes_array)
+            nodes = misc.checkNodes(nodes, self._active_nodes_array)
 
         pos_nodes = misc.convertNodestoPos(nodes, self._feas_nodes_array)
 
@@ -1175,7 +1181,6 @@ class FunctionsContainer:
                 print(var.getName(), var.getOffset())
                 print(f'{item._f} depends on {var}?', cs.depends_on(item._f, var))
 
-        exit()
 
         for name, item in self._cnstr_container.items():
             self._cnstr_container[name] = item.deserialize()
