@@ -17,6 +17,7 @@ import subprocess
 import itertools
 import time
 
+
 class Phase:
     def __init__(self, phase_name, n_nodes_phase):
         self.name = phase_name
@@ -48,7 +49,6 @@ class PhaseToken(Phase):
         self.active_nodes = list()
 
     def activate(self):
-
         # [cnsrt.setNodes(nodes) for cnsrt, nodes in self.constraints.items()]
         # [cost.setNodes(nodes) for cost, nodes in self.costs.items()]
 
@@ -59,8 +59,9 @@ class PhaseToken(Phase):
             print('setting nodes:', time.time() - tic)
 
         # for cost, nodes in self.costs.items():
-            # print(f'activating cost {cost.getName()} in nodes: {nodes}')
-            # cost.setNodes(nodes)
+        # print(f'activating cost {cost.getName()} in nodes: {nodes}')
+        # cost.setNodes(nodes)
+
 
 """
 1. add a phase starting from a specific node
@@ -243,7 +244,6 @@ class PhaseManager:
             if not self.phases[0].active_nodes:
                 self.phases = self.phases[1:]
 
-
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
         [phase.activate() for phase in self.active_phases]
@@ -251,32 +251,32 @@ class PhaseManager:
 
 if __name__ == '__main__':
     n_nodes = 11
-    prb = Problem(n_nodes, receding=True)
+    prb = Problem(n_nodes, receding=True, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
     y = prb.createStateVariable('y', 2)
     u = prb.createInputVariable('u', 2)
+    z = prb.createVariable('u', 2, nodes=[3, 4, 5])
 
+    z.getImpl([2, 3, 4])
+    exit()
     pm = PhaseManager(n_nodes)
 
-
+    cnsrt4 = prb.createConstraint('constraint_4', x * z, nodes=[3, 4])
     cnsrt1 = prb.createIntermediateConstraint('constraint_1', x - u, [])
     cnsrt2 = prb.createConstraint('constraint_2', x - y, [])
     cnsrt3 = prb.createConstraint('constraint_3', 3 * x, [])
     cost1 = prb.createIntermediateResidual('cost_1', x + u, [])
 
-
     in_p = Phase('initial', 5)
     st_p = Phase('stance', 6)
     fl_p = Phase('flight', 2)
 
-
-
+    in_p.addConstraint(cnsrt4)
     in_p.addConstraint(cnsrt1, nodes=range(0, 2))
     in_p.addConstraint(cnsrt2)
     in_p.addCost(cost1, nodes=[5, 6])
 
     st_p.addConstraint(cnsrt3)
-
 
     pm.registerPhase(in_p)
     pm.registerPhase(st_p)
@@ -301,7 +301,6 @@ if __name__ == '__main__':
     print('========= all added phases ===========')
     for phase in pm.phases:
         print(phase.name, phase.active_nodes)
-
 
     for j in range(1):
         print('--------- shifting -----------')
