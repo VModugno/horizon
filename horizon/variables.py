@@ -1120,7 +1120,6 @@ class Variable(AbstractVariable):
         Returns:
             value/s of the desired argument
         """
-        tic = time.time()
         if nodes is None:
             checked_nodes = misc.getNodesFromBinary(self._nodes_array).tolist()
         else:
@@ -1149,7 +1148,6 @@ class Variable(AbstractVariable):
         # vals[:, pos_in_vec] = self._impl[val_type][:, pos_nodes]
         # TODO: before was like this:
         vals = self._impl[val_type][:, pos_nodes]
-        print('getVals:', time.time() - tic)
 
 
         return vals
