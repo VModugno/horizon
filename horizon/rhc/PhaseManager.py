@@ -66,6 +66,9 @@ class PhaseToken(Phase):
         [cnsrt.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cnsrt, nodes in self.constraints.items()]
         [cost.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cost, nodes in self.costs.items()]
 
+    def reset(self):
+        [cnsrt.setNodes([]) for cnsrt, nodes in self.constraints.items()]
+        [cost.setNodes([]) for cost, nodes in self.costs.items()]
 
 """
 1. add a phase starting from a specific node
@@ -80,35 +83,33 @@ def add_flatten_lists(the_lists):
     return result
 
 
-class PhaseManager:
+class SinglePhaseManager:
     """
     set of actions which involves combinations of constraints and bounds
     """
 
-    def __init__(self, nodes, opts=None):
+    def __init__(self, nodes, name=None):
         # prb: Problem, urdf, kindyn, contacts_map, default_foot_z
-
+        self.name = name
         # self.prb = problem
         self.registered_phases = dict()  # container of all the registered phases
-        self.phase_dict = dict()  # map of phase - identifier
         self.n_tot = nodes  # self.prb.getNNodes() + 1
-
-        # empty nodes in horizon --> at the very beginning, all
-        self.trailing_empty_nodes = self.n_tot
 
         self.phases = list()
         self.active_phases = list()  # list of all the active phases
         self.activated_nodes = list()
         self.horizon_nodes = np.nan * np.ones(self.n_tot)
 
-        self.default_action = Phase('default', 1)
-        self.registerPhase(self.default_action)
+        # empty nodes in horizon --> at the very beginning, all
+        self.trailing_empty_nodes = self.n_tot
+
+
+        # self.default_action = Phase('default', 1)
+        # self.registerPhase(self.default_action)
 
 
     def registerPhase(self, p):
 
-        # todo: add unique number identifier?
-        self.phase_dict[p.name] = len(self.registered_phases)
         self.registered_phases[p.name] = p
 
     def getRegisteredPhase(self, p=None):
@@ -160,6 +161,7 @@ class PhaseManager:
                 phase.active_nodes.extend(range(len_phase))
                 phase.update(self.pos_in_horizon, erasing=False)
 
+        print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
         for phase in phases_to_add:
             print(f'{bcolors.OKBLUE}Adding Phase: {phase.name}')
 
@@ -178,55 +180,6 @@ class PhaseManager:
         else:
             raise NotImplementedError
             # return self.active_phases.[phase]
-
-    # def setPattern(self, pattern, n_start=None, n_stop=None):
-    #
-    #     for phase in pattern:
-    #         assert isinstance(phase, Phase)
-    #
-    #     self.current_pattern = pattern
-    #
-    #     self._expand_phases_in_horizon(n_start, n_stop)
-
-    # def _expand_phases_in_horizon(self, n_start=None, n_stop=None):
-    #
-    #     adds phases to future horizon (keep track of all the phases, also outside the problem horizon)
-    # n_start = 0
-    # n_stop = len(self.activated_nodes) if len(self.activated_nodes) <= self.n_tot else self.n_tot
-    #
-    # fill nodes in horizon (fixed number of nodes) with phases
-    # self._update_horizon(n_start, n_stop)
-
-    # def _update_horizon(self, n_start=None, n_stop=None):
-    #
-    #     n_start = 0 if n_start is None else n_start
-    #     n_stop = self.n_tot if n_stop is None else n_stop
-    #
-    #     slice_node = slice(n_start, n_stop)
-    #
-    #     todo wrong implementation of slice nodes
-    #     reset to default action
-    # self.horizon_nodes[slice_node] = self.phase_dict['default']
-    #
-    # todo enhance
-    # if slice_node has a bigger dimension than self.activated_nodes, what happens?
-    # n_stop_activated = n_stop if n_stop < len(self.activated_nodes) else len(self.activated_nodes)
-    # self.horizon_nodes[n_start:n_stop_activated] = self.activated_nodes[n_start:n_stop_activated]
-    #
-    # todo where to put?
-    #
-    # def _update_active_nodes(self, phases):
-    #
-    #     self.activated_nodes = []
-    #     for phase in phases:
-    #         phase_num = self.phase_dict[phase.name]
-    #         self.activated_nodes.extend([phase_num] * self.registered_phases[phase.name].n_nodes)
-
-    # def update_phases_from_active_nodes(self, active_nodes):
-    #
-    #     for phase in self.active_phase_list:
-    #         if self.phase_dict[phase.name] not in active_nodes:
-    #             self.active_phase_list.remove(phase)
 
     def getHorizonNodes(self):
 
@@ -263,11 +216,18 @@ class PhaseManager:
 
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
+        # for phase in self.active_phases:
+        #     phase.reset()
+
         i = 0
+        erasing = True
         for phase in self.active_phases:
-            phase.update(i, erasing=True)
+            if i >= 1:
+                erasing = False
+            phase.update(i, erasing=erasing)
             i += len(phase.active_nodes)
 
+        print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
         for phase in self.phases:
             print(f'{bcolors.OKCYAN}Phase: {phase.name}. N. nodes: {phase.n_nodes}. Active nodes: {phase.active_nodes}{bcolors.ENDC}')
             for constraint, def_nodes in phase.constraints.items():
@@ -276,8 +236,74 @@ class PhaseManager:
             print(f'{bcolors.OKCYAN}-------------------------{bcolors.ENDC}')
 
 
+class PhaseManager:
+    def __init__(self, nodes, opts=None):
+        self.nodes = nodes
+        self.timelines = []
+        self.n_timelines = 0
+
+    def addTimeline(self, name=None):
+
+        self.timelines.append(SinglePhaseManager(self.nodes, name))
+        self.n_timelines += 1
+    def registerPhase(self, p, timeline):
+        self.timelines[timeline].registerPhase(p)
+
+    def addPhase(self, phase, pos=None, timeline=0):
+        self.timelines[timeline].addPhase(phase, pos)
+
+    def _shift_phases(self):
+
+        for timeline in self.timelines:
+            timeline._shift_phases()
+
+
+
+
+
 
 if __name__ == '__main__':
+
+    n_nodes = 11
+    prb = Problem(n_nodes, receding=True, casadi_type=cs.SX)
+    x = prb.createStateVariable('x', 2)
+    y = prb.createStateVariable('y', 2)
+    u = prb.createInputVariable('u', 2)
+    # z = prb.createVariable('u', 2, nodes=[3, 4, 5])
+
+    # z.getImpl([2, 3, 4])
+    # exit()
+    pm = PhaseManager(n_nodes)
+    pm.addTimeline('0')
+    # cnsrt4 = prb.createConstraint('constraint_4', x * z, nodes=[3, 4])
+    cnsrt1 = prb.createIntermediateConstraint('constraint_1', x - u, [])
+    cnsrt2 = prb.createConstraint('constraint_2', x - y, [])
+    cnsrt3 = prb.createConstraint('constraint_3', 3 * x, [])
+    cost1 = prb.createIntermediateResidual('cost_1', x + u, [])
+
+    in_p = Phase('initial', 5)
+    st_p = Phase('stance', 6)
+
+
+    in_p.addConstraint(cnsrt1)
+    st_p.addConstraint(cnsrt2)
+
+    pm.registerPhase(in_p, 0)
+    #
+    print(pm.timelines)
+    pm.addPhase(in_p, timeline=0)
+    pm.addPhase(in_p, timeline=0)
+    # pm.addPhase(in_p)
+    #
+    #
+    for j in range(2):
+        print('--------- shifting -----------')
+        tic = time.time()
+        pm._shift_phases()
+        print('elapsed time in shifting:', time.time() - tic)
+
+    exit()
+
 
 
     # n_nodes = 20
@@ -329,6 +355,8 @@ if __name__ == '__main__':
     # z.getImpl([2, 3, 4])
     # exit()
     pm = PhaseManager(n_nodes)
+    pm.addTimeline('0')
+    pm.addTimeline('1')
 
     # cnsrt4 = prb.createConstraint('constraint_4', x * z, nodes=[3, 4])
     cnsrt1 = prb.createIntermediateConstraint('constraint_1', x - u, [])
@@ -347,25 +375,25 @@ if __name__ == '__main__':
     #
     st_p.addConstraint(cnsrt3)
 
-    pm.registerPhase(in_p)
-    pm.registerPhase(st_p)
-    pm.registerPhase(fl_p)
+    pm.registerPhase(in_p, timeline=0)
+    pm.registerPhase(st_p, timeline=1)
+    pm.registerPhase(fl_p, timeline=0)
 
     tic = time.time()
     for i in range(1):
-        pm.addPhase(in_p)
-        pm.addPhase(st_p)
-        pm.addPhase(fl_p)
+        pm.addPhase(in_p, timeline=0)
+        pm.addPhase(st_p, timeline=1)
+        pm.addPhase(fl_p, timeline=0)
     print(f'elapsed_time: {time.time() - tic}')
 
-    for phase in pm.active_phases:
-        print(f'{phase.name, phase.constraints}')
-    for c_name, c_item in prb.getConstraints().items():
-        print(f'{c_name}: {c_item.getNodes()}')
+    # for phase in pm.active_phases:
+    #     print(f'{phase.name, phase.constraints}')
+    # for c_name, c_item in prb.getConstraints().items():
+    #     print(f'{c_name}: {c_item.getNodes()}')
 
-    print('========= all added phases ===========')
-    for phase in pm.phases:
-        print(phase.name, phase.active_nodes)
+    # print('========= all added phases ===========')
+    # for phase in pm.phases:
+    #     print(phase.name, phase.active_nodes)
 
     for j in range(30):
         print('--------- shifting -----------')
@@ -383,8 +411,7 @@ if __name__ == '__main__':
         # for phase in pm.phases:
         #     print(f'{phase.name}:, {phase.active_nodes}:')
 
-    for phase in pm.active_phases:
-        print(f'{phase.name, phase.constraints}')
-    for c_name, c_item in prb.getConstraints().items():
-        print(f'{c_name}: {c_item.getNodes()}')
-
+    # for phase in pm.active_phases:
+    #     print(f'{phase.name, phase.constraints}')
+    # for c_name, c_item in prb.getConstraints().items():
+    #     print(f'{c_name}: {c_item.getNodes()}')
