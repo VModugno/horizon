@@ -53,6 +53,7 @@ class AbstractFunction:
         self._name = name
         self._active_nodes_array = active_nodes_array.copy()
         self._feas_nodes_array = active_nodes_array.copy()
+        self._n_feas_nodes = np.sum(self._feas_nodes_array).astype(int)
         # todo isn't there another way to get the variables from the function g?
         # todo these are copies, but it is wrong, they should be exactly the objects pointed in var_container
         self.vars = used_vars
@@ -136,6 +137,8 @@ class AbstractFunction:
         self._feas_nodes_array = feas_nodes_array.copy()
         self._active_nodes_array = feas_nodes_array.copy()
 
+        self._n_feas_nodes = np.sum(self._feas_nodes_array).astype(int)
+
     def getVariables(self, offset=True) -> list:
         """
         Getter for the variables used in the function.
@@ -172,7 +175,7 @@ class AbstractFunction:
         Returns:
             the implemented function
         """
-        num_nodes = np.sum(self._feas_nodes_array).astype(int)
+        num_nodes = self._n_feas_nodes
         if num_nodes == 0:
             # if the function is not specified on any nodes, don't implement
             self._fun_impl = None
@@ -376,6 +379,8 @@ class RecedingFunction(AbstractFunction):
 
         total_nodes = np.array(range(self._active_nodes_array.size))
         self._feas_nodes_array = self._computeFeasNodes(used_vars, used_pars, total_nodes)
+
+        self._n_feas_nodes = np.sum(self._feas_nodes_array).astype(int)
 
         # if the function is active (self._nodes_array) in some nodes where the variables it involves are not defined (self._var_nodes) throw an error.
         # this is true for the offset variables also: an offset variable of a variable defined on [0, 1, 2] is only valid at [1, 2].
