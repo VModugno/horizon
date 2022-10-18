@@ -63,62 +63,15 @@ class PhaseToken(Phase):
         self.costs_in_horizon = dict.fromkeys(self.costs.keys(), set())
 
     def update(self, initial_node, erasing=True):
-        # [cnsrt.setNodes(nodes) for cnsrt, nodes in self.constraints.items()]
-        # [cost.setNodes(nodes) for cost, nodes in self.costs.items()]
+        [cnsrt.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cnsrt, nodes in self.constraints.items()]
+        [cost.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cost, nodes in self.costs.items()]
 
-        for cnsrt, nodes in self.constraints.items():
-
-            # self.constraints_in_horizon[cnsrt] = set([node + initial_node for node in nodes if node in self.active_nodes])
-            cnsrt.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing)
-
-        for cost, nodes in self.costs.items():
-            # self.costs_in_horizon[cost] = set([node + initial_node for node in nodes if node in self.active_nodes])
-            cost.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing)
-
-
-# class PhaseContainer:
-#     def __init__(self):
-#         self.phases = list()
-#         self.constraints = dict()
-#         self.costs = dict()
-#
-#     def add_phase(self, phase):
-#
-#         self.phases.append(phase)
-#
-#         self.update_phase(phase)
-#
-#
-#     def update_function(self, container, fun, nodes):
-#
-#         if fun not in container:
-#             container[fun] = set(nodes)
-#         else:
-#             [container[fun].add(node) for node in nodes]
-#
-#         fun.setNodes(list(container[fun]))
-#
-#     def update_constraint(self, constraint, nodes):
-#
-#         self.update_function(self.constraints, constraint, nodes)
-#
-#     def update_cost(self, cost, nodes):
-#
-#         self.update_function(self.costs, cost, nodes)
-#
-#     def update_phase(self, phase):
-#         for constraint, nodes in phase.constraints_in_horizon.items():
-#             self.update_constraint(constraint, nodes)
-#
-#         for cost, nodes in phase.costs_in_horizon.items():
-#             self.update_cost(cost, nodes)
 
 """
 1. add a phase starting from a specific node
 2. add a pattern that repeats (how to stop?)
 3. 
 """
-
 
 def add_flatten_lists(the_lists):
     result = []
@@ -151,7 +104,6 @@ class PhaseManager:
         self.default_action = Phase('default', 1)
         self.registerPhase(self.default_action)
 
-        # self.phase_container = PhaseContainer()
 
     def registerPhase(self, p):
 
@@ -178,7 +130,6 @@ class PhaseManager:
 
 
         # generate a phase token from each phase commanded by the user
-        # phases_to_add = [PhaseToken(phase.name, phase.n_nodes) for phase in phases]
         phases_to_add = [PhaseToken(phase) for phase in phases]
         # append or insert, depending on the user
         if pos is None:
@@ -208,9 +159,6 @@ class PhaseManager:
                 self.active_phases.append(phase)
                 phase.active_nodes.extend(range(len_phase))
                 phase.update(self.pos_in_horizon, erasing=False)
-
-
-        # [self.phase_container.update_phase(phase) for phase in phases_to_add]
 
         for phase in phases_to_add:
             print(f'{bcolors.OKBLUE}Adding Phase: {phase.name}')
@@ -319,7 +267,6 @@ class PhaseManager:
         for phase in self.active_phases:
             phase.update(i, erasing=True)
             i += len(phase.active_nodes)
-            # self.phase_container.update_phase(phase)
 
         for phase in self.phases:
             print(f'{bcolors.OKCYAN}Phase: {phase.name}. N. nodes: {phase.n_nodes}. Active nodes: {phase.active_nodes}{bcolors.ENDC}')
@@ -420,7 +367,7 @@ if __name__ == '__main__':
     for phase in pm.phases:
         print(phase.name, phase.active_nodes)
 
-    for j in range(10):
+    for j in range(30):
         print('--------- shifting -----------')
         tic = time.time()
         pm._shift_phases()
@@ -441,4 +388,3 @@ if __name__ == '__main__':
     for c_name, c_item in prb.getConstraints().items():
         print(f'{c_name}: {c_item.getNodes()}')
 
-    exit()
