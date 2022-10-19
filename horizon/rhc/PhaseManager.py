@@ -98,6 +98,11 @@ class PhaseToken(Phase):
 """
 
 class PhaseContainer:
+    """
+    this class is required to manage multiple phases update.
+    If multiple phases use the same constraint, the constraint must be updated with the nodes from all the phases.
+    (doing setNodes will reset all the nodes, so I need to keep track of the nodes (coming possibly from different phases) for the same constraint)
+    """
     def __init__(self):
         # self.phases = list()
         self.constraints = dict()
