@@ -3,7 +3,7 @@ import copy
 import numpy as np
 from casadi_kin_dyn import pycasadi_kin_dyn
 import casadi as cs
-
+from horizon import misc_function as misc
 from horizon.problem import Problem
 from horizon.utils import utils, kin_dyn
 from horizon.transcriptions.transcriptor import Transcriptor
@@ -62,13 +62,34 @@ class PhaseToken(Phase):
         self.constraints_in_horizon = dict.fromkeys(self.constraints.keys(), set())
         self.costs_in_horizon = dict.fromkeys(self.costs.keys(), set())
 
-    def update(self, initial_node, erasing=True):
-        [cnsrt.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cnsrt, nodes in self.constraints.items()]
-        [cost.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cost, nodes in self.costs.items()]
+    def compute_node_in_horizon(self, initial_node):
+        # [cnsrt.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cnsrt, nodes in self.constraints.items()]
+        # [cost.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cost, nodes in self.costs.items()]
+        # constraint_in_horizon = {}
+        for cnsrt, nodes in self.constraints.items():
+            print(f'{bcolors.OKCYAN}Phase is at position {initial_node}{bcolors.ENDC}')
+            print(f'{bcolors.OKCYAN}Phase "{self.name}" defined on {list(nodes)} is active on nodes: {self.active_nodes}{bcolors.ENDC}')
 
-    def reset(self):
-        [cnsrt.setNodes([]) for cnsrt, nodes in self.constraints.items()]
-        [cost.setNodes([]) for cost, nodes in self.costs.items()]
+            phase_nodes = [node for node in nodes if node in self.active_nodes]
+
+            if cnsrt in self.constraints_in_horizon:
+                if phase_nodes != self.constraints_in_horizon[cnsrt]:
+                    if phase_nodes:
+                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
+                        feas_nodes = [node for node in horizon_nodes if node in misc.getNodesFromBinary(cnsrt._getFeasNodes())]
+                    else:
+                        feas_nodes = []
+
+                    self.constraints_in_horizon[cnsrt] = feas_nodes
+                    print(f'{bcolors.OKCYAN}   --->  {cnsrt.getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.ENDC}')
+                else:
+                    del self.constraints_in_horizon[cnsrt]
+
+        # return constraints_in_horizon
+
+    # def reset(self):
+    #     self.constraints_in_horizon = dict()
+    #     self.costs_in_horizon = dict()
 
 """
 1. add a phase starting from a specific node
@@ -76,12 +97,58 @@ class PhaseToken(Phase):
 3. 
 """
 
-def add_flatten_lists(the_lists):
-    result = []
-    for _list in the_lists:
-        result += _list
-    return result
+class PhaseContainer:
+    def __init__(self):
+        # self.phases = list()
+        self.constraints = dict()
+        self.costs = dict()
 
+    # def add_phase(self, phase):
+    #
+    #     self.phases.append(phase)
+    #     self.update_phase(phase)
+
+    def update_function(self, container, fun, nodes):
+
+        if fun not in container:
+            container[fun] = set(nodes)
+            fun.setNodes(list(nodes))
+            print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.ENDC}')
+        else:
+            if set(nodes) != container[fun]:
+                # todo: there is a small inefficiency: resetting all the nodes even if just only a part are added
+                [container[fun].add(node) for node in nodes]
+                fun.setNodes(list(container[fun]))
+                print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.ENDC}')
+
+
+
+    def update_constraint(self, constraint, nodes):
+        self.update_function(self.constraints, constraint, nodes)
+
+    def update_cost(self, cost, nodes):
+        self.update_function(self.costs, cost, nodes)
+
+    def update_phase(self, phase, initial_node):
+        phase.compute_node_in_horizon(initial_node)
+
+
+        for constraint, nodes in phase.constraints_in_horizon.items():
+            self.update_constraint(constraint, nodes)
+
+        # for cost, nodes in phase.costs_in_horizon.items():
+        #     self.update_cost(cost, nodes)
+
+    def reset(self):
+        self.constraints = dict()
+        self.costs = dict()
+
+# def add_flatten_lists(the_lists):
+#     result = []
+#     for _list in the_lists:
+#         result += _list
+#     return result
+#
 
 class SinglePhaseManager:
     """
@@ -94,6 +161,8 @@ class SinglePhaseManager:
         # self.prb = problem
         self.registered_phases = dict()  # container of all the registered phases
         self.n_tot = nodes  # self.prb.getNNodes() + 1
+
+        self.phase_container = PhaseContainer()
 
         self.phases = list()
         self.active_phases = list()  # list of all the active phases
@@ -121,6 +190,7 @@ class SinglePhaseManager:
 
     def addPhase(self, phases, pos=None):
 
+        print(f'{bcolors.HEADER} =========== Happening in timeline: {self.name} =========== {bcolors.ENDC}')
         # stupid checks
         if isinstance(phases, list):
             for phase in phases:
@@ -154,24 +224,25 @@ class SinglePhaseManager:
                     remaining_nodes = len_phase + self.trailing_empty_nodes
                     phase.active_nodes.extend(range(remaining_nodes))
                     self.active_phases.append(phase)
-                    phase.update(self.pos_in_horizon, erasing=False)
+                    # phase.update(self.pos_in_horizon)
                     self.trailing_empty_nodes = 0
                     break
                 self.active_phases.append(phase)
                 phase.active_nodes.extend(range(len_phase))
-                phase.update(self.pos_in_horizon, erasing=False)
+                # phase.update(self.pos_in_horizon)
 
-        print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
-        for phase in phases_to_add:
-            print(f'{bcolors.OKBLUE}Adding Phase: {phase.name}')
-
-        print('Current phases:')
-        for phase in self.phases:
-            print(f'{bcolors.FAIL} Phase: {phase.name}. N. nodes: {phase.n_nodes}. Active nodes: {phase.active_nodes}{bcolors.ENDC}')
-            for constraint, def_nodes in phase.constraints.items():
-                print(f'{bcolors.FAIL}         --->  {constraint.getName()} (defined on {list(def_nodes)}{bcolors.ENDC}: {bcolors.FAIL}{bcolors.BOLD} {constraint.getNodes()}{bcolors.ENDC}')
-                # print(f'{bcolors.FAIL}         --->  {constraint.getName()} (defined on {list(def_nodes)}): {phase.constraints_in_horizon[constraint]}{bcolors.ENDC}')
-        print(f'{bcolors.FAIL}-------------------------{bcolors.ENDC}')
+        [self.phase_container.update_phase(phase, self.pos_in_horizon) for phase in phases_to_add]
+        # print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
+        # for phase in phases_to_add:
+        #     print(f'{bcolors.OKBLUE}Adding Phase: {phase.name}')
+        #
+        # print('Current phases:')
+        # for phase in self.phases:
+        #     print(f'{bcolors.FAIL} Phase: {phase.name}. N. nodes: {phase.n_nodes}. Active nodes: {phase.active_nodes}{bcolors.ENDC}')
+        #     for constraint, def_nodes in phase.constraints.items():
+        #         print(f'{bcolors.FAIL}         --->  {constraint.getName()} (defined on {list(def_nodes)}{bcolors.ENDC}: {bcolors.FAIL}{bcolors.BOLD} {constraint.getNodes()}{bcolors.ENDC}')
+        #         print(f'{bcolors.FAIL}         --->  {constraint.getName()} (defined on {list(def_nodes)}): {phase.constraints_in_horizon[constraint]}{bcolors.ENDC}')
+        # print(f'{bcolors.FAIL}-------------------------{bcolors.ENDC}')
 
     def getActivePhase(self, phase=None):
 
@@ -188,6 +259,7 @@ class SinglePhaseManager:
 
     def _shift_phases(self):
 
+        print(f'{bcolors.HEADER} =========== Happening in timeline: {self.name} =========== {bcolors.ENDC}')
         # if phases is empty, skip everything
         if self.phases:
             self.active_phases = [phase for phase in self.phases if phase.active_nodes]
@@ -214,26 +286,32 @@ class SinglePhaseManager:
                 print(f'{bcolors.WARNING}Removing depleted phase: {self.phases[0].name}{bcolors.ENDC}')
                 self.phases = self.phases[1:]
 
+            self.phase_container.reset()
+
+            i = 0
+            for phase in self.active_phases:
+                # phase.update(i)
+                self.phase_container.update_phase(phase, i)
+                i += len(phase.active_nodes)
+
+
+
+            # [self.phase_container.update_phase(phase) for phase in self.active_phases]
+
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
         # for phase in self.active_phases:
         #     phase.reset()
 
-        i = 0
-        erasing = True
-        for phase in self.active_phases:
-            if i >= 1:
-                erasing = False
-            phase.update(i, erasing=erasing)
-            i += len(phase.active_nodes)
 
-        print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
-        for phase in self.phases:
-            print(f'{bcolors.OKCYAN}Phase: {phase.name}. N. nodes: {phase.n_nodes}. Active nodes: {phase.active_nodes}{bcolors.ENDC}')
-            for constraint, def_nodes in phase.constraints.items():
-                print(f'{bcolors.OKCYAN}         --->  {constraint.getName()} (defined on {list(def_nodes)}){bcolors.ENDC}: {bcolors.OKCYAN}{bcolors.BOLD}{constraint.getNodes()}{bcolors.ENDC}')
-                # print(f'{bcolors.OKCYAN}         --->  {constraint.getName()} (defined on {list(def_nodes)}){bcolors.ENDC}: {bcolors.OKCYAN}{bcolors.BOLD}{phase.constraints_in_horizon[constraint]}{bcolors.ENDC}')
-            print(f'{bcolors.OKCYAN}-------------------------{bcolors.ENDC}')
+
+        # print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
+        # for phase in self.phases:
+        #     print(f'{bcolors.OKCYAN}Phase: {phase.name}. N. nodes: {phase.n_nodes}. Active nodes: {phase.active_nodes}{bcolors.ENDC}')
+        #     for constraint, def_nodes in phase.constraints.items():
+        #         print(f'{bcolors.OKCYAN}         --->  {constraint.getName()} (defined on {list(def_nodes)}){bcolors.ENDC}: {bcolors.OKCYAN}{bcolors.BOLD}{constraint.getNodes()}{bcolors.ENDC}')
+        # print(f'{bcolors.OKCYAN}         --->  {constraint.getName()} (defined on {list(def_nodes)}){bcolors.ENDC}: {bcolors.OKCYAN}{bcolors.BOLD}{phase.constraints_in_horizon[constraint]}{bcolors.ENDC}')
+        # print(f'{bcolors.OKCYAN}-------------------------{bcolors.ENDC}')
 
 
 class PhaseManager:
@@ -264,7 +342,7 @@ class PhaseManager:
 
 if __name__ == '__main__':
 
-    n_nodes = 11
+    n_nodes = 6
     prb = Problem(n_nodes, receding=True, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
     y = prb.createStateVariable('y', 2)
@@ -295,55 +373,13 @@ if __name__ == '__main__':
     pm.addPhase(in_p, timeline=0)
     # pm.addPhase(in_p)
     #
-    #
-    for j in range(2):
-        print('--------- shifting -----------')
+    for j in range(15):
+        print(f'--------- shifting {j} -----------')
         tic = time.time()
         pm._shift_phases()
         print('elapsed time in shifting:', time.time() - tic)
 
     exit()
-
-
-
-    # n_nodes = 20
-    # prb = Problem(n_nodes, receding=True, casadi_type=cs.SX)
-    # x = prb.createStateVariable('x', 2)
-    # y = prb.createStateVariable('y', 2)
-    # u = prb.createInputVariable('u', 2)
-    # # z = prb.createVariable('u', 2, nodes=[3, 4, 5])
-    #
-    # # z.getImpl([2, 3, 4])
-    # # exit()
-    # pm = PhaseManager(n_nodes)
-    #
-    # # cnsrt4 = prb.createConstraint('constraint_4', x * z, nodes=[3, 4])
-    # cnsrt1 = prb.createIntermediateConstraint('constraint_1', x - u, [])
-    # cnsrt2 = prb.createConstraint('constraint_2', x - y, [])
-    # cnsrt3 = prb.createConstraint('constraint_3', 3 * x, [])
-    # cost1 = prb.createIntermediateResidual('cost_1', x + u, [])
-    #
-    # in_p = Phase('initial', 5)
-    # st_p = Phase('stance', 4)
-    # fl_p = Phase('flight', 2)
-    #
-    # # in_p.addConstraint(cnsrt4)
-    # in_p.addConstraint(cnsrt1, nodes=range(0, 2))
-    #
-    # # in_p.addConstraint(cnsrt2)
-    # # in_p.addCost(cost1, nodes=[3, 4])
-    # #
-    # st_p.addConstraint(cnsrt3)
-    #
-    # pm.registerPhase(in_p)
-    # pm.registerPhase(st_p)
-    # pm.registerPhase(fl_p)
-    #
-    # pm.addPhase(in_p)
-    # pm.addPhase(st_p)
-    # pm.addPhase(in_p)
-    #
-    # exit()
 
     n_nodes = 11
     prb = Problem(n_nodes, receding=True, casadi_type=cs.SX)
@@ -372,7 +408,7 @@ if __name__ == '__main__':
     in_p.addConstraint(cnsrt1, nodes=range(0, 2))
     # in_p.addConstraint(cnsrt2)
     # in_p.addCost(cost1, nodes=[3, 4])
-    #
+    fl_p.addConstraint(cnsrt2)
     st_p.addConstraint(cnsrt3)
 
     pm.registerPhase(in_p, timeline=0)
