@@ -164,7 +164,7 @@ class OffsetTemplate(AbstractVariable):  # note parametrize casadi type!!!
         nodes_array = np.array(nodes)
         # offset the node of self.offset
         offset_nodes = nodes_array + self._offset
-        offset_nodes, _ = misc.checkNodes(offset_nodes, self._nodes_array)
+        offset_nodes = misc.checkNodes(offset_nodes, self._nodes_array)
 
         var_impl = self._impl['var'][:, offset_nodes]
 
