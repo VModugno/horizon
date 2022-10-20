@@ -1,5 +1,5 @@
 solver:
-  type: ipopt
+  type: ilqr
   ilqr.max_iter: 200
   ilqr.alpha_min: 0.01
   ilqr.step_length_threshold: 1e-9

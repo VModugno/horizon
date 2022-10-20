@@ -136,18 +136,21 @@ iteration = 0
 
 # solver_rti.solution_dict['x_opt'] = solver_bs.getSolutionState()
 # solver_rti.solution_dict['u_opt'] = solver_bs.getSolutionInput()
-
+rate = rospy.Rate(1 / dt)
 flag_action = 1
 forces = [ti.prb.getVariables('f_' + c) for c in contacts]
 nc = 4
+
 while True:
     iteration = iteration + 1
     print(iteration)
-    #
-    am.execute(ti.solution)
+
+    am.execute(solution)
     ti.solver_rti.solve()
     solution = ti.solver_rti.getSolutionDict()
 
-    repl.frame_force_mapping = {contacts[i]: solution[forces[i].getName()][:, 0:1] for i in range(nc)}
+    repl.frame_force_mapping = {cname: solution[f.getName()] for cname, f in ti.model.fmap.items()}
     repl.publish_joints(solution['q'][:, 0])
     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
+    rate.sleep()
+
