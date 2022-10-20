@@ -62,13 +62,12 @@ class PhaseToken(Phase):
         self.constraints_in_horizon = dict.fromkeys(self.constraints.keys(), set())
         self.costs_in_horizon = dict.fromkeys(self.costs.keys(), set())
 
-    def compute_node_in_horizon(self, initial_node):
+    def update(self, initial_node):
         # [cnsrt.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cnsrt, nodes in self.constraints.items()]
         # [cost.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cost, nodes in self.costs.items()]
-        # constraint_in_horizon = {}
         for cnsrt, nodes in self.constraints.items():
             print(f'{bcolors.OKCYAN}Phase is at position {initial_node}{bcolors.ENDC}')
-            print(f'{bcolors.OKCYAN}Phase "{self.name}" defined on {list(nodes)} is active on nodes: {self.active_nodes}{bcolors.ENDC}')
+            print(f'{bcolors.OKCYAN}Phase "{self.name}" is active on nodes: {self.active_nodes}{bcolors.ENDC}')
 
             phase_nodes = [node for node in nodes if node in self.active_nodes]
 
@@ -87,9 +86,10 @@ class PhaseToken(Phase):
 
         # return constraints_in_horizon
 
-    # def reset(self):
-    #     self.constraints_in_horizon = dict()
-    #     self.costs_in_horizon = dict()
+    def reset(self):
+        self.active_nodes = list()
+        self.constraints_in_horizon = self.constraints_in_horizon.fromkeys(self.constraints_in_horizon, set())
+        self.costs_in_horizon = self.costs_in_horizon.fromkeys(self.costs_in_horizon, set())
 
 """
 1. add a phase starting from a specific node
@@ -134,10 +134,7 @@ class PhaseContainer:
     def update_cost(self, cost, nodes):
         self.update_function(self.costs, cost, nodes)
 
-    def update_phase(self, phase, initial_node):
-        phase.compute_node_in_horizon(initial_node)
-
-
+    def update_phase(self, phase):
         for constraint, nodes in phase.constraints_in_horizon.items():
             self.update_constraint(constraint, nodes)
 
@@ -196,6 +193,7 @@ class SinglePhaseManager:
     def addPhase(self, phases, pos=None):
 
         print(f'{bcolors.HEADER} =========== Happening in timeline: {self.name} =========== {bcolors.ENDC}')
+
         # stupid checks
         if isinstance(phases, list):
             for phase in phases:
@@ -204,6 +202,10 @@ class SinglePhaseManager:
             assert isinstance(phases, Phase)
             phases = [phases]
 
+        print(f'{bcolors.FAIL}{bcolors.BOLD} Adding phases: {[phase.name for phase in phases]} at position: {pos}{bcolors.ENDC}')
+        print(f'{bcolors.FAIL} Current phases:')
+        for phase in self.phases:
+            print(f'{bcolors.FAIL}    - {phase.name}: {phase.active_nodes}')
 
         # generate a phase token from each phase commanded by the user
         phases_to_add = [PhaseToken(phase) for phase in phases]
@@ -214,7 +216,10 @@ class SinglePhaseManager:
             # recompute empty nodes in horizon, clear active nodes of all the phases AFTER the one inserted
             # insert phase + everthing AFTER it back
             self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.phases[:pos])
-            [elem.active_nodes.clear() for elem in self.phases[pos:]]
+            # if I'm removing phases from the current stack, i need to remove current nodes from the phases
+            [elem.reset() for elem in self.phases[pos:]]
+            self.phase_container.reset()
+            # new active phases
             self.active_phases = [phase for phase in self.phases if phase.active_nodes]
             self.phases[pos:pos] = phases_to_add
             phases_to_add.extend(self.phases[pos + 1:])
@@ -229,14 +234,14 @@ class SinglePhaseManager:
                     remaining_nodes = len_phase + self.trailing_empty_nodes
                     phase.active_nodes.extend(range(remaining_nodes))
                     self.active_phases.append(phase)
-                    # phase.update(self.pos_in_horizon)
+                    phase.update(self.pos_in_horizon)
                     self.trailing_empty_nodes = 0
                     break
                 self.active_phases.append(phase)
                 phase.active_nodes.extend(range(len_phase))
-                # phase.update(self.pos_in_horizon)
+                phase.update(self.pos_in_horizon)
 
-        [self.phase_container.update_phase(phase, self.pos_in_horizon) for phase in phases_to_add]
+        [self.phase_container.update_phase(phase) for phase in phases_to_add]
         # print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
         # for phase in phases_to_add:
         #     print(f'{bcolors.OKBLUE}Adding Phase: {phase.name}')
@@ -295,10 +300,10 @@ class SinglePhaseManager:
 
             i = 0
             for phase in self.active_phases:
-                # phase.update(i)
-                self.phase_container.update_phase(phase, i)
+                phase.update(i)
                 i += len(phase.active_nodes)
 
+            [self.phase_container.update_phase(phase) for phase in self.active_phases]
 
 
             # [self.phase_container.update_phase(phase) for phase in self.active_phases]
@@ -347,7 +352,7 @@ class PhaseManager:
 
 if __name__ == '__main__':
 
-    n_nodes = 6
+    n_nodes = 10
     prb = Problem(n_nodes, receding=True, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
     y = prb.createStateVariable('y', 2)
@@ -395,7 +400,7 @@ if __name__ == '__main__':
 
     # z.getImpl([2, 3, 4])
     # exit()
-    pm = PhaseManager(n_nodes)
+    pm = PhaseManager(n_nodes+1)
     pm.addTimeline('0')
     pm.addTimeline('1')
 
