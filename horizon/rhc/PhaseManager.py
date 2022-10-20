@@ -38,6 +38,10 @@ class Phase:
         self.constraints = dict()
         self.costs = dict()
 
+        self.vars = dict()
+        self.vars_node = dict()
+        self.bounds = dict()
+
     def addConstraint(self, constraint, nodes=None):
         active_nodes = range(self.n_nodes) if nodes is None else nodes
         self.constraints[constraint] = active_nodes
@@ -45,6 +49,12 @@ class Phase:
     def addCost(self, cost, nodes=None):
         active_nodes = range(self.n_nodes) if nodes is None else nodes
         self.costs[cost] = active_nodes
+
+    def addVariableBounds(self, var, bounds, nodes=None):
+        active_nodes = range(self.n_nodes) if nodes is None else nodes
+        self.vars[var.getName()] = var
+        self.vars_node[var.getName()] = active_nodes
+        self.bounds[var.getName()] = bounds
 
     def setDuration(self):
         pass
@@ -54,21 +64,22 @@ class PhaseToken(Phase):
     def __init__(self, *args):
         self.__dict__ = args[0].__dict__.copy()
 
-        self.id = 'cazzi'
+        self.id = '1337c0d3'
         # self.active_nodes = np.zeros(n_nodes_phase).astype(int)
         # self.active_nodes = [0] * n_nodes_phase
         # self.active_nodes = set()
         self.active_nodes = list()
         self.constraints_in_horizon = dict.fromkeys(self.constraints.keys(), set())
         self.costs_in_horizon = dict.fromkeys(self.costs.keys(), set())
+        self.vars_in_horizon = dict.fromkeys(self.vars.keys(), set())
 
     def update(self, initial_node):
+
+        print(f'{bcolors.OKCYAN}Phase is at position {initial_node}{bcolors.ENDC}')
+        print(f'{bcolors.OKCYAN}Phase "{self.name}" is active on nodes: {self.active_nodes}{bcolors.ENDC}')
         # [cnsrt.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cnsrt, nodes in self.constraints.items()]
         # [cost.setNodes([node + initial_node for node in nodes if node in self.active_nodes], erasing=erasing) for cost, nodes in self.costs.items()]
         for cnsrt, nodes in self.constraints.items():
-            print(f'{bcolors.OKCYAN}Phase is at position {initial_node}{bcolors.ENDC}')
-            print(f'{bcolors.OKCYAN}Phase "{self.name}" is active on nodes: {self.active_nodes}{bcolors.ENDC}')
-
             phase_nodes = [node for node in nodes if node in self.active_nodes]
 
             if cnsrt in self.constraints_in_horizon:
@@ -84,7 +95,27 @@ class PhaseToken(Phase):
                 else:
                     del self.constraints_in_horizon[cnsrt]
 
-        # return constraints_in_horizon
+        # ==============================================================================================================
+        # ==============================================================================================================
+        # ==============================================================================================================
+        for var, nodes in self.vars_node.items():
+            phase_nodes = [node for node in nodes if node in self.active_nodes]
+
+            if var in self.vars_in_horizon:
+                if phase_nodes != self.vars_in_horizon[var]:
+                    if phase_nodes:
+                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
+                        feas_nodes = [node for node in horizon_nodes if
+                                      node in misc.getNodesFromBinary(self.vars[var]._nodes_array)]
+                    else:
+                        feas_nodes = []
+
+                    self.vars_in_horizon[var] = feas_nodes
+                    print(
+                        f'{bcolors.OKCYAN}   --->  {self.vars[var].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.ENDC}')
+                else:
+                    del self.vars_in_horizon[var]
+
 
     def reset(self):
         self.active_nodes = list()
@@ -108,6 +139,9 @@ class PhaseContainer:
         self.constraints = dict()
         self.costs = dict()
 
+        self.vars = dict()
+        self.vars_node = dict()
+
     # def add_phase(self, phase):
     #
     #     self.phases.append(phase)
@@ -127,6 +161,26 @@ class PhaseContainer:
                 print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.ENDC}')
 
 
+    def update_variable(self, var, nodes, bounds):
+        var_name = var.getName()
+        if var_name not in self.vars_node:
+            self.vars_node[var_name] = set(nodes)
+            bounds_mat_lb = -np.inf * np.ones((var.getDim(), len(var.getNodes())))
+            bounds_mat_ub = np.inf * np.ones((var.getDim(), len(var.getNodes())))
+            var.setBounds(bounds_mat_lb, bounds_mat_ub)
+
+            bounds_mat = np.array([bounds[var_name]] * len(list(nodes))).T
+            if nodes:
+                var.setBounds(bounds_mat, bounds_mat, list(nodes))
+            print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated variable {var.getName()}: {var.getBounds()}{bcolors.ENDC}')
+        else:
+            if set(nodes) != self.vars_node[var_name]:
+                # todo: there is a small inefficiency: resetting all the nodes even if just only a part are added
+                [self.vars_node[var_name].add(node) for node in nodes]
+                bounds_mat = np.array([bounds[var_name]] * len(list(self.vars_node[var_name]))).T
+                var.setBounds(bounds_mat, bounds_mat, list(self.vars_node[var_name]))
+                print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated variable {var.getName()}: {var.getBounds()}{bcolors.ENDC}')
+
 
     def update_constraint(self, constraint, nodes):
         self.update_function(self.constraints, constraint, nodes)
@@ -138,12 +192,18 @@ class PhaseContainer:
         for constraint, nodes in phase.constraints_in_horizon.items():
             self.update_constraint(constraint, nodes)
 
+        for var, nodes in phase.vars_in_horizon.items():
+            self.update_variable(phase.vars[var], nodes, phase.bounds)
+
         # for cost, nodes in phase.costs_in_horizon.items():
         #     self.update_cost(cost, nodes)
 
     def reset(self):
         self.constraints = dict()
         self.costs = dict()
+
+        self.vars = dict()
+        self.vars_node = dict()
 
 # def add_flatten_lists(the_lists):
 #     result = []
@@ -332,8 +392,12 @@ class PhaseManager:
 
     def addTimeline(self, name=None):
 
-        self.timelines.append(SinglePhaseManager(self.nodes, name))
+        new_timeline = SinglePhaseManager(self.nodes, name)
+        self.timelines.append(new_timeline)
         self.n_timelines += 1
+
+        return new_timeline
+
     def registerPhase(self, p, timeline):
         self.timelines[timeline].registerPhase(p)
 
@@ -363,6 +427,7 @@ if __name__ == '__main__':
     # exit()
     pm = PhaseManager(n_nodes)
     pm.addTimeline('0')
+
     # cnsrt4 = prb.createConstraint('constraint_4', x * z, nodes=[3, 4])
     cnsrt1 = prb.createIntermediateConstraint('constraint_1', x - u, [])
     cnsrt2 = prb.createConstraint('constraint_2', x - y, [])
@@ -374,13 +439,14 @@ if __name__ == '__main__':
 
 
     in_p.addConstraint(cnsrt1)
+    in_p.addVariableBounds(y, [0, 0])
     st_p.addConstraint(cnsrt2)
 
     pm.registerPhase(in_p, 0)
     #
     print(pm.timelines)
     pm.addPhase(in_p, timeline=0)
-    pm.addPhase(in_p, timeline=0)
+    pm.addPhase(st_p, timeline=0)
     # pm.addPhase(in_p)
     #
     for j in range(15):
