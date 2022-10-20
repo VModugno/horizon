@@ -93,7 +93,9 @@ class FullModelInverseDynamics:
         return force
 
     def _make_vertex_contact(self, contact_frame, contact_params):
-        
+
+        # todo WARNING: contact_params['vertex_frames'] must be a list!!!!!!!!!!!!!!!!!
+
         vertex_frames = contact_params['vertex_frames']  # todo improve error
 
         # create inputs (todo: support degree > 0)
