@@ -123,16 +123,14 @@ c_phases = dict()
 for c in contacts:
     c_phases[c] = pm.addTimeline(f'{c}_timeline')
 
-
 i = 0
 for c in contacts:
     stance_phase = Phase(f'stance_{c}', 10)
     stance_phase.addConstraint(prb.getConstraints(f'{c}_vel'))
     c_phases[c].registerPhase(stance_phase)
 
-    flight_phase = Phase(f'flight_{c}', 5)
+    flight_phase = Phase(f'flight_{c}', 10)
     flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'), [0, 0, 0])
-    flight_phase.addConstraint(prb.getVariables(f'f_{c}'), [0, 0, 0])
     c_phases[c].registerPhase(flight_phase)
 
 for name, timeline in c_phases.items():
@@ -143,12 +141,41 @@ for name, timeline in c_phases.items():
 
     for phase in timeline.phases:
         print('    phase', phase)
-exit()
+
+
+for c in contacts:
+    stance = c_phases[c].getRegisteredPhase(f'stance_{c}')
+    flight = c_phases[c].getRegisteredPhase(f'flight_{c}')
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+
+lift_contact = 'lh_foot'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 4)
+lift_contact = 'rh_foot'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
+lift_contact = 'lf_foot'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
+lift_contact = 'rf_foot'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 4)
+
+
 model.setDynamics()
-
-for constr in prb.getConstraints():
-    print(constr)
-
 
 opts = {'ilqr.max_iter': 440,
         'ilqr.alpha_min': 0.1,
@@ -192,9 +219,9 @@ solution = solver_bs.getSolutionDict()
 import subprocess, rospy
 from horizon.ros import replay_trajectory
 
-os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
-subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
-rospy.loginfo("'spot' visualization started.")
+# os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
+# subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
+# rospy.loginfo("'spot' visualization started.")
 
 repl = replay_trajectory.replay_trajectory(dt, kd.joint_names(), np.array([]), {k: None for k in contacts}, kd_frame,
                                            kd)
@@ -228,6 +255,8 @@ while True:
 
     solver_rti.solve()
     solution = solver_rti.getSolutionDict()
+
+    pm._shift_phases()
 
 
     repl.frame_force_mapping = {cname: solution[f.getName()] for cname, f in model.fmap.items()}
