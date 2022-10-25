@@ -167,11 +167,40 @@ class PhaseContainer:
         self.constraints = dict()
         self.costs = dict()
 
-        self.vars = dict()
-        self.vars_node = dict()
+        self.vars = [] # list of variableUpdaters
+        self.vars = dict()  # name - variable
+        self.vars_node = dict()  # name - nodes
+        self.vars_bounds = dict()  #
 
         self.pars = dict()
         self.pars_node = dict()
+        self.pars_values = dict()
+
+    class VariableUpdater:
+        def __init__(self, variable, active_nodes, bounds):
+            self.name = variable.getName()
+            self.var = variable
+            self.active_nodes = active_nodes
+            self.bounds = bounds
+
+        def update(self, var, nodes, bounds):
+            # add new nodes and bounds to var if var already has them
+
+            pass
+            # if not nodes:
+            #         if nodes is empty, resetting all the bounds
+                # bounds_mat_lb = -np.inf * np.ones((var.getDim(), len(var.getNodes())))
+                # bounds_mat_ub = np.inf * np.ones((var.getDim(), len(var.getNodes())))
+                # self.var.setBounds(bounds_mat_lb, bounds_mat_ub)
+            # else:
+            #     only fill the required nodes
+                # bounds_mat = np.array([bounds[var_name]] * len(list(nodes))).T
+                # var.setBounds(bounds_mat, bounds_mat, list(nodes))
+                # print(
+                #     f'{bcolors.OKCYAN}{bcolors.BOLD} updated variable {var.getName()}: {var.getBounds()}{bcolors.ENDC}')
+
+
+
 
     # def add_phase(self, phase):
     #
@@ -214,6 +243,13 @@ class PhaseContainer:
                 var.setBounds(bounds_mat, bounds_mat, list(self.vars_node[var_name]))
                 print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated variable {var.getName()}: {var.getBounds()}{bcolors.ENDC}')
 
+    def update_variable_new(self, var, nodes, bounds):
+        var_name = var.getName()
+        if var_name not in self.vars:
+            self.vars = VariableUpdater(var, nodes, bounds)
+
+        for var in self.vars:
+            var.update() # update var with variable updater
 
     def update_parameter(self, par, nodes, values, active_phase_nodes):
         par_name = par.getName()
