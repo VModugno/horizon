@@ -128,8 +128,8 @@ for i, frame in enumerate(contacts):
     clea = prb.createConstraint(f"{frame}_clea", p[2] - z_des, nodes=[])
 
     # go straight
-    # p0 = FK(q=model.q0)['ee_pos']
-    # cy = prb.createIntermediateResidual(f'{frame}_y', 2 * p0[1] - p[1], nodes=[])
+    p0 = FK(q=model.q0)['ee_pos']
+    cy = prb.createIntermediateResidual(f'{frame}_y', 2 * p0[1] - p[1])
 
     # contact_y.append(cy)
     # add to fn container
@@ -158,12 +158,12 @@ for c in contacts:
     c_phases[c].registerPhase(stance_phase)
 
     # flight phase
-    flight_duration = 8
+    flight_duration = 5
     flight_phase = Phase(f'flight_{c}', flight_duration)
     flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'), [0, 0, 0])
     flight_phase.addConstraint(prb.getConstraints(f'{c}_clea'))
 
-    z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.1, dim=2))
+    z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.03, dim=2))
     flight_phase.addParameterValues(prb.getParameters(f'{c}_z_des'), z_trj)
     c_phases[c].registerPhase(flight_phase)
 
