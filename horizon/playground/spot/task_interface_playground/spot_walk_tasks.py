@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from horizon.rhc.taskInterface import TaskInterface
-from horizon.utils.actionManager import ActionManager
+from horizon.utils.actionManager import ActionManager, Step
 from horizon.problem import Problem
 from horizon.rhc.model_description import FullModelInverseDynamics
 from casadi_kin_dyn import pycasadi_kin_dyn
@@ -81,6 +81,13 @@ reg.setRef(4, f0)
 opts = dict()
 
 am = ActionManager(ti, opts)
+
+# step_frame = 'lf_foot'
+# FK = kd.fk(step_frame)
+# p0 = FK(q=model.q0)['ee_pos']
+# one_step = Step(step_frame, 10, 20, p0, p0, 0.1)
+# am.setStep(one_step)
+# am._trot([10, 200])
 am._walk([10, 200], [0, 2, 1, 3])
 
 
@@ -119,9 +126,9 @@ ti.bootstrap()
 solution = ti.solution
 
 
-os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
-subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
-rospy.loginfo("'spot' visualization started.")
+# os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
+# subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
+# rospy.loginfo("'spot' visualization started.")
 
 # single replay
 # q_sol = solution['q']
