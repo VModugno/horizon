@@ -42,7 +42,7 @@ def compute_polynomial_trajectory(k_start, nodes, nodes_duration, p_start, p_goa
     return np.array(traj_array)
 
 # set up problem
-ns = 50
+ns = 100
 tf = 2.0  # 10s
 dt = tf / ns
 
@@ -153,7 +153,7 @@ for c in contacts:
 i = 0
 for c in contacts:
     # stance phase
-    stance_phase = Phase(f'stance_{c}', 10)
+    stance_phase = Phase(f'stance_{c}', 5)
     stance_phase.addConstraint(prb.getConstraints(f'{c}_vel'))
     c_phases[c].registerPhase(stance_phase)
 
@@ -200,29 +200,31 @@ for c in contacts:
     c_phases[c].addPhase(stance)
 
 lift_contact = 'lh_foot'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 4)
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 3)
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
 lift_contact = 'rh_foot'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
-lift_contact = 'lf_foot'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
-lift_contact = 'rf_foot'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 2)
 c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 4)
-
+lift_contact = 'lf_foot'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 2)
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 4)
+lift_contact = 'rf_foot'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 3)
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
 
 model.setDynamics()
 
+# type: ilqr
+# ilqr.max_iter: 200
+# ilqr.alpha_min: 0.01
+# ilqr.step_length_threshold: 1e-9
+# ilqr.line_search_accept_ratio: 1e-4
+# ilqr.verbose: True
+
 opts = {'ilqr.max_iter': 440,
-        'ilqr.alpha_min': 0.1,
-        'ilqr.huu_reg': 0.0,
-        'ilqr.kkt_reg': 0.0,
-        'ilqr.integrator': 'RK4',
-        'ilqr.closed_loop_forward_pass': True,
+        'ilqr.alpha_min': 0.01,
+        'ilqr.step_length_threshold': 1e-9,
         'ilqr.line_search_accept_ratio': 1e-4,
-        'ilqr.kkt_decomp_type': 'ldlt',
-        'ilqr.constr_decomp_type': 'qr',
-        'ipopt.tol': 0.001,
-        'ipopt.constr_viol_tol': ns * 1e-3,
-        'ipopt.max_iter': 500,
         }
 
 # todo if receding is true ....
