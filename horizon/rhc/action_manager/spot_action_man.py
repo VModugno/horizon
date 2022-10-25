@@ -16,6 +16,31 @@ def barrier(x):
     return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
 
 
+def _trj(tau):
+    return 64. * tau ** 3 * (1 - tau) ** 3
+
+def compute_polynomial_trajectory(k_start, nodes, nodes_duration, p_start, p_goal, clearance, dim=None):
+
+    if dim is None:
+        dim = [0, 1, 2]
+
+    # todo check dimension of parameter before assigning it
+
+    traj_array = np.zeros(len(nodes))
+
+    start = p_start[dim]
+    goal = p_goal[dim]
+
+    index = 0
+    for k in nodes:
+        tau = (k - k_start) / nodes_duration
+        trj = _trj(tau) * clearance
+        trj += (1 - tau) * start + tau * goal
+        traj_array[index] = trj
+        index = index + 1
+
+    return np.array(traj_array)
+
 # set up problem
 ns = 50
 tf = 2.0  # 10s
@@ -79,6 +104,7 @@ for f_name, f_var in model.fmap.items():
 if solver_type != 'ilqr':
     Transcriptor.make_method(transcription_method, prb, transcription_opts)
 
+contact_pos = dict()
 # contact velocity is zero, and normal force is positive
 for i, frame in enumerate(contacts):
     FK = kd.fk(frame)
@@ -97,6 +123,7 @@ for i, frame in enumerate(contacts):
     unil = prb.createIntermediateCost(f'{frame}_unil', fcost, nodes=[])
 
     # clearance
+    contact_pos[frame] = FK(q=model.q0)['ee_pos']
     z_des = prb.createParameter(f'{frame}_z_des', 1)
     clea = prb.createConstraint(f"{frame}_clea", p[2] - z_des, nodes=[])
 
@@ -112,10 +139,10 @@ for i, frame in enumerate(contacts):
     # zdes_params.append(z_des)
 
 # cost
-prb.createResidual("min_q", 0.05 * (model.q[7:] - model.q0[7:]))
-prb.createIntermediateResidual("min_q_ddot", 1e-2 * model.a)
+prb.createResidual("min_q", 1. * (model.q[7:] - model.q0[7:]))
+prb.createIntermediateResidual("min_q_ddot", 0.01 * model.a)
 for f_name, f_var in model.fmap.items():
-    prb.createIntermediateResidual(f"min_{f_var.getName()}", 1e-3 * f_var)
+    prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * f_var)
 
 pm = PhaseManager(nodes=ns)
 
@@ -125,12 +152,19 @@ for c in contacts:
 
 i = 0
 for c in contacts:
+    # stance phase
     stance_phase = Phase(f'stance_{c}', 10)
     stance_phase.addConstraint(prb.getConstraints(f'{c}_vel'))
     c_phases[c].registerPhase(stance_phase)
 
-    flight_phase = Phase(f'flight_{c}', 10)
+    # flight phase
+    flight_duration = 8
+    flight_phase = Phase(f'flight_{c}', flight_duration)
     flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'), [0, 0, 0])
+    flight_phase.addConstraint(prb.getConstraints(f'{c}_clea'))
+
+    z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.1, dim=2))
+    flight_phase.addParameterValues(prb.getParameters(f'{c}_z_des'), z_trj)
     c_phases[c].registerPhase(flight_phase)
 
 for name, timeline in c_phases.items():
