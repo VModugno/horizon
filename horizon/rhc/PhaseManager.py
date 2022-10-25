@@ -40,7 +40,11 @@ class Phase:
 
         self.vars = dict()
         self.vars_node = dict()
-        self.bounds = dict()
+        self.var_bounds = dict()
+
+        self.pars = dict()
+        self.pars_node = dict()
+        self.par_values = dict()
 
     def addConstraint(self, constraint, nodes=None):
         active_nodes = range(self.n_nodes) if nodes is None else nodes
@@ -51,10 +55,17 @@ class Phase:
         self.costs[cost] = active_nodes
 
     def addVariableBounds(self, var, bounds, nodes=None):
+        # todo: this is not very nice, find another way? would be nice to copy the structure of addCost and addConstraint
         active_nodes = range(self.n_nodes) if nodes is None else nodes
         self.vars[var.getName()] = var
         self.vars_node[var.getName()] = active_nodes
-        self.bounds[var.getName()] = bounds
+        self.var_bounds[var.getName()] = bounds
+
+    def addParameterValues(self, par, values, nodes=None):
+        active_nodes = range(self.n_nodes) if nodes is None else nodes
+        self.pars[par.getName()] = par
+        self.pars_node[par.getName()] = active_nodes
+        self.par_values[par.getName()] = values
 
     def setDuration(self):
         pass
@@ -72,6 +83,7 @@ class PhaseToken(Phase):
         self.constraints_in_horizon = dict.fromkeys(self.constraints.keys(), set())
         self.costs_in_horizon = dict.fromkeys(self.costs.keys(), set())
         self.vars_in_horizon = dict.fromkeys(self.vars.keys(), set())
+        self.pars_in_horizon = dict.fromkeys(self.pars.keys(), set())
 
     def update(self, initial_node):
 
@@ -116,6 +128,26 @@ class PhaseToken(Phase):
                 else:
                     del self.vars_in_horizon[var]
 
+        # ==============================================================================================================
+        # ==============================================================================================================
+        # ==============================================================================================================
+        for par, nodes in self.pars_node.items():
+            phase_nodes = [node for node in nodes if node in self.active_nodes]
+
+            if par in self.pars_in_horizon:
+                if phase_nodes != self.pars_in_horizon[par]:
+                    if phase_nodes:
+                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
+                        feas_nodes = [node for node in horizon_nodes if
+                                      node in misc.getNodesFromBinary(self.pars[par]._nodes_array)]
+                    else:
+                        feas_nodes = []
+
+                    self.pars_in_horizon[par] = feas_nodes
+                    print(
+                        f'{bcolors.OKCYAN}   --->  {self.pars[par].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.ENDC}')
+                else:
+                    del self.pars_in_horizon[par]
 
     def reset(self):
         self.active_nodes = list()
@@ -142,6 +174,9 @@ class PhaseContainer:
         self.vars = dict()
         self.vars_node = dict()
 
+        self.pars = dict()
+        self.pars_node = dict()
+
     # def add_phase(self, phase):
     #
     #     self.phases.append(phase)
@@ -165,6 +200,8 @@ class PhaseContainer:
         var_name = var.getName()
         if var_name not in self.vars_node:
             self.vars_node[var_name] = set(nodes)
+
+            # resetting all the bounds
             bounds_mat_lb = -np.inf * np.ones((var.getDim(), len(var.getNodes())))
             bounds_mat_ub = np.inf * np.ones((var.getDim(), len(var.getNodes())))
             var.setBounds(bounds_mat_lb, bounds_mat_ub)
@@ -182,6 +219,33 @@ class PhaseContainer:
                 print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated variable {var.getName()}: {var.getBounds()}{bcolors.ENDC}')
 
 
+    def update_parameter(self, par, nodes, values, active_phase_nodes):
+        par_name = par.getName()
+        if par_name not in self.pars_node:
+            self.pars_node[par_name] = set(nodes)
+
+            values_mat = np.zeros((par.getDim(), len(par.getNodes())))
+
+
+            # if nodes:
+            #     par.assign(values_mat[:, active_phase_nodes], list(nodes))
+            if nodes:
+                values_mat[:, [nodes]] = values[par_name][:, active_phase_nodes]
+                par.assign(values_mat)
+            else:
+                par.assign(values_mat)
+
+            print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {par.getName()}: {par.getValues()}{bcolors.ENDC}')
+        else:
+            if set(nodes) != self.pars_node[par_name]:
+                # todo: there is an inefficiency: resetting all the nodes even if only a part of them is added
+                [self.pars_node[par_name].add(node) for node in nodes]
+                values_mat = np.zeros((par.getDim(), len(par.getNodes())))
+                values_mat[:, [nodes]] = values[par_name][:, active_phase_nodes]
+                par.assign(values_mat, list(self.pars_node[par_name]))
+                # par.assign(values[par_name][:, active_phase_nodes], list(self.pars_node[par_name]))
+                print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {par.getName()}: {par.getValues()}{bcolors.ENDC}')
+
     def update_constraint(self, constraint, nodes):
         self.update_function(self.constraints, constraint, nodes)
 
@@ -193,7 +257,10 @@ class PhaseContainer:
             self.update_constraint(constraint, nodes)
 
         for var, nodes in phase.vars_in_horizon.items():
-            self.update_variable(phase.vars[var], nodes, phase.bounds)
+            self.update_variable(phase.vars[var], nodes, phase.var_bounds)
+
+        for var, nodes in phase.pars_in_horizon.items():
+            self.update_parameter(phase.pars[var], nodes, phase.par_values, phase.active_nodes)
 
         # for cost, nodes in phase.costs_in_horizon.items():
         #     self.update_cost(cost, nodes)
@@ -205,6 +272,8 @@ class PhaseContainer:
         self.vars = dict()
         self.vars_node = dict()
 
+        self.pars = dict()
+        self.pars_node = dict()
 # def add_flatten_lists(the_lists):
 #     result = []
 #     for _list in the_lists:

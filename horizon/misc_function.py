@@ -87,6 +87,7 @@ def checkNodes(nodes, nodes_array=None):
     return checked_nodes
 
 def checkValueEntry(val):
+    # todo: if the array is monodimensional, it should be considered as column or row?
     if isinstance(val, (int, float)):
         val = np.array([val])
     else:
