@@ -1,4 +1,6 @@
 import os
+import time
+
 import numpy as np
 from horizon.rhc.taskInterface import TaskInterface
 from horizon.utils.actionManager import ActionManager, Step
@@ -65,11 +67,11 @@ final_base_y.setRef([0, model.q0[1], 0, 0, 0, 0, 1])
 # min_rot = ti.getTask('min_rot')
 # min_rot.setRef(ti.q0[3:5])
 
-final_x = ti.getTask('final_x')
-final_x.setRef([model.q0[0], 0, 0, 0, 0, 0, 1])
-
-final_y = ti.getTask('final_y')
-final_y.setRef([0, model.q0[1], 0, 0, 0, 0, 1])
+# final_x = ti.getTask('final_x')
+# final_x.setRef([model.q0[0], 0, 0, 0, 0, 0, 1])
+#
+# final_y = ti.getTask('final_y')
+# final_y.setRef([0, model.q0[1], 0, 0, 0, 0, 1])
 
 f0 = np.array([0, 0, 55])
 reg = ti.getTask('regularization')
@@ -87,8 +89,8 @@ am = ActionManager(ti, opts)
 # p0 = FK(q=model.q0)['ee_pos']
 # one_step = Step(step_frame, 10, 20, p0, p0, 0.1)
 # am.setStep(one_step)
-# am._trot([10, 200])
-am._walk([10, 200], [0, 2, 1, 3])
+am._trot([10, 200])
+# am._walk([10, 200], [0, 2, 1, 3])
 
 
 # ===============================================================
@@ -118,7 +120,7 @@ from horizon.ros import replay_trajectory
 
 # todo
 
-final_base_x.setRef([0.5, 0, 0, 0, 0, 0, 1])
+# final_base_x.setRef([0.5, 0, 0, 0, 0, 0, 1])
 # ptgt.assign(ptgt_final, nodes=ns)
 
 ti.finalize()
@@ -152,10 +154,12 @@ while True:
     iteration = iteration + 1
     print(iteration)
 
+    tic = time.time()
     am.execute(solution)
+
     ti.solver_rti.solve()
     solution = ti.solver_rti.getSolutionDict()
-
+    print('cycle:', time.time() - tic)
     repl.frame_force_mapping = {cname: solution[f.getName()] for cname, f in ti.model.fmap.items()}
     repl.publish_joints(solution['q'][:, 0])
     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
