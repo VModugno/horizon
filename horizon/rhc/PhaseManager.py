@@ -243,7 +243,7 @@ class PhaseToken(Phase):
 """
 
 
-class PhaseContainer:
+class HorizonManager:
     """
     this class is required to manage multiple phases update.
     If multiple phases use the same constraint, the constraint must be updated with the nodes from all the phases.
@@ -371,7 +371,6 @@ class PhaseContainer:
             #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD}'f'Adding nodes to '
             #                       f'{bcolors.CUNDERLINE}new{bcolors.CEND}'
             #                       f'{bcolors.CCYAN0}{bcolors.CBOLD} function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
-                # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
         else:
             if set(nodes) != container[fun]:
                 # todo: there is a small inefficiency: resetting all the nodes even if just only a part are added
@@ -380,7 +379,6 @@ class PhaseContainer:
                 # if self.debug_mode:
                 #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                 #                       f'Adding nodes to function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
-                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
 
     def update_variable(self, var, nodes, bounds, phase_nodes, reset=False):
         var_name = var.getName()
@@ -421,6 +419,7 @@ class PhaseContainer:
 
         # print('update_phase', time.time() - tic)
     def reset(self):
+
         self.constraints = dict()
         self.costs = dict()
         self.vars = dict()
@@ -471,7 +470,7 @@ class SinglePhaseManager:
         self.registered_phases = dict()  # container of all the registered phases
         self.n_tot = nodes  # self.prb.getNNodes() + 1
 
-        self.phase_container = PhaseContainer(self.logger)
+        self.horizon_manager = HorizonManager(self.logger)
 
         self.phases = list()
         self.active_phases = list()  # list of all the active phases
@@ -527,7 +526,9 @@ class SinglePhaseManager:
             self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.phases[:pos])
             # if I'm removing phases from the current stack, i need to remove current nodes from the phases
             [elem.reset() for elem in self.phases[pos:]]
-            self.phase_container.reset()
+            self.horizon_manager.reset()
+            [self.horizon_manager.update_phase(phase) for phase in self.phases[:pos]]
+            # todo this reset is wrong!
             # new active phases
             self.active_phases = [phase for phase in self.phases if phase.active_nodes]
             self.phases[pos:pos] = phases_to_add
@@ -556,9 +557,9 @@ class SinglePhaseManager:
                 phase.active_nodes.extend(range(len_phase))
                 phase.update(self.pos_in_horizon)
 
-            # update only if phase_to_add is inside horizon
-            [self.phase_container.update_phase(phase) for phase in phases_to_add[:current_phase]]
-            self.phase_container.set_horizon_nodes()
+            # update only if phase_to_add is inside horizon ( --> :current_phase)
+            [self.horizon_manager.update_phase(phase) for phase in phases_to_add[:current_phase]]
+            self.horizon_manager.set_horizon_nodes()
 
         # print(f'{bcolors.CRED} Updated phases:')
         # for phase in self.phases:
@@ -609,14 +610,14 @@ class SinglePhaseManager:
                 if self.debug_mode:
                     self.logger.debug(f'{bcolors.CYELLOW}Removing depleted phase: {self.phases[0].name}{bcolors.CEND}')
                 self.phases = self.phases[1:]
-            self.phase_container.reset()
+            self.horizon_manager.reset()
             i = 0
             for phase in self.active_phases:
                 phase.update(i)
                 i += len(phase.active_nodes)
 
-            [self.phase_container.update_phase(phase, reset=True) for phase in self.active_phases]
-            self.phase_container.set_horizon_nodes()
+            [self.horizon_manager.update_phase(phase, reset=True) for phase in self.active_phases]
+            self.horizon_manager.set_horizon_nodes()
 
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
