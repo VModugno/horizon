@@ -20,15 +20,57 @@ import logging
 
 
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+
+    CPURPLE = '\033[95m'
+    CBLUE0 = '\033[94m'
+    CCYAN0 = '\033[96m'
+    CGREEN0 = '\033[92m'
+    CYELLOW0 = '\033[93m'
+    CRED0 = '\033[91m'
+
+    CEND = '\33[0m'
+    CBOLD = '\33[1m'
+    CITALIC = '\33[3m'
+    CUNDERLINE = '\33[4m'
+    CBLINK = '\33[5m'
+    CBLINK2 = '\33[6m'
+    CSELECTED = '\33[7m'
+
+    CBLACK = '\33[30m'
+    CRED = '\33[31m'
+    CGREEN = '\33[32m'
+    CYELLOW = '\33[33m'
+    CBLUE = '\33[34m'
+    CVIOLET = '\33[35m'
+    CBEIGE = '\33[36m'
+    CWHITE = '\33[37m'
+
+    CBLACKBG = '\33[40m'
+    CREDBG = '\33[41m'
+    CGREENBG = '\33[42m'
+    CYELLOWBG = '\33[43m'
+    CBLUEBG = '\33[44m'
+    CVIOLETBG = '\33[45m'
+    CBEIGEBG = '\33[46m'
+    CWHITEBG = '\33[47m'
+
+    CGREY = '\33[90m'
+    CRED2 = '\33[91m'
+    CGREEN2 = '\33[92m'
+    CYELLOW2 = '\33[93m'
+    CBLUE2 = '\33[94m'
+    CVIOLET2 = '\33[95m'
+    CBEIGE2 = '\33[96m'
+    CWHITE2 = '\33[97m'
+
+    CGREYBG = '\33[100m'
+    CREDBG2 = '\33[101m'
+    CGREENBG2 = '\33[102m'
+    CYELLOWBG2 = '\33[103m'
+    CBLUEBG2 = '\33[104m'
+    CVIOLETBG2 = '\33[105m'
+    CBEIGEBG2 = '\33[106m'
+    CWHITEBG2 = '\33[107m'
 
 
 class Phase:
@@ -96,8 +138,8 @@ class PhaseToken(Phase):
     def update(self, initial_node):
 
         if self.debug_mode:
-            self.logger.debug(f'{bcolors.OKCYAN}Phase "{self.name}" starting at node: {initial_node}{bcolors.ENDC}')
-            self.logger.debug(f'{bcolors.OKCYAN}Phase is active on nodes: {self.active_nodes}{bcolors.ENDC}')
+            self.logger.debug(f'{bcolors.CCYAN0}Phase "{self.name}" starting at node: {initial_node}{bcolors.CEND}')
+            self.logger.debug(f'{bcolors.CCYAN0}Phase is active on nodes: {self.active_nodes}{bcolors.CEND}')
 
         # given the active nodes of a phase:
         #   for each constraint, get the active nodes and compute the horizon nodes it is active node
@@ -116,7 +158,7 @@ class PhaseToken(Phase):
                     self.constraints_in_horizon[cnsrt] = feas_nodes
                     if self.debug_mode:
                         self.logger.debug(
-                            f'{bcolors.OKCYAN}   --->  {cnsrt.getName()}. Nodes to add: {list(feas_nodes)}{bcolors.ENDC}')
+                            f'{bcolors.CCYAN0}   --->  {cnsrt.getName()}. Nodes to add: {list(feas_nodes)}{bcolors.CEND}')
                 else:
                     del self.constraints_in_horizon[cnsrt]
 
@@ -139,7 +181,7 @@ class PhaseToken(Phase):
                     self.costs_in_horizon[cost] = feas_nodes
                     if self.debug_mode:
                         self.logger.debug(
-                            f'{bcolors.OKCYAN}   --->  {cost.getName()}. Nodes to add: {list(feas_nodes)}{bcolors.ENDC}')
+                            f'{bcolors.CCYAN0}   --->  {cost.getName()}. Nodes to add: {list(feas_nodes)}{bcolors.CEND}')
                 else:
                     del self.costs_in_horizon[cost]
 
@@ -162,7 +204,7 @@ class PhaseToken(Phase):
                     self.vars_in_horizon[var] = feas_nodes
                     if self.debug_mode:
                         self.logger.debug(
-                            f'{bcolors.OKCYAN}   --->  {self.vars[var].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.ENDC}')
+                            f'{bcolors.CCYAN0}   --->  {self.vars[var].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.CEND}')
                 else:
                     del self.vars_in_horizon[var]
 
@@ -184,7 +226,7 @@ class PhaseToken(Phase):
                     self.pars_in_horizon[par] = feas_nodes
                     if self.debug_mode:
                         self.logger.debug(
-                            f'{bcolors.OKCYAN}   --->  {self.pars[par].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.ENDC}')
+                            f'{bcolors.CCYAN0}   --->  {self.pars[par].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.CEND}')
                 else:
                     del self.pars_in_horizon[par]
 
@@ -222,7 +264,7 @@ class PhaseContainer:
         self.costs = dict()
 
         self.vars = dict()  # dict of variableUpdaters
-        self.pars = dict() # dict of parameterUpdaters
+        self.pars = dict()  # dict of parameterUpdaters
 
     class VariableUpdater:
         def __init__(self, variable, logger=None):
@@ -258,23 +300,23 @@ class PhaseContainer:
                 bounds_mat_ub = np.inf * np.ones((self.var.getDim(), len(self.var.getNodes())))
                 self.var.setBounds(bounds_mat_lb, bounds_mat_ub)
                 if self.debug_mode:
-                    # self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} '
+                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                     #                   f'updated variable {self.var.getName()}: {self.var.getLowerBounds()[0]}'
-                    #                   f'{bcolors.ENDC}')
-                    self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} '
+                    #                   f'{bcolors.CEND}')
+                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                                       f'updated variable {self.var.getName()} at all nodes.'
-                                      f'{bcolors.ENDC}')
+                                      f'{bcolors.CEND}')
             else:
                 # only fill the required nodes
                 self.var.setBounds(self.lower_bounds[:, self.horizon_nodes], self.upper_bounds[:, self.horizon_nodes],
                                    self.horizon_nodes)
                 if self.debug_mode:
-                    # self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} '
+                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                     #                   f'updated variable {self.var.getName()}: {self.var.getLowerBounds()[0]}'
-                    #                   f'{bcolors.ENDC}')
-                    self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} '
+                    #                   f'{bcolors.CEND}')
+                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                                       f'updated variable {self.var.getName()} at nodes: {self.horizon_nodes}'
-                                      f'{bcolors.ENDC}')
+                                      f'{bcolors.CEND}')
 
     class ParameterUpdater:
         def __init__(self, parameter, logger=None):
@@ -306,14 +348,14 @@ class PhaseContainer:
                 values_mat = np.zeros((self.par.getDim(), len(self.par.getNodes())))
                 self.par.assign(values_mat)
                 if self.debug_mode:
-                    # self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {self.par.getName()}: {self.par.getValues()}{bcolors.ENDC}')
-                    self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {self.par.getName()}at all nodes.{bcolors.ENDC}')
+                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()}: {self.par.getValues()}{bcolors.CEND}')
+                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()}at all nodes.{bcolors.CEND}')
             else:
                 self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
 
                 if self.debug_mode:
-                    # self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {self.par.getName()}: {self.par.getValues()}{bcolors.ENDC}')
-                    self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {self.par.getName()} at nodes: {self.horizon_nodes}{bcolors.ENDC}')
+                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()}: {self.par.getValues()}{bcolors.CEND}')
+                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()} at nodes: {self.horizon_nodes}{bcolors.CEND}')
 
     # def add_phase(self, phase):
     #
@@ -324,38 +366,21 @@ class PhaseContainer:
 
         if fun not in container:
             container[fun] = set(nodes)
-            fun.setNodes(list(nodes))
-            if self.debug_mode:
-                self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.ENDC}')
+            # fun.setNodes(list(nodes))
+            # if self.debug_mode:
+            #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD}'f'Adding nodes to '
+            #                       f'{bcolors.CUNDERLINE}new{bcolors.CEND}'
+            #                       f'{bcolors.CCYAN0}{bcolors.CBOLD} function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
+                # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
         else:
             if set(nodes) != container[fun]:
                 # todo: there is a small inefficiency: resetting all the nodes even if just only a part are added
                 [container[fun].add(node) for node in nodes]
-                fun.setNodes(list(container[fun]))
-                if self.debug_mode:
-                    self.logger.debug(f'{bcolors.OKCYAN}{bcolors.BOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.ENDC}')
-
-    # def update_variable(self, var, nodes, bounds):
-    #     var_name = var.getName()
-    #     if var_name not in self.vars_node:
-    #         self.vars_node[var_name] = set(nodes)
-    #         if not nodes:
-    #             # if nodes is empty, resetting all the bounds
-    #             bounds_mat_lb = -np.inf * np.ones((var.getDim(), len(var.getNodes())))
-    #             bounds_mat_ub = np.inf * np.ones((var.getDim(), len(var.getNodes())))
-    #             var.setBounds(bounds_mat_lb, bounds_mat_ub)
-    #         else:
-    #             # only fill the required nodes
-    #             bounds_mat = np.array([bounds[var_name]] * len(list(nodes))).T
-    #             var.setBounds(bounds_mat, bounds_mat, list(nodes))
-    #         print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated variable {var.getName()}: {var.getBounds()}{bcolors.ENDC}')
-    #     else:
-    #         if set(nodes) != self.vars_node[var_name]:
-    #             # todo: there is a small inefficiency: resetting all the nodes even if just only a part are added
-    #             [self.vars_node[var_name].add(node) for node in nodes]
-    #             bounds_mat = np.array([bounds[var_name]] * len(list(self.vars_node[var_name]))).T
-    #             var.setBounds(bounds_mat, bounds_mat, list(self.vars_node[var_name]))
-    #             print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated variable {var.getName()}: {var.getBounds()}{bcolors.ENDC}')
+                # fun.setNodes(list(container[fun]))
+                # if self.debug_mode:
+                #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
+                #                       f'Adding nodes to function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
+                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
 
     def update_variable(self, var, nodes, bounds, phase_nodes, reset=False):
         var_name = var.getName()
@@ -372,29 +397,6 @@ class PhaseContainer:
 
         for par_item in self.pars.values():
             par_item.update(nodes, values[par_name], phase_nodes, reset)  # update var with parameter updater
-
-    # def update_parameter(self, par, nodes, values, active_phase_nodes):
-    #     par_name = par.getName()
-    #     if par_name not in self.pars_node:
-    #         self.pars_node[par_name] = set(nodes)
-    #         if not nodes:
-    #             values_mat = np.zeros((par.getDim(), len(par.getNodes())))
-    #             par.assign(values_mat)
-    #         # if nodes:
-    #         #     par.assign(values_mat[:, active_phase_nodes], list(nodes))
-    #         else:
-    #             values_mat = values[par_name][:, active_phase_nodes]
-    #             par.assign(values_mat, list(nodes))
-    #
-    #         print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {par.getName()}: {par.getValues()}{bcolors.ENDC}')
-    #     else:
-    #         if set(nodes) != self.pars_node[par_name]:
-    #             # todo: there is an inefficiency: resetting all the nodes even if only a part of them is added
-    #             [self.pars_node[par_name].add(node) for node in nodes]
-    #             values_mat = values[par_name][:, active_phase_nodes]
-    #             par.assign(values_mat, list(self.pars_node[par_name]))
-    #             # par.assign(values[par_name][:, active_phase_nodes], list(self.pars_node[par_name]))
-    #             print(f'{bcolors.OKCYAN}{bcolors.BOLD} updated parameters {par.getName()}: {par.getValues()}{bcolors.ENDC}')
 
     def update_constraint(self, constraint, nodes):
         self.update_function(self.constraints, constraint, nodes)
@@ -423,6 +425,23 @@ class PhaseContainer:
         self.costs = dict()
         self.vars = dict()
         self.pars = dict()
+
+    def set_horizon_nodes(self):
+
+        # todo incorporate these two
+        for constraint, nodes in self.constraints.items():
+            constraint.setNodes(list(nodes))
+            if self.debug_mode:
+                self.logger.debug(f'{bcolors.CBLUE}{bcolors.CUNDERLINE}{bcolors.CBOLD}'
+                                  f'updated function {constraint.getName()}: {constraint.getNodes()}'
+                                  f'{bcolors.CEND}')
+
+        for cost, nodes in self.costs.items():
+            cost.setNodes(list(nodes))
+            if self.debug_mode:
+                self.logger.debug(f'{bcolors.CBLUE}{bcolors.CUNDERLINE}{bcolors.CBOLD}'
+                                  f'updated function {cost.getName()}: {cost.getNodes()}'
+                                  f'{bcolors.CEND}')
 
 
 # def add_flatten_lists(the_lists):
@@ -480,7 +499,7 @@ class SinglePhaseManager:
 
         if self.debug_mode:
             self.logger.debug(
-                f'{bcolors.HEADER} =========== Happening in timeline: {self.name} =========== {bcolors.ENDC}')
+                f'{bcolors.CVIOLET} =========== Happening in timeline: {self.name} =========== {bcolors.CEND}')
 
         # stupid checks
         if isinstance(phases, list):
@@ -492,7 +511,7 @@ class SinglePhaseManager:
 
         if self.debug_mode:
             self.logger.debug(
-                f'{bcolors.FAIL}{bcolors.BOLD} Adding phases: {[phase.name for phase in phases]} at position: {pos}{bcolors.ENDC}')
+                f'{bcolors.CRED}{bcolors.CBOLD} Adding phases: {[phase.name for phase in phases]} at position: {pos}{bcolors.CEND}')
         # print(f'{bcolors.FAIL} Current phases:')
         # for phase in self.phases:
         #     print(f'{bcolors.FAIL}    - {phase.name}: {phase.active_nodes}')
@@ -514,9 +533,9 @@ class SinglePhaseManager:
             self.phases[pos:pos] = phases_to_add
             phases_to_add.extend(self.phases[pos + 1:])
 
-        # print(f'{bcolors.WARNING} updating phases:')
+        # print(f'{bcolors.CYELLOW} updating phases:')
         # for phase in phases_to_add:
-        #     print(f'{bcolors.WARNING}    - {phase.name}{bcolors.ENDC}')
+        #     print(f'{bcolors.CYELLOW}    - {phase.name}{bcolors.CEND}')
 
         if self.trailing_empty_nodes > 0:
             # set active node for each added phase
@@ -539,10 +558,11 @@ class SinglePhaseManager:
 
             # update only if phase_to_add is inside horizon
             [self.phase_container.update_phase(phase) for phase in phases_to_add[:current_phase]]
+            self.phase_container.set_horizon_nodes()
 
-        # print(f'{bcolors.FAIL} Updated phases:')
+        # print(f'{bcolors.CRED} Updated phases:')
         # for phase in self.phases:
-        #     print(f'{bcolors.FAIL}    - {phase.name}: {phase.active_nodes}{bcolors.ENDC}')
+        #     print(f'{bcolors.CRED}    - {phase.name}: {phase.active_nodes}{bcolors.CEND}')
 
     def getActivePhase(self, phase=None):
 
@@ -561,7 +581,7 @@ class SinglePhaseManager:
 
         if self.debug_mode:
             self.logger.debug(
-                f'{bcolors.HEADER} =========== Happening in timeline: {self.name} =========== {bcolors.ENDC}')
+                f'{bcolors.CVIOLET} =========== Happening in timeline: {self.name} =========== {bcolors.CEND}')
         # if phases is empty, skip everything
         if self.phases:
             self.active_phases = [phase for phase in self.phases if phase.active_nodes]
@@ -587,7 +607,7 @@ class SinglePhaseManager:
             # burn depleted phases
             if not self.phases[0].active_nodes:
                 if self.debug_mode:
-                    self.logger.debug(f'{bcolors.WARNING}Removing depleted phase: {self.phases[0].name}{bcolors.ENDC}')
+                    self.logger.debug(f'{bcolors.CYELLOW}Removing depleted phase: {self.phases[0].name}{bcolors.CEND}')
                 self.phases = self.phases[1:]
             self.phase_container.reset()
             i = 0
@@ -596,22 +616,12 @@ class SinglePhaseManager:
                 i += len(phase.active_nodes)
 
             [self.phase_container.update_phase(phase, reset=True) for phase in self.active_phases]
-
-            # [self.phase_container.update_phase(phase) for phase in self.active_phases]
+            self.phase_container.set_horizon_nodes()
 
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
         # for phase in self.active_phases:
         #     phase.reset()
-
-        # print(f'{bcolors.HEADER} =========== Timeline: {self.name} =========== {bcolors.ENDC}')
-        # for phase in self.phases:
-        #     print(f'{bcolors.OKCYAN}Phase: {phase.name}. N. nodes: {phase.n_nodes}. Active nodes: {phase.active_nodes}{bcolors.ENDC}')
-        #     for constraint, def_nodes in phase.constraints.items():
-        #         print(f'{bcolors.OKCYAN}         --->  {constraint.getName()} (defined on {list(def_nodes)}){bcolors.ENDC}: {bcolors.OKCYAN}{bcolors.BOLD}{constraint.getNodes()}{bcolors.ENDC}')
-        # print(f'{bcolors.OKCYAN}         --->  {constraint.getName()} (defined on {list(def_nodes)}){bcolors.ENDC}: {bcolors.OKCYAN}{bcolors.BOLD}{phase.constraints_in_horizon[constraint]}{bcolors.ENDC}')
-        # print(f'{bcolors.OKCYAN}-------------------------{bcolors.ENDC}')
-
 
 class PhaseManager:
     def __init__(self, nodes, opts=None):
