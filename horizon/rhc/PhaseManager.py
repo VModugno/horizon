@@ -405,6 +405,8 @@ class HorizonManager:
     def update_phase(self, phase, reset=False):
         # tic = time.time()
 
+        # todo why functions does not require reset?
+        # add bounds to constraints
         for constraint, nodes in phase.constraints_in_horizon.items():
             self.update_constraint(constraint, nodes)
 
@@ -426,7 +428,7 @@ class HorizonManager:
         self.pars = dict()
 
     def set_horizon_nodes(self):
-
+        # todo what about bounds in constraints?
         # todo incorporate these two
         for constraint, nodes in self.constraints.items():
             constraint.setNodes(list(nodes))
@@ -442,7 +444,8 @@ class HorizonManager:
                                   f'updated function {cost.getName()}: {cost.getNodes()}'
                                   f'{bcolors.CEND}')
 
-
+        # for var, var_item in self.vars.items():
+        #     var_item.var.setBounds(var_item.)
 # def add_flatten_lists(the_lists):
 #     result = []
 #     for _list in the_lists:
