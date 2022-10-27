@@ -276,7 +276,10 @@ rate = rospy.Rate(1 / dt)
 flag_action = 1
 forces = [prb.getVariables('f_' + c) for c in contacts]
 nc = 4
-while True:
+
+elapsed_time_list = []
+
+while iteration < 100:
     iteration = iteration + 1
     print(iteration)
 
@@ -298,16 +301,22 @@ while True:
 
     prb.setInitialState(x0=xig[:, 0])
 
+
+    tic = time.time()
     pm._shift_phases()
+    elapsed_time = time.time() - tic
+    print('cycle:', elapsed_time)
+    elapsed_time_list.append(elapsed_time)
 
     solver_rti.solve()
     solution = solver_rti.getSolutionDict()
 
-    tic = time.time()
 
-    print('cycle:', time.time() - tic)
 
     repl.frame_force_mapping = {cname: solution[f.getName()] for cname, f in model.fmap.items()}
     repl.publish_joints(solution['q'][:, 0])
     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
     rate.sleep()
+
+
+print(sum(elapsed_time_list) / len(elapsed_time_list))
