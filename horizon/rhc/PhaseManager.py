@@ -135,6 +135,52 @@ class PhaseToken(Phase):
         self.vars_in_horizon = dict.fromkeys(self.vars.keys(), set())
         self.pars_in_horizon = dict.fromkeys(self.pars.keys(), set())
 
+    def function_update(self, initial_node, input_container, output_container):
+
+        for item, nodes in input_container.items():
+            phase_nodes = [node for node in nodes if node in self.active_nodes]
+            if item in output_container:
+                if phase_nodes != output_container[item]:
+                    if phase_nodes:
+                        # tic = time.time()
+                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
+                        feas_nodes = horizon_nodes
+                        # todo: computing feas_node is VERY computationally expensive
+                        # feas_nodes = [node for node in horizon_nodes if
+                        #               node in misc.getNodesFromBinary(item._getFeasNodes())]
+                        # print(f'         compute horizon nodes: {time.time() - tic}')
+                    else:
+                        feas_nodes = []
+                    output_container[item] = feas_nodes
+
+                    if self.debug_mode:
+                        self.logger.debug(
+                            f'{bcolors.CCYAN0}   --->  {item.getName()}. Nodes to add: {list(feas_nodes)}{bcolors.CEND}')
+                else:
+                    del output_container[item]
+
+    def variable_update(self, initial_node, input_node_container, input_item_container, output_container):
+
+        for item, nodes in input_node_container.items():
+            phase_nodes = [node for node in nodes if node in self.active_nodes]
+            if item in output_container:
+                if phase_nodes != output_container[item]:
+                    if phase_nodes:
+                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
+                        feas_nodes = horizon_nodes
+                        # todo: computing feas_node is VERY computationally expensive
+                        # feas_nodes = [node for node in horizon_nodes if
+                        #               node in misc.getNodesFromBinary(input_item_container[item]._nodes_array)]
+                        # print(f'         compute horizon nodes: {time.time() - tic}')
+                    else:
+                        feas_nodes = []
+                    output_container[item] = feas_nodes
+
+                    if self.debug_mode:
+                        self.logger.debug(
+                            f'{bcolors.CCYAN0}   --->  {input_item_container[item].getName()}. Nodes to add: {list(feas_nodes)}{bcolors.CEND}')
+                else:
+                    del output_container[item]
     def update(self, initial_node):
 
         '''
@@ -145,96 +191,26 @@ class PhaseToken(Phase):
             self.logger.debug(f'{bcolors.CCYAN0}Phase "{self.name}" starting at node: {initial_node}{bcolors.CEND}')
             self.logger.debug(f'{bcolors.CCYAN0}Phase is active on nodes: {self.active_nodes}{bcolors.CEND}')
 
+        # initial_tic = time.time()
         # given the active nodes of a phase:
         #   for each constraint, get the active nodes and compute the horizon nodes it is active node
-        for cnsrt, nodes in self.constraints.items():
-            phase_nodes = [node for node in nodes if node in self.active_nodes]
+        # tic = time.time()
+        self.function_update(initial_node, self.constraints, self.constraints_in_horizon)
+        # print(f' --> updating constraints: {time.time() - tic}')
 
-            if cnsrt in self.constraints_in_horizon:
-                if phase_nodes != self.constraints_in_horizon[cnsrt]:
-                    if phase_nodes:
-                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
-                        feas_nodes = [node for node in horizon_nodes if
-                                      node in misc.getNodesFromBinary(cnsrt._getFeasNodes())]
-                    else:
-                        feas_nodes = []
+        # tic = time.time()
+        self.function_update(initial_node, self.costs, self.costs_in_horizon)
+        # print(f' --> updating costs: {time.time() - tic}')
 
-                    self.constraints_in_horizon[cnsrt] = feas_nodes
-                    if self.debug_mode:
-                        self.logger.debug(
-                            f'{bcolors.CCYAN0}   --->  {cnsrt.getName()}. Nodes to add: {list(feas_nodes)}{bcolors.CEND}')
-                else:
-                    del self.constraints_in_horizon[cnsrt]
+        # tic = time.time()
+        self.variable_update(initial_node, self.vars_node, self.vars, self.vars_in_horizon)
+        # print(f' --> updating vars: {time.time() - tic}')
 
-        # ==============================================================================================================
-        # ==============================================================================================================
-        # ==============================================================================================================
+        # tic = time.time()
+        self.variable_update(initial_node, self.pars_node, self.pars, self.pars_in_horizon)
+        # print(f' --> updating pars: {time.time() - tic}')
 
-        for cost, nodes in self.costs.items():
-            phase_nodes = [node for node in nodes if node in self.active_nodes]
-
-            if cost in self.costs_in_horizon:
-                if phase_nodes != self.costs_in_horizon[cost]:
-                    if phase_nodes:
-                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
-                        feas_nodes = [node for node in horizon_nodes if
-                                      node in misc.getNodesFromBinary(cost._getFeasNodes())]
-                    else:
-                        feas_nodes = []
-
-                    self.costs_in_horizon[cost] = feas_nodes
-                    if self.debug_mode:
-                        self.logger.debug(
-                            f'{bcolors.CCYAN0}   --->  {cost.getName()}. Nodes to add: {list(feas_nodes)}{bcolors.CEND}')
-                else:
-                    del self.costs_in_horizon[cost]
-
-        # ==============================================================================================================
-        # ==============================================================================================================
-        # ==============================================================================================================
-
-        for var, nodes in self.vars_node.items():
-            phase_nodes = [node for node in nodes if node in self.active_nodes]
-            print(var, nodes)
-            print(phase_nodes)
-
-            if var in self.vars_in_horizon:
-                if phase_nodes != self.vars_in_horizon[var]:
-                    if phase_nodes:
-                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
-                        feas_nodes = [node for node in horizon_nodes if
-                                      node in misc.getNodesFromBinary(self.vars[var]._nodes_array)]
-                    else:
-                        feas_nodes = []
-
-                    self.vars_in_horizon[var] = feas_nodes
-                    if self.debug_mode:
-                        self.logger.debug(
-                            f'{bcolors.CCYAN0}   --->  {self.vars[var].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.CEND}')
-                else:
-                    del self.vars_in_horizon[var]
-
-        # ==============================================================================================================
-        # ==============================================================================================================
-        # ==============================================================================================================
-        for par, nodes in self.pars_node.items():
-            phase_nodes = [node for node in nodes if node in self.active_nodes]
-
-            if par in self.pars_in_horizon:
-                if phase_nodes != self.pars_in_horizon[par]:
-                    if phase_nodes:
-                        horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
-                        feas_nodes = [node for node in horizon_nodes if
-                                      node in misc.getNodesFromBinary(self.pars[par]._nodes_array)]
-                    else:
-                        feas_nodes = []
-
-                    self.pars_in_horizon[par] = feas_nodes
-                    if self.debug_mode:
-                        self.logger.debug(
-                            f'{bcolors.CCYAN0}   --->  {self.pars[par].getName()}. Nodes to add: {list(feas_nodes)}:{bcolors.CEND}')
-                else:
-                    del self.pars_in_horizon[par]
+        # print(f'updated one phase: {time.time() - initial_tic}')
 
     def reset(self):
         self.active_nodes = list()
@@ -383,7 +359,7 @@ class HorizonManager:
     #     self.update_phase(phase)
 
     def update_function(self, container, fun, nodes):
-
+        # tic = time.time()
         if fun not in container:
             container[fun] = set(nodes)
             # fun.setNodes(list(nodes))
@@ -400,6 +376,7 @@ class HorizonManager:
                 #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                 #                       f'Adding nodes to function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
 
+        # print(f'        updated fun: {time.time() - tic}')
     def update_variable(self, var, nodes, bounds, phase_nodes):
         var_name = var.getName()
         if var_name not in self.vars:
@@ -423,23 +400,35 @@ class HorizonManager:
         self.update_function(self.costs, cost, nodes)
 
     def update_phase(self, phase):
-        # tic = time.time()
+        # print(f'{bcolors.CBLUE2} updating phase: {phase.name}{bcolors.CEND}')
+        initial_tic = time.time()
 
         # todo why functions does not require reset?
-        # add bounds to constraints
+        # todo add bounds to constraints
+        # tic = time.time()
+        # [self.update_constraint(constraint, nodes) for constraint, nodes in phase.constraints_in_horizon.items()]
         for constraint, nodes in phase.constraints_in_horizon.items():
             self.update_constraint(constraint, nodes)
-
+        # print('      --> constraints:', time.time() - tic)
+        # tic = time.time()
+        # [self.update_cost(cost, nodes) for cost, nodes in phase.costs_in_horizon.items()]
         for cost, nodes in phase.costs_in_horizon.items():
             self.update_cost(cost, nodes)
+        # print('      --> costs:', time.time() - tic)
 
+        # tic = time.time()
+        # [self.update_variable(phase.vars[var], nodes, phase.var_bounds, phase.active_nodes) for var, nodes in phase.vars_in_horizon.items()]
         for var, nodes in phase.vars_in_horizon.items():
             self.update_variable(phase.vars[var], nodes, phase.var_bounds, phase.active_nodes)
+        # print('      --> vars:', time.time() - tic)
 
-        for var, nodes in phase.pars_in_horizon.items():
-            self.update_parameter(phase.pars[var], nodes, phase.par_values, phase.active_nodes)
+        # tic = time.time()
+        # [self.update_parameter(phase.pars[par], nodes, phase.par_values, phase.active_nodes) for par, nodes in phase.pars_in_horizon.items()]
+        for par, nodes in phase.pars_in_horizon.items():
+            self.update_parameter(phase.pars[par], nodes, phase.par_values, phase.active_nodes)
+        # print('      --> pars:', time.time() - tic)
 
-        # print('update_phase', time.time() - tic)
+        print(f'{bcolors.CITALIC}{bcolors.CYELLOW0} -> update single phase {time.time() - initial_tic}{bcolors.CEND}')
     def reset(self):
 
         self.constraints = dict()
@@ -590,7 +579,7 @@ class SinglePhaseManager:
 
             # update only if phase_to_add is inside horizon ( --> :current_phase)
             [self.horizon_manager.update_phase(phase) for phase in phases_to_add[:current_phase]]
-            self.horizon_manager.set_horizon_nodes()
+            # self.horizon_manager.set_horizon_nodes()
 
         # print(f'{bcolors.CRED} Updated phases:')
         # for phase in self.phases:
@@ -610,14 +599,20 @@ class SinglePhaseManager:
         return self.horizon_nodes
 
     def _shift_phases(self):
+        initial_tic = time.time()
+        # tic = time.time()
 
         if self.debug_mode:
             self.logger.debug(
                 f'{bcolors.CVIOLET} =========== Happening in timeline: {self.name} =========== {bcolors.CEND}')
         # if phases is empty, skip everything
         if self.phases:
+            # update active_phases with all the phases that have active nodes
             self.active_phases = [phase for phase in self.phases if phase.active_nodes]
 
+            # print('adding phase to active phase:', time.time() - tic)
+
+            # tic = time.time()
 
             last_active_phase = self.active_phases[-1]
             # if 'last active node' of 'last active phase' is the last of the phase, add new phase, otherwise continue to fill the phase
@@ -633,25 +628,41 @@ class SinglePhaseManager:
                 elem = last_active_phase.active_nodes[-1] + 1 if last_active_phase.active_nodes else 0
                 last_active_phase.active_nodes.append(elem)
 
+            # print('update nodes of phases:', time.time() - tic)
+            # tic = time.time()
+
             # remove first element in phases
             self.active_phases[0].active_nodes = self.active_phases[0].active_nodes[1:]
 
+            # print('remove first element in phases:', time.time() - tic)
+
+            # tic = time.time()
             # burn depleted phases
             if not self.phases[0].active_nodes:
                 if self.debug_mode:
                     self.logger.debug(f'{bcolors.CYELLOW}Removing depleted phase: {self.phases[0].name}{bcolors.CEND}')
                 self.phases = self.phases[1:]
+            # print('burn depleted phases:', time.time() - tic)
+
+            # tic = time.time()
             self.horizon_manager.reset()
+            # print('reset horizon_manager:', time.time() - tic)
+
+            tic = time.time()
             i = 0
             for phase in self.active_phases:
                 phase.update(i)
                 i += len(phase.active_nodes)
+            print('update nodes for each phase:', time.time() - tic)
 
+            tic = time.time()
             [self.horizon_manager.update_phase(phase) for phase in self.active_phases]
-            self.horizon_manager.set_horizon_nodes()
+            # self.horizon_manager.set_horizon_nodes()
+            print('update phases all together:', time.time() - tic)
 
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
+        print('one shift:', time.time() - initial_tic)
         # for phase in self.active_phases:
         #     phase.reset()
 
