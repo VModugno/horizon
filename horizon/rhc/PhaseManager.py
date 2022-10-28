@@ -137,6 +137,10 @@ class PhaseToken(Phase):
 
     def update(self, initial_node):
 
+        '''
+        update phase "anonymous" nodes appending the right nodes to the horizon
+        '''
+
         if self.debug_mode:
             self.logger.debug(f'{bcolors.CCYAN0}Phase "{self.name}" starting at node: {initial_node}{bcolors.CEND}')
             self.logger.debug(f'{bcolors.CCYAN0}Phase is active on nodes: {self.active_nodes}{bcolors.CEND}')
@@ -191,6 +195,8 @@ class PhaseToken(Phase):
 
         for var, nodes in self.vars_node.items():
             phase_nodes = [node for node in nodes if node in self.active_nodes]
+            print(var, nodes)
+            print(phase_nodes)
 
             if var in self.vars_in_horizon:
                 if phase_nodes != self.vars_in_horizon[var]:
@@ -234,6 +240,8 @@ class PhaseToken(Phase):
         self.active_nodes = list()
         self.constraints_in_horizon = self.constraints_in_horizon.fromkeys(self.constraints_in_horizon, set())
         self.costs_in_horizon = self.costs_in_horizon.fromkeys(self.costs_in_horizon, set())
+        self.vars_in_horizon = self.vars_in_horizon.fromkeys(self.vars_in_horizon, set())
+        self.pars_in_horizon = self.pars_in_horizon.fromkeys(self.pars_in_horizon, set())
 
 
 """
@@ -279,44 +287,50 @@ class HorizonManager:
             self.name = variable.getName()
             self.var = variable
 
+            self.var_nodes = list(self.var.getNodes())
             self.active_nodes = list()
             self.horizon_nodes = list()
-            self.lower_bounds = -np.inf * np.ones((self.var.getDim(), len(self.var.getNodes())))
-            self.upper_bounds = np.inf * np.ones((self.var.getDim(), len(self.var.getNodes())))
+            self.lower_bounds = -np.inf * np.ones((self.var.getDim(), len(self.var_nodes)))
+            self.upper_bounds = np.inf * np.ones((self.var.getDim(), len(self.var_nodes)))
 
-        def update(self, nodes, bounds, phase_nodes, reset=False):
+        def update(self, nodes, bounds, phase_nodes):
             # add new nodes and bounds to var if var already has them
-            if reset:
-                self.var.setBounds(self.lower_bounds, self.upper_bounds)
-
             self.active_nodes.extend(phase_nodes)
             self.horizon_nodes.extend(nodes)
-            self.lower_bounds[:, nodes] = bounds[0][:, phase_nodes]
-            self.upper_bounds[:, nodes] = bounds[1][:, phase_nodes]
 
-            if not nodes:
-                # if nodes is empty, resetting all the bounds
-                bounds_mat_lb = -np.inf * np.ones((self.var.getDim(), len(self.var.getNodes())))
-                bounds_mat_ub = np.inf * np.ones((self.var.getDim(), len(self.var.getNodes())))
-                self.var.setBounds(bounds_mat_lb, bounds_mat_ub)
-                if self.debug_mode:
-                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
-                    #                   f'updated variable {self.var.getName()}: {self.var.getLowerBounds()[0]}'
-                    #                   f'{bcolors.CEND}')
-                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
-                                      f'updated variable {self.var.getName()} at all nodes.'
-                                      f'{bcolors.CEND}')
-            else:
+            if nodes:
                 # only fill the required nodes
-                self.var.setBounds(self.lower_bounds[:, self.horizon_nodes], self.upper_bounds[:, self.horizon_nodes],
-                                   self.horizon_nodes)
-                if self.debug_mode:
+                self.lower_bounds[:, nodes] = bounds[0][:, phase_nodes]
+                self.upper_bounds[:, nodes] = bounds[1][:, phase_nodes]
+                # if self.debug_mode:
                     # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
-                    #                   f'updated variable {self.var.getName()}: {self.var.getLowerBounds()[0]}'
+                    #                   f'updated variable {self.var.getName()} at nodes: {self.horizon_nodes}'
                     #                   f'{bcolors.CEND}')
-                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
-                                      f'updated variable {self.var.getName()} at nodes: {self.horizon_nodes}'
-                                      f'{bcolors.CEND}')
+
+            else:
+                self.horizon_nodes = []
+                # if self.debug_mode:
+                # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
+                #                   f'updated variable {self.var.getName()} at all nodes.'
+                #                   f'{bcolors.CEND}')
+        def set_horizon_nodes(self):
+
+            self.var.setBounds(self.lower_bounds, self.upper_bounds)
+            # else:
+            #     if self.horizon_nodes:
+            #         self.var.setBounds(self.lower_bounds[:, self.horizon_nodes],
+            #                            self.upper_bounds[:, self.horizon_nodes],
+            #                            self.horizon_nodes)
+            #     else:
+            #         self.var.setBounds(self.lower_bounds,
+            #                            self.upper_bounds)
+            #
+            if self.debug_mode:
+                self.logger.debug(f"{bcolors.CCYAN0}{bcolors.CUNDERLINE}{bcolors.CBOLD}"
+                                  f"updated variable's bounds {self.var.getName()}."
+                                  f" Relevant nodes: {self.horizon_nodes}"
+                                  f"{bcolors.CEND}")
+            # def add_phase(self, phase):
 
     class ParameterUpdater:
         def __init__(self, parameter, logger=None):
@@ -335,28 +349,34 @@ class HorizonManager:
             self.horizon_nodes = list()
             self.values = np.zeros((self.par.getDim(), len(self.par.getNodes())))
 
-        def update(self, nodes, values, phase_nodes, reset=False):
-
-            if reset:
-                self.par.assign(self.values)
+        def update(self, nodes, values, phase_nodes):
 
             self.active_nodes.extend(phase_nodes)
             self.horizon_nodes.extend(nodes)
-            self.values[:, nodes] = values[:, phase_nodes]
 
-            if not nodes:
-                values_mat = np.zeros((self.par.getDim(), len(self.par.getNodes())))
-                self.par.assign(values_mat)
-                if self.debug_mode:
-                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()}: {self.par.getValues()}{bcolors.CEND}')
-                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()}at all nodes.{bcolors.CEND}')
+            if nodes:
+                self.values[:, nodes] = values[:, phase_nodes]
+                # self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
+
+                # if self.debug_mode:
+                #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()} at nodes: {self.horizon_nodes}{bcolors.CEND}')
             else:
-                self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
+                self.horizon_nodes = []
+                # self.par.assign(self.values)
+                # if self.debug_mode:
+                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()} at all nodes.{bcolors.CEND}')
 
-                if self.debug_mode:
-                    # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()}: {self.par.getValues()}{bcolors.CEND}')
-                    self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()} at nodes: {self.horizon_nodes}{bcolors.CEND}')
+        def set_horizon_nodes(self):
 
+            # todo: for now the values are assigned at all nodes (given that I keep track of all the added values)
+            # self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
+            self.par.assign(self.values)
+            #
+            if self.debug_mode:
+                self.logger.debug(f"{bcolors.CCYAN0}{bcolors.CUNDERLINE}{bcolors.CBOLD}"
+                                  f"updated parameter's values {self.par.getName()}."
+                                  f" Relevant nodes: {self.horizon_nodes}"
+                                  f"{bcolors.CEND}")
     # def add_phase(self, phase):
     #
     #     self.phases.append(phase)
@@ -380,21 +400,21 @@ class HorizonManager:
                 #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                 #                       f'Adding nodes to function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
 
-    def update_variable(self, var, nodes, bounds, phase_nodes, reset=False):
+    def update_variable(self, var, nodes, bounds, phase_nodes):
         var_name = var.getName()
         if var_name not in self.vars:
             self.vars[var_name] = self.VariableUpdater(var, self.logger)
 
         for var_item in self.vars.values():
-            var_item.update(nodes, bounds[var_name], phase_nodes, reset)  # update var with variable updater
+            var_item.update(nodes, bounds[var_name], phase_nodes)  # update var with variable updater
 
-    def update_parameter(self, par, nodes, values, phase_nodes, reset=False):
+    def update_parameter(self, par, nodes, values, phase_nodes):
         par_name = par.getName()
         if par_name not in self.pars:
             self.pars[par_name] = self.ParameterUpdater(par, self.logger)
 
         for par_item in self.pars.values():
-            par_item.update(nodes, values[par_name], phase_nodes, reset)  # update var with parameter updater
+            par_item.update(nodes, values[par_name], phase_nodes)  # update var with parameter updater
 
     def update_constraint(self, constraint, nodes):
         self.update_function(self.constraints, constraint, nodes)
@@ -402,7 +422,7 @@ class HorizonManager:
     def update_cost(self, cost, nodes):
         self.update_function(self.costs, cost, nodes)
 
-    def update_phase(self, phase, reset=False):
+    def update_phase(self, phase):
         # tic = time.time()
 
         # todo why functions does not require reset?
@@ -414,10 +434,10 @@ class HorizonManager:
             self.update_cost(cost, nodes)
 
         for var, nodes in phase.vars_in_horizon.items():
-            self.update_variable(phase.vars[var], nodes, phase.var_bounds, phase.active_nodes, reset)
+            self.update_variable(phase.vars[var], nodes, phase.var_bounds, phase.active_nodes)
 
         for var, nodes in phase.pars_in_horizon.items():
-            self.update_parameter(phase.pars[var], nodes, phase.par_values, phase.active_nodes, reset)
+            self.update_parameter(phase.pars[var], nodes, phase.par_values, phase.active_nodes)
 
         # print('update_phase', time.time() - tic)
     def reset(self):
@@ -444,8 +464,12 @@ class HorizonManager:
                                   f'updated function {cost.getName()}: {cost.getNodes()}'
                                   f'{bcolors.CEND}')
 
-        # for var, var_item in self.vars.items():
-        #     var_item.var.setBounds(var_item.)
+        for var_item in self.vars.values():
+            var_item.set_horizon_nodes()
+
+        for par_item in self.pars.values():
+            par_item.set_horizon_nodes()
+
 # def add_flatten_lists(the_lists):
 #     result = []
 #     for _list in the_lists:
@@ -524,16 +548,20 @@ class SinglePhaseManager:
         if pos is None:
             self.phases.extend(phases_to_add)
         else:
+            # if pos is beyond the horizon (outside of the active_phases), skip useless computation:
+            # if pos <= len(self.active_phases):
             # recompute empty nodes in horizon, clear active nodes of all the phases AFTER the one inserted
-            # insert phase + everthing AFTER it back
+            # insert phase + everything AFTER it back
             self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.phases[:pos])
             # if I'm removing phases from the current stack, i need to remove current nodes from the phases
+            # todo make this faster?
             [elem.reset() for elem in self.phases[pos:]]
             self.horizon_manager.reset()
             [self.horizon_manager.update_phase(phase) for phase in self.phases[:pos]]
             # todo this reset is wrong!
             # new active phases
             self.active_phases = [phase for phase in self.phases if phase.active_nodes]
+
             self.phases[pos:pos] = phases_to_add
             phases_to_add.extend(self.phases[pos + 1:])
 
@@ -619,7 +647,7 @@ class SinglePhaseManager:
                 phase.update(i)
                 i += len(phase.active_nodes)
 
-            [self.horizon_manager.update_phase(phase, reset=True) for phase in self.active_phases]
+            [self.horizon_manager.update_phase(phase) for phase in self.active_phases]
             self.horizon_manager.set_horizon_nodes()
 
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
