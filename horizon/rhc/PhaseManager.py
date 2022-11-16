@@ -143,6 +143,7 @@ class PhaseToken(Phase):
                 if phase_nodes != output_container[item]:
                     if phase_nodes:
                         # tic = time.time()
+                        # todo this is wrong if constraint nodes are not the full phase nodes
                         horizon_nodes = range(initial_node, initial_node + len(phase_nodes))
                         feas_nodes = horizon_nodes
                         # todo: computing feas_node is VERY computationally expensive
@@ -527,6 +528,7 @@ class SinglePhaseManager:
         if self.debug_mode:
             self.logger.debug(
                 f'{bcolors.CRED}{bcolors.CBOLD} Adding phases: {[phase.name for phase in phases]} at position: {pos}{bcolors.CEND}')
+
         # print(f'{bcolors.FAIL} Current phases:')
         # for phase in self.phases:
         #     print(f'{bcolors.FAIL}    - {phase.name}: {phase.active_nodes}')
@@ -579,7 +581,7 @@ class SinglePhaseManager:
 
             # update only if phase_to_add is inside horizon ( --> :current_phase)
             [self.horizon_manager.update_phase(phase) for phase in phases_to_add[:current_phase]]
-            # self.horizon_manager.set_horizon_nodes()
+            self.horizon_manager.set_horizon_nodes()
 
         # print(f'{bcolors.CRED} Updated phases:')
         # for phase in self.phases:
@@ -620,9 +622,9 @@ class SinglePhaseManager:
                 n_active_phases = len(self.active_phases)
                 # add new active phase from list of added phases
                 if n_active_phases < len(self.phases):
-                    elem = self.phases[n_active_phases].active_nodes[-1] + 1 if self.phases[
-                        n_active_phases].active_nodes else 0
+                    elem = self.phases[n_active_phases].active_nodes[-1] + 1 if self.phases[n_active_phases].active_nodes else 0
                     self.phases[n_active_phases].active_nodes.append(elem)
+                    self.active_phases.append(self.phases[n_active_phases])
             else:
                 # add new node to last active phase
                 elem = last_active_phase.active_nodes[-1] + 1 if last_active_phase.active_nodes else 0
@@ -657,11 +659,16 @@ class SinglePhaseManager:
 
             tic = time.time()
             [self.horizon_manager.update_phase(phase) for phase in self.active_phases]
-            # self.horizon_manager.set_horizon_nodes()
+            self.horizon_manager.set_horizon_nodes()
             print('update phases all together:', time.time() - tic)
 
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
+        print('active phases: ')
+        for phase in self.active_phases:
+            print(phase.name, phase.active_nodes)
+
+        print("free nodes:", self.trailing_empty_nodes)
         print('one shift:', time.time() - initial_tic)
         # for phase in self.active_phases:
         #     phase.reset()
@@ -705,7 +712,7 @@ class PhaseManager:
 
 if __name__ == '__main__':
 
-    n_nodes = 10
+    n_nodes = 12
     prb = Problem(n_nodes, receding=True, casadi_type=cs.SX)
     x = prb.createStateVariable('x', 2)
     y = prb.createStateVariable('y', 2)
@@ -724,7 +731,7 @@ if __name__ == '__main__':
     cost1 = prb.createIntermediateResidual('cost_1', x + u, [])
 
     in_p = Phase('initial', 5)
-    st_p = Phase('stance', 6)
+    st_p = Phase('stance', 5)
 
     in_p.addConstraint(cnsrt1)
     in_p.addVariableBounds(y, np.array([[0, 0]] * 5).T, np.array([[0, 0]] * 5).T)
@@ -734,10 +741,14 @@ if __name__ == '__main__':
     #
     print(pm.timelines)
     pm.addPhase(in_p, timeline=0)
+    pm.addPhase(in_p, timeline=0)
+
+    exit()
+    pm.addPhase(in_p, timeline=0)
     pm.addPhase(st_p, timeline=0)
     # pm.addPhase(in_p)
     #
-    for j in range(15):
+    for j in range(10):
         print(f'--------- shifting {j} -----------')
         tic = time.time()
         pm._shift_phases()
