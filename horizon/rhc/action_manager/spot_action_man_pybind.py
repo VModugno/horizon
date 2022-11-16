@@ -11,6 +11,8 @@ from casadi_kin_dyn import pycasadi_kin_dyn
 from horizon.transcriptions.transcriptor import Transcriptor
 import casadi as cs
 import time
+import phase_manager.pyphase as pyphase
+import phase_manager.pymanager as pymanager
 
 
 def barrier(x):
@@ -141,42 +143,42 @@ prb.createIntermediateResidual("min_q_ddot", 0.01 * model.a)
 for f_name, f_var in model.fmap.items():
     prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * f_var)
 
+cplusplus = True
 opts =dict()
 opts['logging_level']=logging.DEBUG
-pm = PhaseManager(nodes=ns, opts=opts)
+if cplusplus:
+    pm = pymanager.PhaseManager(ns)
+else:
+    pm = PhaseManager(nodes=ns, opts=opts)
 
 c_phases = dict()
 for c in contacts:
-    c_phases[c] = pm.addTimeline(f'{c}_timeline')
-
+     c_phases[c] = pm.addTimeline(f'{c}_timeline')
+#
 i = 0
 for c in contacts:
     # stance phase
     stance_duration = 5
-    stance_phase = Phase(f'stance_{c}', stance_duration)
+    if cplusplus:
+        stance_phase = pyphase.Phase(5, f"stance_{c}")
+    else:
+        stance_phase = Phase(f'stance_{c}', stance_duration)
     stance_phase.addConstraint(prb.getConstraints(f'{c}_vel'))
     stance_phase.addCost(prb.getCosts(f'{c}_unil'))
     c_phases[c].registerPhase(stance_phase)
-
-    # flight phase
+#
+#     # flight phase
     flight_duration = 5
-    flight_phase = Phase(f'flight_{c}', flight_duration)
-    flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'),  np.array([[0, 0, 0]] * flight_duration).T, np.array([[0, 0, 0]] * flight_duration).T)
+    if cplusplus:
+        flight_phase = pyphase.Phase(5, f"flight_{c}")
+    else:
+        flight_phase = Phase(f'flight_{c}', flight_duration)
+    # flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'),  np.array([[0, 0, 0]] * flight_duration).T, np.array([[0, 0, 0]] * flight_duration).T)
     flight_phase.addConstraint(prb.getConstraints(f'{c}_clea'))
 
     z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.03, dim=2))
     flight_phase.addParameterValues(prb.getParameters(f'{c}_z_des'), z_trj)
     c_phases[c].registerPhase(flight_phase)
-
-for name, timeline in c_phases.items():
-    print('timeline:', timeline.name)
-
-    for phase in timeline.registered_phases:
-        print('    registered_phases', phase)
-
-    for phase in timeline.phases:
-        print('    phase', phase)
-
 
 for c in contacts:
     stance = c_phases[c].getRegisteredPhase(f'stance_{c}')
@@ -185,18 +187,30 @@ for c in contacts:
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
+
+
+    # print(prb.getConstraints(f'{c}_vel').getName(), ":")
+    # print(" nodes:", prb.getConstraints(f'{c}_vel').getNodes())
+    # print(" bounds:", prb.getConstraints(f'{c}_vel').getLowerBounds())
+    # print(prb.getCosts(f'{c}_unil').getName(), ":")
+    # print(" nodes:", prb.getCosts(f'{c}_unil').getNodes())
+
+
+# for c_name, c_item in prb.getConstraints().items():
+#     print(c_item.getName())
+#     print(c_item.getNodes())
+# print("=========================")
+# for c_name, c_item in prb.getCosts().items():
+#     print(c_item.getName())
+#     print(c_item.getNodes())
+#
+# exit()
+    # c_phases[c].addPhase(stance)
+    # c_phases[c].addPhase(stance)
+    # c_phases[c].addPhase(stance)
+    # c_phases[c].addPhase(stance)
+    # c_phases[c].addPhase(stance)
+    # c_phases[c].addPhase(stance)
     # c_phases[c].addPhase(stance)
     # c_phases[c].addPhase(stance)
     # c_phases[c].addPhase(stance)
@@ -207,34 +221,16 @@ for c in contacts:
     # c_phases[c].addPhase(stance)
     # c_phases[c].addPhase(stance)
 
-lift_contact = 'lh_foot'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 4)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 6)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 8)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 10)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 12)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 14)
-lift_contact = 'rh_foot'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 7)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 9)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 11)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 13)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 15)
-lift_contact = 'lf_foot'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 7)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 9)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 11)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 13)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 15)
-lift_contact = 'rf_foot'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 4)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 6)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 8)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 10)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 12)
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 14)
+# for name, timeline in c_phases.items():
+    # print('timeline:', timeline.getName())
+#
+#     for phase in timeline.registered_phases:
+#         print('    registered_phases', phase.getName())
+# #
+#     for phase in timeline.phases:
+#         print('    phase', phase)
+
+
 
 model.setDynamics()
 
@@ -328,3 +324,6 @@ while iteration < 200:
 
 
 print(sum(elapsed_time_list) / len(elapsed_time_list))
+
+
+
