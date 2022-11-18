@@ -292,7 +292,7 @@ class HorizonManager:
                 #                   f'{bcolors.CEND}')
         def set_horizon_nodes(self):
 
-            self.var.setBounds(self.lower_bounds, self.upper_bounds)
+            # self.var.setBounds(self.lower_bounds, self.upper_bounds)
             # else:
             #     if self.horizon_nodes:
             #         self.var.setBounds(self.lower_bounds[:, self.horizon_nodes],
@@ -347,7 +347,7 @@ class HorizonManager:
 
             # todo: for now the values are assigned at all nodes (given that I keep track of all the added values)
             # self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
-            self.par.assign(self.values)
+            # self.par.assign(self.values)
             #
             if self.debug_mode:
                 self.logger.debug(f"{bcolors.CCYAN0}{bcolors.CUNDERLINE}{bcolors.CBOLD}"
@@ -429,7 +429,9 @@ class HorizonManager:
             self.update_parameter(phase.pars[par], nodes, phase.par_values, phase.active_nodes)
         # print('      --> pars:', time.time() - tic)
 
-        print(f'{bcolors.CITALIC}{bcolors.CYELLOW0} -> update single phase {time.time() - initial_tic}{bcolors.CEND}')
+        if self.debug_mode:
+            print(f'{bcolors.CITALIC}{bcolors.CYELLOW0} -> update single phase {time.time() - initial_tic}{bcolors.CEND}')
+
     def reset(self):
 
         self.constraints = dict()
@@ -441,14 +443,14 @@ class HorizonManager:
         # todo what about bounds in constraints?
         # todo incorporate these two
         for constraint, nodes in self.constraints.items():
-            constraint.setNodes(list(nodes))
+            # constraint.setNodes(list(nodes))
             if self.debug_mode:
                 self.logger.debug(f'{bcolors.CBLUE}{bcolors.CUNDERLINE}{bcolors.CBOLD}'
                                   f'updated function {constraint.getName()}: {constraint.getNodes()}'
                                   f'{bcolors.CEND}')
 
         for cost, nodes in self.costs.items():
-            cost.setNodes(list(nodes))
+            # cost.setNodes(list(nodes))
             if self.debug_mode:
                 self.logger.debug(f'{bcolors.CBLUE}{bcolors.CUNDERLINE}{bcolors.CBOLD}'
                                   f'updated function {cost.getName()}: {cost.getNodes()}'
@@ -650,26 +652,26 @@ class SinglePhaseManager:
             self.horizon_manager.reset()
             # print('reset horizon_manager:', time.time() - tic)
 
-            tic = time.time()
+            # tic = time.time()
             i = 0
             for phase in self.active_phases:
                 phase.update(i)
                 i += len(phase.active_nodes)
-            print('update nodes for each phase:', time.time() - tic)
+            # print('update nodes for each phase:', time.time() - tic)
 
-            tic = time.time()
+            # tic = time.time()
             [self.horizon_manager.update_phase(phase) for phase in self.active_phases]
             self.horizon_manager.set_horizon_nodes()
-            print('update phases all together:', time.time() - tic)
+            # print('update phases all together:', time.time() - tic)
 
         self.trailing_empty_nodes = self.n_tot - sum(len(s.active_nodes) for s in self.active_phases)
 
-        print('active phases: ')
-        for phase in self.active_phases:
-            print(phase.name, phase.active_nodes)
+        # print('active phases: ')
+        # for phase in self.active_phases:
+        #     print(phase.name, phase.active_nodes)
 
-        print("free nodes:", self.trailing_empty_nodes)
-        print('one shift:', time.time() - initial_tic)
+        # print("free nodes:", self.trailing_empty_nodes)
+        # print('one shift:', time.time() - initial_tic)
         # for phase in self.active_phases:
         #     phase.reset()
 

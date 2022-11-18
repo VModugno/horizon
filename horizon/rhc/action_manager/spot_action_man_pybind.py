@@ -143,9 +143,10 @@ prb.createIntermediateResidual("min_q_ddot", 0.01 * model.a)
 for f_name, f_var in model.fmap.items():
     prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * f_var)
 
-cplusplus = True
+cplusplus = True  # without set nodes: 6.5*10-5 (c++) vs 9*10-4 (python)
+
 opts =dict()
-opts['logging_level']=logging.DEBUG
+# opts['logging_level']=logging.DEBUG
 if cplusplus:
     pm = pymanager.PhaseManager(ns)
 else:
@@ -173,7 +174,7 @@ for c in contacts:
         flight_phase = pyphase.Phase(5, f"flight_{c}")
     else:
         flight_phase = Phase(f'flight_{c}', flight_duration)
-    # flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'),  np.array([[0, 0, 0]] * flight_duration).T, np.array([[0, 0, 0]] * flight_duration).T)
+    flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'),  np.array([[0, 0, 0]] * flight_duration).T, np.array([[0, 0, 0]] * flight_duration).T)
     flight_phase.addConstraint(prb.getConstraints(f'{c}_clea'))
 
     z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.03, dim=2))
@@ -187,39 +188,31 @@ for c in contacts:
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
+    # c_phases[c].addPhase(flight)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
 
 
-    # print(prb.getConstraints(f'{c}_vel').getName(), ":")
-    # print(" nodes:", prb.getConstraints(f'{c}_vel').getNodes())
-    # print(" bounds:", prb.getConstraints(f'{c}_vel').getLowerBounds())
-    # print(prb.getCosts(f'{c}_unil').getName(), ":")
-    # print(" nodes:", prb.getCosts(f'{c}_unil').getNodes())
 
 
-# for c_name, c_item in prb.getConstraints().items():
-#     print(c_item.getName())
-#     print(c_item.getNodes())
-# print("=========================")
-# for c_name, c_item in prb.getCosts().items():
-#     print(c_item.getName())
-#     print(c_item.getNodes())
-#
-# exit()
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(stance)
+lift_contact = 'lh_foot'
+for i in range(4, 16, 2):
+    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+lift_contact = 'rh_foot'
+for i in range(5, 17, 2):
+    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+lift_contact = 'lf_foot'
+for i in range(5, 17, 2):
+    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+lift_contact = 'rf_foot'
+for i in range(4, 16, 2):
+    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
 
 # for name, timeline in c_phases.items():
     # print('timeline:', timeline.getName())
@@ -231,6 +224,24 @@ for c in contacts:
 #         print('    phase', phase)
 
 
+    # print(prb.getConstraints(f'{c}_vel').getName(), ":")
+    # print(" nodes:", prb.getConstraints(f'{c}_vel').getNodes())
+    # print(" bounds:", prb.getConstraints(f'{c}_vel').getLowerBounds())
+    # print(prb.getCosts(f'{c}_unil').getName(), ":")
+    # print(" nodes:", prb.getCosts(f'{c}_unil').getNodes())
+
+# for c_name, c_item in prb.getConstraints().items():
+#     print(c_item.getName())
+#     print(c_item.getNodes())
+# print("=========================")
+# for c_name, c_item in prb.getCosts().items():
+#     print(c_item.getName())
+#     print(c_item.getNodes())
+# for c_name, c_item in prb.getVariables().items():
+#     print(c_item.getName())
+#     print(c_item.getNodes())
+#     print(c_item.getLowerBounds())
+# exit()
 
 model.setDynamics()
 
@@ -283,7 +294,7 @@ nc = 4
 
 elapsed_time_list = []
 
-while iteration < 200:
+while iteration < 100:
     iteration = iteration + 1
     print(iteration)
 
