@@ -1131,7 +1131,9 @@ if __name__ == '__main__':
     print(mimmo.getNodes())
     mimmo.setBounds([-np.inf, -np.inf], [np.inf, np.inf], nodes=4)
     mimmo.setBounds([0, 1], [0, 1], nodes=4)
+
     print(mimmo.getNodes())
+    print(mimmo.getBounds())
 
     exit()
     # ============================================================
