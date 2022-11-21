@@ -292,7 +292,7 @@ class HorizonManager:
                 #                   f'{bcolors.CEND}')
         def set_horizon_nodes(self):
 
-            # self.var.setBounds(self.lower_bounds, self.upper_bounds)
+            self.var.setBounds(self.lower_bounds, self.upper_bounds)
             # else:
             #     if self.horizon_nodes:
             #         self.var.setBounds(self.lower_bounds[:, self.horizon_nodes],
@@ -333,21 +333,21 @@ class HorizonManager:
 
             if nodes:
                 self.values[:, nodes] = values[:, phase_nodes]
-                # self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
+                # nope self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
 
                 # if self.debug_mode:
                 #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()} at nodes: {self.horizon_nodes}{bcolors.CEND}')
             else:
                 self.horizon_nodes = []
-                # self.par.assign(self.values)
+                # nope self.par.assign(self.values)
                 # if self.debug_mode:
                     # self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} updated parameters {self.par.getName()} at all nodes.{bcolors.CEND}')
 
         def set_horizon_nodes(self):
 
             # todo: for now the values are assigned at all nodes (given that I keep track of all the added values)
-            # self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
-            # self.par.assign(self.values)
+            # nope self.par.assign(self.values[:, self.horizon_nodes], self.horizon_nodes)
+            self.par.assign(self.values)
             #
             if self.debug_mode:
                 self.logger.debug(f"{bcolors.CCYAN0}{bcolors.CUNDERLINE}{bcolors.CBOLD}"
@@ -363,7 +363,7 @@ class HorizonManager:
         # tic = time.time()
         if fun not in container:
             container[fun] = set(nodes)
-            # fun.setNodes(list(nodes))
+            # nope fun.setNodes(list(nodes))
             # if self.debug_mode:
             #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD}'f'Adding nodes to '
             #                       f'{bcolors.CUNDERLINE}new{bcolors.CEND}'
@@ -372,7 +372,7 @@ class HorizonManager:
             if set(nodes) != container[fun]:
                 # todo: there is a small inefficiency: resetting all the nodes even if just only a part are added
                 [container[fun].add(node) for node in nodes]
-                # fun.setNodes(list(container[fun]))
+                # nope fun.setNodes(list(container[fun]))
                 # if self.debug_mode:
                 #     self.logger.debug(f'{bcolors.CCYAN0}{bcolors.CBOLD} '
                 #                       f'Adding nodes to function {fun.getName()}: {fun.getNodes()}{bcolors.CEND}')
@@ -443,14 +443,14 @@ class HorizonManager:
         # todo what about bounds in constraints?
         # todo incorporate these two
         for constraint, nodes in self.constraints.items():
-            # constraint.setNodes(list(nodes))
+            constraint.setNodes(list(nodes))
             if self.debug_mode:
                 self.logger.debug(f'{bcolors.CBLUE}{bcolors.CUNDERLINE}{bcolors.CBOLD}'
                                   f'updated function {constraint.getName()}: {constraint.getNodes()}'
                                   f'{bcolors.CEND}')
 
         for cost, nodes in self.costs.items():
-            # cost.setNodes(list(nodes))
+            cost.setNodes(list(nodes))
             if self.debug_mode:
                 self.logger.debug(f'{bcolors.CBLUE}{bcolors.CUNDERLINE}{bcolors.CBOLD}'
                                   f'updated function {cost.getName()}: {cost.getNodes()}'

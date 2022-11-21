@@ -293,6 +293,7 @@ forces = [prb.getVariables('f_' + c) for c in contacts]
 nc = 4
 
 elapsed_time_list = []
+elapsed_time_solution_list = []
 
 while iteration < 100:
     iteration = iteration + 1
@@ -323,7 +324,11 @@ while iteration < 100:
     print('cycle:', elapsed_time)
     elapsed_time_list.append(elapsed_time)
 
+    tic_solve = time.time()
     solver_rti.solve()
+    elapsed_time_solving = time.time() - tic_solve
+    print('solve:', elapsed_time_solving)
+    elapsed_time_solution_list.append(elapsed_time_solving)
     solution = solver_rti.getSolutionDict()
 
 
@@ -335,6 +340,7 @@ while iteration < 100:
 
 
 print(sum(elapsed_time_list) / len(elapsed_time_list))
+print(sum(elapsed_time_solution_list) / len(elapsed_time_solution_list))
 
 
 
