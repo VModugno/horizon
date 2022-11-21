@@ -339,8 +339,8 @@ while iteration < 100:
     rate.sleep()
 
 
-print(sum(elapsed_time_list) / len(elapsed_time_list))
-print(sum(elapsed_time_solution_list) / len(elapsed_time_solution_list))
+print("elapsed time resetting nodes:", sum(elapsed_time_list) / len(elapsed_time_list))
+print("elapsed time solving:", sum(elapsed_time_solution_list) / len(elapsed_time_solution_list))
 
 
 
