@@ -366,7 +366,7 @@ class Function(AbstractFunction):
 class RecedingFunction(AbstractFunction):
 
     def __init__(self, name: str, f: Union[cs.SX, cs.MX], used_vars: list, used_pars: list, active_nodes_array: np.ndarray, thread_map_num=None):
-
+        # TODO: probably everything breaks if there are variables only defined on specific nodes
         super().__init__(name, f, used_vars, used_pars, active_nodes_array)
 
         if thread_map_num is None:
