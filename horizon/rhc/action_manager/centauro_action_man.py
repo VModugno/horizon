@@ -57,28 +57,107 @@ transcription_opts = dict(integrator='RK4')
 
 # set up model
 path_to_examples = os.path.dirname('../../examples/')
-urdffile = os.path.join(path_to_examples, 'urdf', 'spot.urdf')
+urdffile = os.path.join(path_to_examples, 'urdf', 'centauro.urdf')
 urdf = open(urdffile, 'r').read()
+
+contacts = ['contact_1', 'contact_2', 'contact_3', 'contact_4']
+
+base_init = np.array([0, 0, 0.718565, 0, 0, 0, 1.0])
+
+fixed_joint_map = {'torso_yaw': 0.00,   # 0.00,
+
+                    'j_arm1_1': 1.50,   # 1.60,
+                    'j_arm1_2': 0.1,    # 0.,
+                    'j_arm1_3': 0.2,   # 1.5,
+                    'j_arm1_4': -2.2,  # 0.3,
+                    'j_arm1_5': 0.00,   # 0.00,
+                    'j_arm1_6': -1.3,   # 0.,
+                    'j_arm1_7': 0.0,    # 0.0,
+
+                    'j_arm2_1': 1.50,   # 1.60,
+                    'j_arm2_2': 0.1,    # 0.,
+                    'j_arm2_3': -0.2,   # 1.5,
+                    'j_arm2_4': -2.2,   #-0.3,
+                    'j_arm2_5': 0.0,    # 0.0,
+                    'j_arm2_6': -1.3,   # 0.,
+                    'j_arm2_7': 0.0,    # 0.0,
+                    'd435_head_joint': 0.0,
+                    'velodyne_joint': 0.0,
+
+                    'j_wheel_1': 0.0,
+                    'j_wheel_2': 0.0,
+                    'j_wheel_3': 0.0,
+                    'j_wheel_4': 0.0,
+
+                   # 'ankle_yaw_1': np.pi/4,
+                   # 'ankle_yaw_2': -np.pi/4,
+                   # 'ankle_yaw_3': -np.pi/4,
+                   # 'ankle_yaw_4': np.pi/4,
+
+                    # 'hip_yaw_1': -0.746,
+                    # 'hip_pitch_1': -1.254,
+                    # 'knee_pitch_1': -1.555,
+                    # 'ankle_pitch_1': -0.3,
+                    #
+                    # 'hip_yaw_2': 0.746,
+                    # 'hip_pitch_2': 1.254,
+                    # 'knee_pitch_2': 1.555,
+                    # 'ankle_pitch_2': 0.3,
+                    #
+                    # 'hip_yaw_3': 0.746,
+                    # 'hip_pitch_3': 1.254,
+                    # 'knee_pitch_3': 1.555,
+                    # 'ankle_pitch_3': 0.3,
+                    #
+                    # 'hip_yaw_4': -0.746,
+                    # 'hip_pitch_4': -1.254,
+                    # 'knee_pitch_4': -1.555,
+                    # 'ankle_pitch_4': -0.3,
+
+                    }
+
+# initial config
+q_init = {
+    'hip_yaw_1': -0.746,
+    'hip_pitch_1': -1.254,
+    'knee_pitch_1': -1.555,
+    'ankle_pitch_1': -0.3,
+
+    'hip_yaw_2': 0.746,
+    'hip_pitch_2': 1.254,
+    'knee_pitch_2': 1.555,
+    'ankle_pitch_2': 0.3,
+
+    'hip_yaw_3': 0.746,
+    'hip_pitch_3': 1.254,
+    'knee_pitch_3': 1.555,
+    'ankle_pitch_3': 0.3,
+
+    'hip_yaw_4': -0.746,
+    'hip_pitch_4': -1.254,
+    'knee_pitch_4': -1.555,
+    'ankle_pitch_4': -0.3,
+}
+
+# wheels = [f'j_wheel_{i + 1}' for i in range(4)]
+# q_init.update(zip(wheels, 4 * [0.]))
+
+ankle_yaws = [f'ankle_yaw_{i + 1}' for i in range(4)]
+q_init.update(zip(ankle_yaws, 4 * [0.]))
+#
+q_init.update(dict(ankle_yaw_1=np.pi/4))
+q_init.update(dict(ankle_yaw_2=-np.pi/4))
+q_init.update(dict(ankle_yaw_3=-np.pi/4))
+q_init.update(dict(ankle_yaw_4=np.pi/4))
+#
+q_init.update(fixed_joint_map)
+
+# set up model description
+urdf = urdf.replace('continuous', 'revolute')
+
+kd = pycasadi_kin_dyn.CasadiKinDyn(urdf, fixed_joints=fixed_joint_map)
 kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-kd = pycasadi_kin_dyn.CasadiKinDyn(urdf)
-contacts = ['lf_foot', 'rf_foot', 'lh_foot', 'rh_foot']
-
-base_init = np.array([0.0, 0.0, 0.505, 0.0, 0.0, 0.0, 1.0])
-q_init = {'lf_haa_joint': 0.0,
-          'lf_hfe_joint': 0.9,
-          'lf_kfe_joint': -1.52,
-
-          'lh_haa_joint': 0.0,
-          'lh_hfe_joint': 0.9,
-          'lh_kfe_joint': -1.52,
-
-          'rf_haa_joint': 0.0,
-          'rf_hfe_joint': 0.9,
-          'rf_kfe_joint': -1.52,
-
-          'rh_haa_joint': 0.0,
-          'rh_hfe_joint': 0.9,
-          'rh_kfe_joint': -1.52}
+q_init = {k: v for k, v in q_init.items() if k not in fixed_joint_map.keys()}
 
 # set up model
 prb = Problem(ns, receding=True)  # logging_level=logging.DEBUG
@@ -87,12 +166,13 @@ prb.setDt(dt)
 model = FullModelInverseDynamics(problem=prb,
                                  kd=kd,
                                  q_init=q_init,
-                                 base_init=base_init)
+                                 base_init=base_init,
+                                 fixed_joint_map=fixed_joint_map)
 
-model.setContactFrame('lh_foot', 'vertex', dict(vertex_frames=['lh_foot']))
-model.setContactFrame('rh_foot', 'vertex', dict(vertex_frames=['rh_foot']))
-model.setContactFrame('lf_foot', 'vertex', dict(vertex_frames=['lf_foot']))
-model.setContactFrame('rf_foot', 'vertex', dict(vertex_frames=['rf_foot']))
+model.setContactFrame('contact_1', 'vertex', dict(vertex_frames=['contact_1']))
+model.setContactFrame('contact_2', 'vertex', dict(vertex_frames=['contact_2']))
+model.setContactFrame('contact_3', 'vertex', dict(vertex_frames=['contact_3']))
+model.setContactFrame('contact_4', 'vertex', dict(vertex_frames=['contact_4']))
 
 model.q.setBounds(model.q0, model.q0, 0)
 model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), 0)
@@ -114,6 +194,7 @@ for i, frame in enumerate(contacts):
 
     p = FK(q=model.q)['ee_pos']
     v = DFK(q=model.q, qdot=model.v)['ee_vel_linear']
+    v_ang = DFK(q=model.q, qdot=model.v)['ee_vel_angular']
     a = DDFK(q=model.q, qdot=model.v)['ee_acc_linear']
 
     # kinematic contact
@@ -128,14 +209,18 @@ for i, frame in enumerate(contacts):
 
     clea = prb.createConstraint(f"{frame}_clea", p[2] - z_des, nodes=[])
 
+    lat_vel = cs.vertcat(v[0:2], v_ang)
+    vert = prb.createConstraint(f"{frame}_vert", lat_vel)
+
+
 # final_base_x
 prb.createFinalConstraint(f'min_q0', model.q[0] - model.q0[0])
 # final_base_y
-prb.createFinalResidual(f'min_q1', 1000 * (model.q[1] - model.q0[1]))
+# prb.createFinalResidual(f'min_q1', 1000 * (model.q[1] - model.q0[1]))
 # joint posture
-prb.createResidual("min_q", 1. * (model.q[7:] - model.q0[7:]))
+prb.createResidual("min_q", 2. * (model.q[7:] - model.q0[7:]))
 # joint acceleration
-prb.createIntermediateResidual("min_q_ddot", 0.01 * model.a)
+prb.createIntermediateResidual("min_q_ddot", 0.1 * model.a)
 # contact forces
 for f_name, f_var in model.fmap.items():
     prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * f_var)
@@ -166,15 +251,18 @@ for c in contacts:
     c_phases[c].registerPhase(stance_phase)
 #
 #     # flight phase
-    flight_duration = 5
+    flight_duration = 15
     if cplusplus:
         flight_phase = pyphase.Phase(flight_duration, f"flight_{c}")
     else:
         flight_phase = Phase(f'flight_{c}', flight_duration)
+
     flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'),  np.array([[0, 0, 0]] * flight_duration).T, np.array([[0, 0, 0]] * flight_duration).T)
     flight_phase.addConstraint(prb.getConstraints(f'{c}_clea'))
+    flight_phase.addConstraint(prb.getConstraints(f'{c}_vert')) # , nodes=[0, 1, 2]
 
-    z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.03, dim=2))
+    z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.1, dim=2))
+
     flight_phase.addParameterValues(prb.getParameters(f'{c}_z_des'), z_trj)
     c_phases[c].registerPhase(flight_phase)
 
@@ -185,7 +273,24 @@ for c in contacts:
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(flight)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
+    c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
@@ -196,21 +301,39 @@ for c in contacts:
     c_phases[c].addPhase(stance)
 
 
-range_trot_1 = range(4, 16, 2)
-range_trot_2 = range(5, 17, 2)
 
-lift_contact = 'lh_foot'
-for i in range_trot_1:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
-lift_contact = 'rh_foot'
-for i in range_trot_2:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
-lift_contact = 'lf_foot'
-for i in range_trot_2:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
-lift_contact = 'rf_foot'
-for i in range_trot_1:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+# for c in contacts:
+#     print(c_phases[c].getActivePhase())
+
+
+# range_trot_1 = range(4, 16, 2)
+# range_trot_2 = range(5, 17, 2)
+
+lift_contact = 'contact_1'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
+#
+lift_contact = 'contact_2'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 15)
+#
+lift_contact = 'contact_3'
+c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 25)
+#
+# lift_contact = 'contact_4'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 20)
+
+
+# lift_contact = 'contact_1'
+# for i in range_trot_1:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+# lift_contact = 'contact_2'
+# for i in range_trot_2:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+# lift_contact = 'contact_3'
+# for i in range_trot_2:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+# lift_contact = 'contact_4'
+# for i in range_trot_1:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
 
 # for name, timeline in c_phases.items():
     # print('timeline:', timeline.getName())
@@ -220,7 +343,6 @@ for i in range_trot_1:
 # #
 #     for phase in timeline.phases:
 #         print('    phase', phase)
-
 
     # print(prb.getConstraints(f'{c}_vel').getName(), ":")
     # print(" nodes:", prb.getConstraints(f'{c}_vel').getNodes())
@@ -244,9 +366,13 @@ for i in range_trot_1:
 model.setDynamics()
 
 opts = {'ilqr.max_iter': 200,
+
         'ilqr.alpha_min': 0.01,
         'ilqr.step_length_threshold': 1e-9,
         'ilqr.line_search_accept_ratio': 1e-4,
+        # 'ilqr.enable_gn': True,
+        # 'ilqr.hxx_reg_base': 0.0,
+        # 'ilqr.n_threads': 0
         }
 
 # todo if receding is true ....
@@ -282,7 +408,7 @@ from horizon.ros import replay_trajectory
 # rospy.loginfo("'spot' visualization started.")
 
 repl = replay_trajectory.replay_trajectory(dt, kd.joint_names(), np.array([]), {k: None for k in contacts}, kd_frame,
-                                           kd)
+                                           kd, fixed_joint_map=fixed_joint_map)
 iteration = 0
 
 rate = rospy.Rate(1 / dt)
@@ -293,9 +419,15 @@ nc = 4
 elapsed_time_list = []
 elapsed_time_solution_list = []
 
-while iteration < 100:
+while iteration < 150:
     iteration = iteration + 1
     print(iteration)
+
+    # for cnsrt_name, cnsrt_item in prb.getConstraints().items():
+    #     print(f"{cnsrt_name}:\n {cnsrt_item.getNodes()}")
+    #
+    # for var_name, var_item in prb.getVariables().items():
+    #     print(f"{var_name}:\n {var_item.getUpperBounds()}")
 
     x_opt = solution['x_opt']
     u_opt = solution['u_opt']
