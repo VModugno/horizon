@@ -18,7 +18,7 @@ import itertools
 import time
 import logging
 
-
+#todo could be closer to the way I did the PhaseManager in c++
 class bcolors:
 
     CPURPLE = '\033[95m'
