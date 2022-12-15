@@ -45,8 +45,8 @@ def compute_polynomial_trajectory(k_start, nodes, nodes_duration, p_start, p_goa
     return np.array(traj_array)
 
 # set up problem
-ns = 50
-tf = 2.0  # 10s
+ns = 80
+tf = 8.0  # 10s
 dt = tf / ns
 
 # set up solver
@@ -89,10 +89,10 @@ fixed_joint_map = {'torso_yaw': 0.00,   # 0.00,
                     'j_wheel_3': 0.0,
                     'j_wheel_4': 0.0,
 
-                   # 'ankle_yaw_1': np.pi/4,
-                   # 'ankle_yaw_2': -np.pi/4,
-                   # 'ankle_yaw_3': -np.pi/4,
-                   # 'ankle_yaw_4': np.pi/4,
+                   'ankle_yaw_1': 0.0, #np.pi/4,
+                   'ankle_yaw_2': 0.0, #-np.pi/4,
+                   'ankle_yaw_3': 0.0, #-np.pi/4,
+                   'ankle_yaw_4': 0.0, #np.pi/4,
 
                     # 'hip_yaw_1': -0.746,
                     # 'hip_pitch_1': -1.254,
@@ -179,8 +179,9 @@ model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), 0)
 
 model.q.setInitialGuess(model.q0)
 
+f0 = [0, 0, kd.mass()/4 * 9.8]
 for f_name, f_var in model.fmap.items():
-    f_var.setInitialGuess([0, 0, kd.mass()/4 * 9.8])
+    f_var.setInitialGuess(f0)
 
 if solver_type != 'ilqr':
     Transcriptor.make_method(transcription_method, prb, transcription_opts)
@@ -193,9 +194,13 @@ for i, frame in enumerate(contacts):
     DDFK = kd.frameAcceleration(frame, kd_frame)
 
     p = FK(q=model.q)['ee_pos']
+    p_rot = FK(q=model.q)['ee_rot']
     v = DFK(q=model.q, qdot=model.v)['ee_vel_linear']
     v_ang = DFK(q=model.q, qdot=model.v)['ee_vel_angular']
     a = DDFK(q=model.q, qdot=model.v)['ee_acc_linear']
+
+    # rot_err = cs.sumsqr(p_rot[2, :2])
+    # prb.createIntermediateCost(f'{frame}_rot', 1e-2*rot_err)
 
     # kinematic contact
     contact = prb.createConstraint(f"{frame}_vel", v, nodes=[])
@@ -209,23 +214,38 @@ for i, frame in enumerate(contacts):
 
     clea = prb.createConstraint(f"{frame}_clea", p[2] - z_des, nodes=[])
 
-    lat_vel = cs.vertcat(v[0:2], v_ang)
-    vert = prb.createConstraint(f"{frame}_vert", lat_vel)
+    # lat_vel = cs.vertcat(v[0:2], v_ang)
+    # vert = prb.createConstraint(f"{frame}_vert", lat_vel)
 
-
+# pos_x_final_base = prb.createParameter("pos_x_final_base", 1)
 # final_base_x
-prb.createFinalConstraint(f'min_q0', model.q[0] - model.q0[0])
+prb.createFinalConstraint(f'min_q0', model.q[0] - 2.)  #
+# prb.createFinalConstraint(f'min_q0', model.q[0] - model.q0[0] - .5)  #
+# prb.createFinalConstraint(f'min_q0', model.q[0] - pos_x_final_base) #  nodes=range(40, 50))
+# prb.createFinalResidual(f'min_q0', 10000 * (model.q[0] - pos_x_final_base))
+# pos_x_final_base.assign(model.q0[0] + .2)
+
 # final_base_y
-# prb.createFinalResidual(f'min_q1', 1000 * (model.q[1] - model.q0[1]))
+prb.createFinalResidual(f'min_q1', 1000 * (model.q[1] - model.q0[1]))
+# final_base_rot
+# prb.createFinalConstraint(f'min_rot', model.q[5])
+
 # joint posture
-prb.createResidual("min_q", 2. * (model.q[7:] - model.q0[7:]))
+# prb.createResidual("min_rot", 1e-3 * (model.q[3:4] - model.q0[3:4]))
+# prb.createResidual("min_q", 1e-6 * (model.q[7:] - model.q0[7:]))
+# prb.createFinalResidual("min_qf", 1e2 * (model.q[7:] - model.q0[7:]))
+# prb.createResidual("min_q", 2. * (model.q[7:] - model.q0[7:]))
+prb.createResidual("min_q", 1. * (model.q[7:] - model.q0[7:]))
+
 # joint acceleration
-prb.createIntermediateResidual("min_q_ddot", 0.1 * model.a)
+prb.createIntermediateResidual("min_q_ddot", 0.02 * model.a)
+# prb.createIntermediateResidual("min_q_ddot", 1e-5 * model.a)
 # contact forces
 for f_name, f_var in model.fmap.items():
-    prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * f_var)
+    # prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * f_var)
+    prb.createIntermediateResidual(f"min_{f_var.getName()}", 1e-8 * (f_var - f0))
 
-cplusplus = True  # without set nodes: 6.5*10-5 (c++) vs 9*10-4 (python)
+cplusplus = True
 
 opts =dict()
 # opts['logging_level']=logging.DEBUG
@@ -241,17 +261,18 @@ for c in contacts:
 i = 0
 for c in contacts:
     # stance phase
-    stance_duration = 5
+    stance_duration = 6
     if cplusplus:
         stance_phase = pyphase.Phase(stance_duration, f"stance_{c}")
     else:
         stance_phase = Phase(f'stance_{c}', stance_duration)
+
     stance_phase.addConstraint(prb.getConstraints(f'{c}_vel'))
     stance_phase.addCost(prb.getCosts(f'{c}_unil'))
     c_phases[c].registerPhase(stance_phase)
 #
 #     # flight phase
-    flight_duration = 15
+    flight_duration = 6
     if cplusplus:
         flight_phase = pyphase.Phase(flight_duration, f"flight_{c}")
     else:
@@ -259,9 +280,11 @@ for c in contacts:
 
     flight_phase.addVariableBounds(prb.getVariables(f'f_{c}'),  np.array([[0, 0, 0]] * flight_duration).T, np.array([[0, 0, 0]] * flight_duration).T)
     flight_phase.addConstraint(prb.getConstraints(f'{c}_clea'))
-    flight_phase.addConstraint(prb.getConstraints(f'{c}_vert')) # , nodes=[0, 1, 2]
 
-    z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.1, dim=2))
+    # vertical take-off
+    # flight_phase.addConstraint(prb.getConstraints(f'{c}_vert'))  # nodes=[0, 1, 2]
+
+    z_trj = np.atleast_2d(compute_polynomial_trajectory(0, range(flight_duration), flight_duration, contact_pos[c], contact_pos[c], 0.03, dim=2))
 
     flight_phase.addParameterValues(prb.getParameters(f'{c}_z_des'), z_trj)
     c_phases[c].registerPhase(flight_phase)
@@ -300,28 +323,52 @@ for c in contacts:
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
 
-
-
 # for c in contacts:
 #     print(c_phases[c].getActivePhase())
 
+################################################ CRAWLING ##############################################################
+n_cycle = 4
+initial_phase = 5
+
+# todo
+# lift_contacts = ['contact_1', 'contact_4', 'contact_2', 'contact_3']
+lift_contacts = ['contact_4', 'contact_2', 'contact_3', 'contact_1']
+for i in range(n_cycle):
+    for pos, step in enumerate(lift_contacts):
+        c_phases[step].addPhase(c_phases[step].getRegisteredPhase(f'flight_{step}'), initial_phase + pos)
+    initial_phase += pos + 1
+
+#
+
+# lift_contact = 'contact_1'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
+# #
+# lift_contact = 'contact_2'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 6)
+# #
+# lift_contact = 'contact_3'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 7)
+# #
+# lift_contact = 'contact_4'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 8)
+#
+# lift_contact = 'contact_1'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 9)
+# #
+# lift_contact = 'contact_2'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 10)
+# #
+# lift_contact = 'contact_3'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 11)
+# #
+# lift_contact = 'contact_4'
+# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 12)
+
+################################################ TROTTING ##############################################################
 
 # range_trot_1 = range(4, 16, 2)
 # range_trot_2 = range(5, 17, 2)
-
-lift_contact = 'contact_1'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 5)
 #
-lift_contact = 'contact_2'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 15)
-#
-lift_contact = 'contact_3'
-c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 25)
-#
-# lift_contact = 'contact_4'
-# c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), 20)
-
-
 # lift_contact = 'contact_1'
 # for i in range_trot_1:
 #     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
@@ -335,6 +382,8 @@ c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flig
 # for i in range_trot_1:
 #     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
 
+
+########################################################################################################################
 # for name, timeline in c_phases.items():
     # print('timeline:', timeline.getName())
 #
@@ -365,8 +414,24 @@ c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flig
 
 model.setDynamics()
 
-opts = {'ilqr.max_iter': 200,
+# ilqr.max_iter': 1033,
+#   'ilqr.alpha_min': 0.001,
+#   'ilqr.step_length': 1.0,
+#   'ilqr.use_filter': True,
+#   'ilqr.filter_gamma': .01,
+#   'ilqr.filter_beta': .99,
+#   'ilqr.hxx_reg': 1000.0,
+#   'ilqr.hxx_reg_base': 0.0,
+#   'ilqr.hxx_reg_growth_factor': 8.,
+#   'ilqr.kkt_reg': 0.0,
+#   'ilqr.integrator': 'RK4',
+#   'ilqr.merit_der_threshold': 1e-6,
+#   'ilqr.step_length_threshold': 1e-9,
+#   'ilqr.line_search_accept_ratio': 1e-4,
+#   'ilqr.kkt_decomp_type': 'ldlt',
+#   'ilqr.constr_decomp_type': 'qr',
 
+opts = {'ilqr.max_iter': 200,
         'ilqr.alpha_min': 0.01,
         'ilqr.step_length_threshold': 1e-9,
         'ilqr.line_search_accept_ratio': 1e-4,
@@ -419,13 +484,17 @@ nc = 4
 elapsed_time_list = []
 elapsed_time_solution_list = []
 
-while iteration < 150:
+while iteration < 1000:
     iteration = iteration + 1
     print(iteration)
 
     # for cnsrt_name, cnsrt_item in prb.getConstraints().items():
     #     print(f"{cnsrt_name}:\n {cnsrt_item.getNodes()}")
-    #
+
+    # for cost_name, cost_item in prb.getCosts().items():
+    #     print(f"{cost_name}:\n {cost_item.getNodes()}")
+    # print("================================================")
+
     # for var_name, var_item in prb.getVariables().items():
     #     print(f"{var_name}:\n {var_item.getUpperBounds()}")
 
