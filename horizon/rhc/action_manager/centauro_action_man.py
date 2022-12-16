@@ -13,6 +13,7 @@ import casadi as cs
 import time
 import phase_manager.pyphase as pyphase
 import phase_manager.pymanager as pymanager
+import math
 
 
 def barrier(x):
@@ -189,7 +190,7 @@ if solver_type != 'ilqr':
 ptgt = prb.createParameter('ptgt', 3)
 goalx = prb.createFinalResidual("final_x", 3 * (model.q[0] - ptgt[0]))
 goaly = prb.createFinalResidual("final_y", 3 * (model.q[1] - ptgt[1]))
-goalrz = prb.createFinalResidual("final_rz", 1e3 * (model.q[5] - ptgt[2]))
+goalrz = prb.createFinalResidual("final_rz", 3 * (model.q[5] - ptgt[2]))
 
 # final velocity
 model.v.setBounds(model.v0, model.v0, nodes=ns)
@@ -210,7 +211,7 @@ jlim_cost = barrier(model.q[8:10] - (-2.55)) + \
             barrier(model.q[14:16] - (-2.55)) + \
             barrier(model.q[20:22] - (-2.55))
 
-prb.createCost(f'jlim', 10 * jlim_cost)
+prb.createCost(f'jlim', 100 * jlim_cost)
 
 # joint acceleration
 prb.createIntermediateResidual("min_q_ddot", 1e-2 * model.a)
@@ -237,8 +238,8 @@ for i, frame in enumerate(contacts):
     prb.createIntermediateCost(f'{frame}_rot', 1e1*rot_err)  # nodes=[]
 
     # kinematic contact
-    contact = prb.createConstraint(f"{frame}_vel", ee_v, nodes=[]) # cs.vertcat(ee_v, ee_v_ang)
-
+    contact = prb.createConstraint(f"{frame}_vel", ee_v, nodes=[])  # ee_v # cs.vertcat(ee_v, ee_v_ang)
+    contact_rot = prb.createResidual(f"{frame}_rot_vel", 1 * ee_v_ang, nodes=[])
     # unilateral forces
     fcost = barrier(model.fmap[frame][2] - 100.0)  # fz > 10
     unil = prb.createIntermediateCost(f'{frame}_unil', 1e-3 * fcost, nodes=[])
@@ -253,8 +254,14 @@ for i, frame in enumerate(contacts):
     vert = prb.createConstraint(f"{frame}_vert", lat_vel, nodes=[])
 
 
-ptgt[0].assign(2.)
-# ptgt[1].assign(1.)
+# set base goal
+x_goal = 2.
+y_goal = 0.
+
+base_goal = [x_goal, y_goal, math.atan2(y_goal, x_goal)]
+
+ptgt.assign(base_goal)
+
 
 cplusplus = True
 
@@ -279,6 +286,7 @@ for c in contacts:
         stance_phase = Phase(f'stance_{c}', stance_duration)
 
     stance_phase.addConstraint(prb.getConstraints(f'{c}_vel'))
+    stance_phase.addCost(prb.getCosts(f'{c}_rot_vel'))
     stance_phase.addCost(prb.getCosts(f'{c}_unil'))
     c_phases[c].registerPhase(stance_phase)
 #
@@ -299,6 +307,8 @@ for c in contacts:
 
     flight_phase.addParameterValues(prb.getParameters(f'{c}_z_des'), z_trj)
     c_phases[c].registerPhase(flight_phase)
+
+    print(flight_phase.getConstraints())
 
 for c in contacts:
     stance = c_phases[c].getRegisteredPhase(f'stance_{c}')
