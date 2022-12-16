@@ -1477,7 +1477,7 @@ class RecedingParameter(Parameter):
         if indices is None:
             indices_vec = np.array(range(self._dim)).astype(int)
         else:
-            indices_vec = np.array(indices).astype(int)
+            indices_vec = np.atleast_1d(np.array(indices).astype(int))
 
         if val_checked.shape[0] != indices_vec.size:
             raise Exception(f'Wrong dimension of parameter values inserted: ({val_checked.shape[0]} != {indices_vec.size})')
