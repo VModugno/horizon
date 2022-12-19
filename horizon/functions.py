@@ -923,7 +923,7 @@ class RecedingCost(RecedingFunction):
     def setNodes(self, nodes, erasing=True):
         super().setNodes(nodes, erasing)
         # eliminate/enable cost functions by setting their weight
-        nodes_mask = self._zero_nodes_mask
+        nodes_mask = self._zero_nodes_mask.copy()
         # nodes_mask = np.zeros([self.weight_mask.getDim(), np.sum(self._feas_nodes_array).astype(int)])
         nodes_mask[:, nodes] = 1
         self.weight_mask.assign(nodes_mask)
