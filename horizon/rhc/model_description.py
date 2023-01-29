@@ -11,12 +11,16 @@ np.set_printoptions(precision=3, suppress=True)
 
 class FullModelInverseDynamics:
     
-    def __init__(self, problem, kd, q_init, base_init, floating_base=True, **kwargs):
+    def __init__(self, problem, kd, q_init, base_init=None, floating_base=True, fixed_joint_map=None, **kwargs):
+        # todo: adding contact dict
+
+        if fixed_joint_map is None:
+            fixed_joint_map = {}
 
         self.prb: Problem = problem
         self.kd = kd
         self.kd_frame = pycasadi_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED
-        self.floating_base = floating_base
+        self.fixed_joint_map = fixed_joint_map
 
         # number of dof
         self.nq = self.kd.nq()
@@ -28,7 +32,6 @@ class FullModelInverseDynamics:
 
         if floating_base is True:
             self.q0[:7] = base_init
-            floating_base = True
             self.joint_names = self.kd.joint_names()[2:]
         else:
             self.joint_names = self.kd.joint_names()[1:]
@@ -90,7 +93,9 @@ class FullModelInverseDynamics:
         return force
 
     def _make_vertex_contact(self, contact_frame, contact_params):
-        
+
+        # todo WARNING: contact_params['vertex_frames'] must be a list!!!!!!!!!!!!!!!!!
+
         vertex_frames = contact_params['vertex_frames']  # todo improve error
 
         # create inputs (todo: support degree > 0)
@@ -107,11 +112,8 @@ class FullModelInverseDynamics:
 
     def setDynamics(self):
         # todo refactor this floating base stuff
-        if self.floating_base:
-            self.xdot = utils.double_integrator_with_floating_base(self.q, self.v, self.a, self.kd)
-        else:
-            self.xdot = utils.double_integrator(self.v, self.a)
 
+        self.xdot = utils.double_integrator(self.q, self.v, self.a, self.kd)
         self.prb.setDynamics(self.xdot)
 
         # underactuation constraints
@@ -123,7 +125,7 @@ class FullModelInverseDynamics:
         #     id_fn = kin_dyn.InverseDynamics(self.kd)
 
     def getContacts(self):
-        return self.cmap.keys()
+        return list(self.cmap.keys())
 
     # def getInput(self):
     #     return self.a
@@ -213,7 +215,7 @@ class SingleRigidBodyDynamicsModel:
         if self.use_kinodynamic:
             # note: base acceleration computation is postponed to setDynamics.
             # when we'll know the forces
-            self.aj =  self.prb.createInputVariable('aj', self.nv - 6)
+            self.aj = self.prb.createInputVariable('aj', self.nv - 6)
         else:
             self.a = self.prb.createInputVariable('a', self.nv)
 

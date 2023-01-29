@@ -283,10 +283,8 @@ class SolverILQR(Solver):
             if isinstance(f, (Residual, RecedingResidual)) and self.use_gn:
                 outname_actual = 'res'
                 set_to_ilqr_actual = self.ilqr.setIntermediateResidual
-                print('got residual')
             elif isinstance(f, (Residual, RecedingResidual)) and not self.use_gn:
                 value = cs.sumsqr(value)
-                print('got residual disables')
                 
             # wrap function
             l = cs.Function(fname, 

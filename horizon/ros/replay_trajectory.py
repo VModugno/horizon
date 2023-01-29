@@ -13,7 +13,7 @@ try:
 except ImportError:
     from . import tf_broadcaster_simple as ros_tf
     print('will not use tf publisher')
-        
+
 
 def normalize_quaternion(q):
 
@@ -27,7 +27,7 @@ def normalize_quaternion(q):
 
 
 class replay_trajectory:
-    def __init__(self, dt, joint_list, q_replay, frame_force_mapping=None, force_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL, kindyn=None):
+    def __init__(self, dt, joint_list, q_replay, frame_force_mapping=None, force_reference_frame=cas_kin_dyn.CasadiKinDyn.LOCAL, kindyn=None, fixed_joint_map=None):
         """
         Contructor
         Args:
@@ -36,25 +36,20 @@ class replay_trajectory:
             q_replay: joints position to replay
             frame_force_mapping: map between forces and frames where the force is acting
             force_reference_frame: frame w.r.t. the force is expressed. If LOCAL_WORLD_ALIGNED then forces are rotated in LOCAL frame before being published
-            kindyn: casadi_kin_dyn obj
-
-            #TODO: move kindyn before optional params!
+            kindyn: needed if forces are in LOCAL_WORLD_ALIGNED
         """
-        if kindyn is None:
-            raise Exception('kindyn input can not be None')
-
         if frame_force_mapping is None:
             frame_force_mapping = {}
 
+        if fixed_joint_map is None:
+            fixed_joint_map = {}
+
         self.dt = dt
-
-
         self.joints_1dof = [j for j in joint_list if kindyn.joint_nq(j) == 1]
         self.joints_floating = [j for j in joint_list if kindyn.joint_nq(j) == 7]
         self.iq_1dof = [kindyn.joint_iq(j) for j in self.joints_1dof]
         self.iq_floating = [kindyn.joint_iq(j) for j in self.joints_floating]
         self.parent_child_floating = [(kindyn.parentLink(j), kindyn.childLink(j)) for j in self.joints_floating]
-
 
         self.q_replay = q_replay
         self.__sleep = 0.
@@ -62,12 +57,16 @@ class replay_trajectory:
         self.frame_force_mapping = {}
         self.slow_down_rate = 1.
         self.frame_fk = dict()
+        self.fixed_joint_map = fixed_joint_map
+
 
         if frame_force_mapping is not None:
             self.frame_force_mapping = deepcopy(frame_force_mapping)
 
         # WE CHECK IF WE HAVE TO ROTATE CONTACT FORCES:
         if force_reference_frame is cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED:
+            if kindyn is None:
+                raise Exception('kindyn input can not be None if force_reference_frame is LOCAL_WORLD_ALIGNED!')
             for frame in self.frame_force_mapping.keys(): # WE LOOP ON FRAMES
                 FK = kindyn.fk(frame)
                 self.frame_fk[frame] = FK
@@ -107,7 +106,7 @@ class replay_trajectory:
             f = self.frame_force_mapping[frame][:, k]
 
             w_R_f = self.frame_fk[frame](q=qk)['ee_rot'].toarray()
-            
+
             if f.shape[0] == 3:
                 f = np.dot(w_R_f.T,  f).T
             else:
@@ -147,16 +146,19 @@ class replay_trajectory:
         '''
         self.slow_down_rate = 1./slow_down_factor
 
-    def publish_joints(self, qk, fixed_joint_map=dict(), is_floating_base=True, base_link='base_link'):
-        
+    def publish_joints(self, qk, is_floating_base=True, base_link='base_link', skip_tf=False):
+
         joint_state_pub = JointState()
         joint_state_pub.header = Header()
-        joint_state_pub.name = self.joints_1dof + list(fixed_joint_map.keys())
+        joint_state_pub.name = self.joints_1dof + list(self.fixed_joint_map.keys())
         t = rospy.Time.now()
         br = self.br
         nq = len(qk)
 
         for iq, (parent, child) in zip(self.iq_floating, self.parent_child_floating):
+
+            if skip_tf:
+                break
 
             q = normalize_quaternion(qk[iq:iq+7])
 
@@ -176,9 +178,9 @@ class replay_trajectory:
                                 m.transform.rotation.w),
                                 t, m.child_frame_id, m.header.frame_id)
 
-        
+
         joint_state_pub.header.stamp = t
-        joint_state_pub.position = qk[self.iq_1dof].tolist() + list(fixed_joint_map.values())
+        joint_state_pub.position = qk[self.iq_1dof].tolist() + list(self.fixed_joint_map.values())
         joint_state_pub.velocity = []
         joint_state_pub.effort = []
         self.pub.publish(joint_state_pub)

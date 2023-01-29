@@ -1,10 +1,10 @@
 solver:
-  type: ipopt
-  max_iter: 200
-  alpha_min: 0.01
-  step_length_threshold: 1e-9
-  line_search_accept_ratio: 1e-4
-  verbose: True
+  type: ilqr
+  ilqr.max_iter: 200
+  ilqr.alpha_min: 0.01
+  ilqr.step_length_threshold: 1e-9
+  ilqr.line_search_accept_ratio: 1e-4
+  ilqr.verbose: True
 
 # todo add MinVelocity JointVelocity
 #regularization:
@@ -13,7 +13,6 @@ solver:
 #    force: 0.01
 
 constraints: [final_base_x,
-              final_x,
               foot_contact_lf_foot,
               foot_contact_rf_foot,
               foot_contact_lh_foot,
@@ -27,15 +26,13 @@ constraints: [final_base_x,
               foot_xy_lh_foot,
               foot_xy_rh_foot]
 
-costs: [final_base_y, joint_posture, regularization, final_y] # min_rot
+costs: [final_base_y, joint_posture, regularization] # min_rot
 
-# todo to cartesian
 final_base_x:
   type: Cartesian
   distal_link: base_link
   indices: [0]
   nodes: final
-  weight: 1000
 #
 final_base_y:
   type: Cartesian
@@ -56,23 +53,14 @@ joint_posture:
   weight: 1.
   nodes: all
 
-final_x:
-  type: Cartesian
-  distal_link: base_link
-  indices: [0]
-  nodes: final
-
-final_y:
-  type: Cartesian
-  distal_link: base_link
-  indices: [1]
-  weight: 1000
-  nodes: final
-
 ## ==================== required for actionManager =============================
 contact_lf_foot:
-  type: Force
+  type: VertexForce
   frame: lf_foot
+  fn_min: 10.0
+  vertex_frames:
+    - lf_foot
+
 zero_velocity_lf_foot:
   type: Cartesian
   distal_link: lf_foot
@@ -80,8 +68,12 @@ zero_velocity_lf_foot:
   cartesian_type: velocity
 
 contact_rf_foot:
-  type: Force
+  type: VertexForce
   frame: rf_foot
+  fn_min: 10.0
+  vertex_frames:
+    - rf_foot
+
 zero_velocity_rf_foot:
   type: Cartesian
   distal_link: rf_foot
@@ -89,8 +81,12 @@ zero_velocity_rf_foot:
   cartesian_type: velocity
 
 contact_lh_foot:
-  type: Force
+  type: VertexForce
   frame: lh_foot
+  fn_min: 10.0
+  vertex_frames:
+    - lh_foot
+
 zero_velocity_lh_foot:
   type: Cartesian
   distal_link: lh_foot
@@ -98,8 +94,11 @@ zero_velocity_lh_foot:
   cartesian_type: velocity
 
 contact_rh_foot:
-  type: Force
+  type: VertexForce
   frame: rh_foot
+  fn_min: 10.0
+  vertex_frames:
+    - rh_foot
 
 zero_velocity_rh_foot:
   type: Cartesian

@@ -9,8 +9,6 @@ from horizon.utils import utils, kin_dyn
 from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.solvers.solver import Solver
 from horizon.rhc.tasks.cartesianTask import CartesianTask
-from horizon.rhc.plugins.contactTaskSpot import ContactTaskSpot
-from horizon.rhc.plugins.contactTaskMirror import ContactTaskMirror
 from horizon.ros import replay_trajectory
 from horizon.rhc.taskInterface import TaskInterface
 import rospy
@@ -45,9 +43,10 @@ class Step(Action):
     simple class representing a step, contains the main info about the step
     """
 
-    def __init__(self, frame: str, k_start: int, k_goal: int, start=np.array([]), goal=np.array([]), clearance=0.08):
+    def __init__(self, frame: str, k_start: int, k_goal: int, start=np.array([]), goal=np.array([]), clearance=0.08, indices=None):
         super().__init__(frame, k_start, k_goal, start, goal)
         self.clearance = clearance
+        self.indices = indices
 
 
 # what if the action manager provides only the nodes? but for what?
@@ -99,6 +98,23 @@ class ActionManager:
 
         # TODO: action manager requires some tasks from the ti. It searches them by NAME.
         self.required_tasks = dict()
+        tasks_foot_contact = [f"foot_contact_{contact}" for contact in self.contacts]
+        tasks_foot_z = [f"foot_z_{contact}" for contact in self.contacts]
+        tasks_foot_xy = [f"foot_xy_{contact}" for contact in self.contacts]
+
+        for task in tasks_foot_contact:
+            if self.ti.getTask(task) is None:
+                print(f'task "{task}" not found.')
+
+        for task in tasks_foot_z:
+            if self.ti.getTask(task) is None:
+                print(f'task "{task}" not found.')
+
+        for task in tasks_foot_xy:
+            if self.ti.getTask(task) is None:
+                print(f'task "{task}" not found.')
+
+
         self.required_tasks['foot_contact'] = {contact: self.ti.getTask(f"foot_contact_{contact}") for contact in self.contacts}
         self.required_tasks['foot_z'] = {contact: self.ti.getTask(f"foot_z_{contact}") for contact in self.contacts}
         self.required_tasks['foot_xy'] = {contact: self.ti.getTask(f"foot_xy_{contact}") for contact in self.contacts}
@@ -294,13 +310,16 @@ class ActionManager:
         self.setContact(frame, self.contact_constr_nodes[frame])
 
         # xy goal
-        if self.N >= k_goal > 0 and step.goal.size > 0:
+        # TODO: refactor this
+        # if self.N >= k_goal > 0 and step.goal.size > 0:
             # adding param:
-            self._foot_tgt_params[frame][:, swing_nodes_in_horizon] = s.goal[:2]
+            # self._foot_tgt_params[frame][:, swing_nodes_in_horizon] = s.goal[:2]
+            #
+            # self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame])  # [k_goal]
+            # self.foot_tgt_constr[frame].setRef(self._foot_tgt_params[frame][self.foot_tgt_constr_nodes[frame]])  # s.goal[:2]
 
-            self.foot_tgt_constr[frame].setRef(
-                self._foot_tgt_params[frame][self.foot_tgt_constr_nodes[frame]])  # s.goal[:2]
-            self.foot_tgt_constr[frame].setNodes(self.foot_tgt_constr_nodes[frame])  # [k_goal]
+        if step.goal.size > 0:
+            s.start = np.array([0, 0, s.goal[2]])
 
         # z goal
         start = np.array([0, 0, self.default_foot_z[frame]]) if s.start.size == 0 else s.start
@@ -374,7 +393,7 @@ class ActionManager:
             step_list.append(s2)
 
         for s_i in step_list:
-            am.setStep(s_i)
+            self.setStep(s_i)
 
     def execute(self, bootstrap_solution):
         """

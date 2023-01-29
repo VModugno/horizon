@@ -159,7 +159,7 @@ public:
 
         ForwardPassResult(int nx, int nu, int N);
 
-        void print() const;
+        void print(int N = 1) const;
     };
 
 
@@ -282,6 +282,7 @@ private:
 
     bool _verbose;
     bool _log;
+    bool _rti;
 
     const int _nx;
     const int _nu;

@@ -2,7 +2,7 @@ solver:
   type: ipopt
   ipopt.linear_solver: ma57
   ipopt.hessian_approximation: exact
-  ilqr.verbose: true
+  ilqr.verbose: false
   ilqr.codegen_enabled: true
   ilqr.codegen_workdir: /tmp/miao
   ilqr.enable_gn: true

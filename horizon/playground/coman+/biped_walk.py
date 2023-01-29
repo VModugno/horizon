@@ -8,10 +8,9 @@ from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.utils.actionManager import ActionManager, Step
 import casadi as cs
 import rospy
-import logging
 
 # set up model
-path_to_examples = os.path.dirname(os.path.abspath(__file__)) + "/../../examples"
+path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples")
 os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
@@ -19,6 +18,7 @@ urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
 
 base_init = np.array([0., 0., 0.96, 0., 0.0, 0.0, 1.])
+
 q_init = {"LHipLat":       -0.0,
           "LHipSag":       -0.363826,
           "LHipYaw":       0.0,
@@ -48,8 +48,6 @@ q_init = {"LHipLat":       -0.0,
           "RWrj1":         -0.523599,
           "RWrj2":         -0.0}
 
-
-
 contact_dict = {
     'l_sole': {
         'type': 'vertex',
@@ -75,76 +73,48 @@ contact_dict = {
 
 # set up model
 urdf = urdf.replace('continuous', 'revolute')
-fixed_joints = [
-    "WaistLat",     
-    "WaistYaw",     
-    # "LShSag",       
-    "LShLat",       
-    "LShYaw",       
-    "LElbj",        
-    "LForearmPlate",
-    "LWrj1",        
-    "LWrj2",        
-    # "RShSag",       
-    "RShLat",       
-    "RShYaw",       
-    "RElbj",        
-    "RForearmPlate",
-    "RWrj1",        
-    "RWrj2",        
-    ]
-
+fixed_joints = []
 fixed_joints_pos = [q_init[k] for k in fixed_joints]
 fixed_joint_map = {k: q_init[k] for k in fixed_joints}
 q_init = {k: v for k, v in q_init.items() if k not in fixed_joints}
 kd = pycasadi_kin_dyn.CasadiKinDyn(urdf, fixed_joints=fixed_joint_map)
 
 # definition of the problem --> required by the ti
-N = 20
-tf = 2.0
+N = 50
+tf = 10.0
 dt = tf / N
 
-prb = Problem(N, receding=True)
+prb = Problem(N, receding=True, casadi_type=cs.SX)
 prb.setDt(dt)
 
 
 # set up model
-if True:
-    modeltype = 'FullModelInverseDynamics'
-    model = FullModelInverseDynamics(problem=prb, 
-                                     kd=kd, 
-                                     q_init=q_init,
-                                     base_init=base_init)
-else:
-    modeltype = 'SingleRigidBodyDynamicsModel'
-    model = SingleRigidBodyDynamicsModel(problem=prb, 
-                                         kd=kd, 
-                                         q_init=q_init,
-                                         base_init=base_init,
-                                         contact_dict=contact_dict,
-                                         use_kinodynamic=False)
-    rospy.set_param('/robot_description', model.kd_srbd.urdf())
+model = FullModelInverseDynamics(problem=prb,
+                                 kd=kd,
+                                 q_init=q_init,
+                                 base_init=base_init)
+# else:
+# model = SingleRigidBodyDynamicsModel(problem=prb,
+#                                      kd=kd,
+#                                      q_init=q_init,
+#                                      base_init=base_init,
+#                                      contact_dict=contact_dict)
 
 ti = TaskInterface(prb=prb,
                    model=model)
 
-ti.setTaskFromYaml(os.path.dirname(os.path.abspath(__file__)) + '/config_walk_forces.yaml')
-ti.finalize()   # todo call internally
+ti.setTaskFromYaml(os.path.dirname(__file__) + '/config_walk_forces.yaml')
+
 
 f0 = np.array([0, 0, 315, 0, 0, 0])
-# init_force = ti.getTask('joint_regularization')
-# # init_force.setRef(1, f0)
-# # init_force.setRef(2, f0)
-# for i in range(1, 1+8):
-#     init_force.setRef(i, f0[:3]/4.)
+init_force = ti.getTask('joint_regularization')
+# init_force.setRef(1, f0)
+# init_force.setRef(2, f0)
 
 
 
 final_base_x = ti.getTask('final_base_x')
-vref = 0.1
-
-# base_velocity = ti.getTask('base_velocity')
-# base_velocity.setRef([0.1, 0, 0, 0, 0, 0])
+final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])
@@ -153,28 +123,8 @@ vref = 0.1
 
 opts = dict()
 am = ActionManager(ti, opts)
-
-# create a gait pattern
-steps = list()
-n_steps = 100
-pattern = [0, 1]
-contacts = list(contact_dict.keys())
-stride_time = 2.0
-duty_cycle = 0.60
-tinit = 1.0
-k = 0
-
-for i in range(n_steps):
-    l = pattern[i % len(pattern)]
-    frame = contacts[l]
-    t_start = tinit + i*stride_time/2
-    t_goal = t_start + stride_time*(1-duty_cycle)
-    s = Step(frame=frame, k_start=k+int(t_start/dt), k_goal=k+int(t_goal/dt)) #, goal=goals[i], clearance=clea[i])
-    am.setStep(s)
-
-
-final_base_x.setRef([vref*(tf - tinit), 0, 0, 0, 0, 0, 1])
-
+am._walk([10, 40], [0, 1])
+# am._step(Step(frame='l_sole', k_start=20, k_goal=30))
 
 # todo: horrible API
 # l_contact.setNodes(list(range(5)) + list(range(15, 50)))
@@ -184,21 +134,15 @@ final_base_x.setRef([vref*(tf - tinit), 0, 0, 0, 0, 0, 1])
 # ===============================================================
 # ===============================================================
 # ===============================================================
-q = ti.model.getVariables('q')
-v = ti.model.getVariables('v')
-a = ti.model.getVariables('a')
+q = ti.prb.getVariables('q')
+v = ti.prb.getVariables('v')
+a = ti.prb.getVariables('a')
 
-import casadi as cs
 cd_fun = ti.model.kd.computeCentroidalDynamics()
 
 # adding minimization of angular momentum
 h_lin, h_ang, dh_lin, dh_ang = cd_fun(q, v, a)
-# ti.prb.createIntermediateResidual('min_angular_mom', 1e-1 * dh_ang)
-
-l_sole_pos, _ = ti.model.fk('l_sole')
-r_sole_pos, _ = ti.model.fk('r_sole')
-# ti.prb.createResidual('foot_distance_y', 1e1*(l_sole_pos[1] - r_sole_pos[1] - 0.30))
-
+ti.prb.createIntermediateResidual('min_angular_mom', 1e-1 * dh_ang)
 
 q.setBounds(ti.model.q0, ti.model.q0, nodes=0)
 v.setBounds(ti.model.v0, ti.model.v0, nodes=0)
@@ -209,40 +153,36 @@ for cname, cforces in ti.model.cmap.items():
     for c in cforces:
         c.setInitialGuess(f0[:c.size1()])
 
-# prb.createIntermediateCost('ureg', 1e-1*cs.sumsqr(prb.getInput().getVars()))
-
-replay_motion = False
+replay_motion = True
 plot_sol = False
 
 # todo how to add?
-# ti.prb.createConstraint('prevedibile_v', v, nodes=N-1)
-# ti.prb.createConstraint('prevedibile_a', a, nodes=N-1)
-
+ti.prb.createFinalConstraint('final_v', v)
 # ================================================================
 # ================================================================
 # ===================== stuff to wrap ============================
 # ================================================================
 # ================================================================
-import subprocess, rospy
+import rospy
 from horizon.ros import replay_trajectory
 
-ti.create_solver()
-
+ti.finalize()
 ti.bootstrap()
+ti.load_initial_guess()
 ti.resample(dt_res=0.001)
 solution = ti.solution
 ti.save_solution('/tmp/dioboy.mat')
-ti.solver_bs.save_iterations(f'/tmp/biped_walk_{modeltype}_{N}.mat')
-# exit()
 
 if replay_motion:
 
     # single replay
     q_sol = solution['q_res']
-    frame_force_mapping = {cname: solution[f.getName()+'_res'] for cname, f in ti.model.fmap.items()}
-    repl = replay_trajectory.replay_trajectory(0.001, ti.model.kd.joint_names()[2:], q_sol, frame_force_mapping, ti.model.kd_frame, ti.model.kd)
+    frame_force_mapping = {cname: solution[f.getName()+'_res'] for cname, f in model.fmap.items()}
+    repl = replay_trajectory.replay_trajectory(0.001, model.kd.joint_names(), q_sol, frame_force_mapping, model.kd_frame, model.kd)
     repl.sleep(1.)
     repl.replay(is_floating_base=True)
+
+exit()
 # =========================================================================
 if plot_sol:
     from horizon.utils import plotter
@@ -250,7 +190,7 @@ if plot_sol:
     from matplotlib import gridspec
     import casadi as cs
 
-    hplt = plotter.PlotterHorizon(ti.prb, solution)
+    hplt = plotter.PlotterHorizon(prb, solution)
     hplt.plotVariables([elem.getName() for elem in forces], show_bounds=False, gather=2, legend=False, dim=[0, 1, 2])
     hplt.plotVariables([elem.getName() for elem in forces], show_bounds=True, gather=2, legend=False, dim=[3, 4, 5])
 
@@ -290,28 +230,25 @@ if plot_sol:
     plt.show()
 
 
-repl = replay_trajectory.replay_trajectory(dt, ti.model.kd.joint_names()[:], np.array([]), {k: None for k in ti.model.fmap.keys()},
-                                           ti.model.kd_frame, ti.model.kd)
+repl = replay_trajectory.replay_trajectory(dt, kd.joint_names(), np.array([]), {k: None for k in model.fmap.keys()},
+                                           model.kd_frame, kd)
 iteration = 0
 
 
 flag_action = 1
 forces = [f for _, f in ti.model.fmap.items()]
-rate = rospy.Rate(1./dt)
 
 while True:
     iteration = iteration + 1
-    
-    final_base_x.setRef([vref*(tf - tinit + iteration*dt), 0, 0, 0, 0, 0, 1])
+    print(iteration)
 
-    am.execute(ti.solution)
+    solution = ti.solution
+    am.execute(solution)
     ti.rti()
 
-    repl.frame_force_mapping = {cname: ti.solution[f.getName()] for cname, f in ti.model.fmap.items()}
-    repl.publish_joints(ti.solution['q'][:, 0], fixed_joint_map=fixed_joint_map)
-    repl.publishContactForces(rospy.Time.now(), ti.solution['q'][:, 0], 0)
-
-    rate.sleep()
+    repl.frame_force_mapping = {cname: solution[f.getName()] for cname, f in ti.model.fmap.items()}
+    repl.publish_joints(solution['q'][:, 0])
+    repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
 
 
 

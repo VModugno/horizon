@@ -265,7 +265,7 @@ class CartesianTask(Task):
             fun = ee_a[self.indices] - self.acc_tgt
 
         self.constr = self.instantiator(
-            f'{frame_name}_task', self.weight * fun, nodes=self.nodes)
+            f'{frame_name}_cartesian_task', self.weight * fun, nodes=self.nodes)
 
         # todo should I keep track of the nodes here?
         #  in other words: should be setNodes resetting?
@@ -295,13 +295,13 @@ class CartesianTask(Task):
 
         if not nodes:
             self.nodes = []
-            self.constr.setNodes(self.nodes, erasing=True)
+            self.constr.setNodes(self.nodes)
             return 0
 
         # print('=============================================')
 
         # core
-        self.constr.setNodes(self.nodes[1:-1], erasing=True)  # <==== SET NODES
+        self.constr.setNodes(self.nodes[1:])  # <==== SET NODES
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
