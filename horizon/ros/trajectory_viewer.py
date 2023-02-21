@@ -19,7 +19,7 @@ class TrajectoryViewer:
 
         self.frame = frame
         self.count = 0
-        self.marker_publisher = rospy.Publisher('visualization_marker_array' + self.frame, MarkerArray, queue_size=100)
+        self.marker_publisher = rospy.Publisher('visualization_marker_array/' + self.frame, MarkerArray, queue_size=100)
 
         # rospy.Subscriber("/joint_states", JointState, self.event_in_cb)
         self.a = [1, 1, 1]
