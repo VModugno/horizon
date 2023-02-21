@@ -182,7 +182,7 @@ class replay_trajectory:
         '''
         self.slow_down_rate = 1./slow_down_factor
 
-    def publish_joints(self, qk, is_floating_base=True, base_link='base_link', skip_tf=False):
+    def publish_joints(self, qk, is_floating_base=True, base_link='base_link', skip_tf=False, trajectory_marker_action=Marker.ADD):
 
         joint_state_pub = JointState()
         joint_state_pub.header = Header()
@@ -220,6 +220,10 @@ class replay_trajectory:
         joint_state_pub.velocity = []
         joint_state_pub.effort = []
 
+        # action = Marker.ADD
+        for elem in self.tv.values():
+            elem.publish_once(action=trajectory_marker_action)
+
         self.pub.publish(joint_state_pub)
 
 
@@ -242,16 +246,16 @@ class replay_trajectory:
             for qk in self.q_replay.T:
 
                 t = rospy.Time.now()
-                self.publish_joints(qk, base_link=base_link)
 
                 # publish trajectory of frames with markers
-                for elem in self.tv.values():
-                    if k == ns - 1:
-                        action = Marker.DELETEALL
-                    else:
-                        action = Marker.ADD
-                    # action = Marker.ADD
-                    elem.publish_once(action=action)
+
+                if k == ns - 1:
+                    action = Marker.DELETEALL
+                else:
+                    action = Marker.ADD
+
+                self.publish_joints(qk, base_link=base_link, trajectory_marker_action=action)
+
 
                 if self.frame_force_mapping:
                     if k != ns-1:
