@@ -13,7 +13,9 @@ import casadi as cs
 import time
 import phase_manager.pyphase as pyphase
 import phase_manager.pymanager as pymanager
-
+import subprocess
+from horizon.utils.mat_storer import matStorer
+from matlogger2 import matlogger
 
 def barrier(x):
     return cs.sum1(cs.if_else(x > 0, 0, x ** 2))
@@ -185,7 +187,7 @@ for c in contacts:
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(flight)
+    # c_phases[c].addPhase(flight)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
     c_phases[c].addPhase(stance)
@@ -272,17 +274,36 @@ except:
     pass
 solution = solver_bs.getSolutionDict()
 
+
 # =========================================================================
 
 import subprocess, rospy
 from horizon.ros import replay_trajectory
 
+rospy.set_param('/robot_description', urdf)
+bashCommand = 'rosrun robot_state_publisher robot_state_publisher'
+subprocess.Popen(bashCommand.split(), start_new_session=True)
+
 # os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 # subprocess.Popen(["roslaunch", path_to_examples + "/replay/launch/launcher.launch", 'robot:=spot'])
 # rospy.loginfo("'spot' visualization started.")
 
+ml = matlogger.MatLogger2('ciao')
+
+for name, element in solution.items():
+    ml.create(name, element.shape[0])
+
+for contact in contacts:
+    FK = kd.fk(contact)
+    pos = FK(q=solution['q'])['ee_pos']
+    ml.create(contact + "pos", pos.shape[0])
+
+
+for i, contact in enumerate(contacts):
+    ml.create(contact, i)
+
 repl = replay_trajectory.replay_trajectory(dt, kd.joint_names(), np.array([]), {k: None for k in contacts}, kd_frame,
-                                           kd)
+                                           kd, trajectory_markers=contacts)
 iteration = 0
 
 rate = rospy.Rate(1 / dt)
@@ -329,10 +350,20 @@ while iteration < 100:
     elapsed_time_solution_list.append(elapsed_time_solving)
     solution = solver_rti.getSolutionDict()
 
+    for name, element in solution.items():
+        ml.add(name, element[:, 0])
+
+    for contact in contacts:
+        FK = kd.fk(contact)
+        contact_pos = FK(q=solution['q'][:, 0])['ee_pos']
+        ml.add(contact + "pos", contact_pos)
+
+
     repl.frame_force_mapping = {cname: solution[f.getName()] for cname, f in model.fmap.items()}
     repl.publish_joints(solution['q'][:, 0])
     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
     rate.sleep()
+
 
 
 print("elapsed time resetting nodes:", sum(elapsed_time_list) / len(elapsed_time_list))
