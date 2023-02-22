@@ -10,6 +10,7 @@ from casadi_kin_dyn import pycasadi_kin_dyn
 from matlogger2 import matlogger
 import phase_manager.pyphase as pyphase
 import phase_manager.pymanager as pymanager
+from horizon.utils import trajectoryGenerator as tg
 
 # set up problem
 ns = 50
@@ -123,7 +124,8 @@ stance_duration = 5
 flight_duration = 5
 
 pm = pymanager.PhaseManager(ns)
-#
+
+tg = tg.TrajectoryGenerator()
 c_phases = dict()
 for c in contacts:
      c_phases[c] = pm.addTimeline(f'{c}_timeline')
@@ -141,8 +143,24 @@ for c in contacts:
     flight_phase = pyphase.Phase(flight_duration, f"flight_{c}")
     clearance_task = ti.getTask('foot_z_' + c)
     stance_phase.addItem(clearance_task)
+
+    FK = kd.fk(c)
+    initial_contact_pos = FK(q=model.q0)['ee_pos'].elements()[0]
+
+    z_trj = tg.from_derivatives(flight_duration, initial_contact_pos, initial_contact_pos, 0.02, [0, 0, 0])
+
+    cart_ref = np.zeros([7, stance_duration])
+    cart_ref[2, :] = z_trj
+
+    print(cart_ref)
+    clearance_task.setRef(cart_ref)
+
     # clearance_task.
     c_phases[c].registerPhase(flight_phase)
+
+
+
+    clearance_task.setRef()
 
 
 # clearance_task.setRef()
