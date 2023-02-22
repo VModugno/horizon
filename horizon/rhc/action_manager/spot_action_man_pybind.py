@@ -101,8 +101,10 @@ model.v.setBounds(np.zeros(model.nv), np.zeros(model.nv), 0)
 
 model.q.setInitialGuess(model.q0)
 
+f0 = [0, 0, kd.mass()/4 * 9.8]
+
 for f_name, f_var in model.fmap.items():
-    f_var.setInitialGuess([0, 0, kd.mass()/4 * 9.8])
+    f_var.setInitialGuess(f0)
 
 if solver_type != 'ilqr':
     Transcriptor.make_method(transcription_method, prb, transcription_opts)
@@ -140,7 +142,7 @@ prb.createResidual("min_q", 1. * (model.q[7:] - model.q0[7:]))
 prb.createIntermediateResidual("min_q_ddot", 0.01 * model.a)
 # contact forces
 for f_name, f_var in model.fmap.items():
-    prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * f_var)
+    prb.createIntermediateResidual(f"min_{f_var.getName()}", 0.01 * (f_var))
 
 cplusplus = True  # without set nodes: 6.5*10-5 (c++) vs 9*10-4 (python)
 
@@ -183,36 +185,41 @@ for c in contacts:
 for c in contacts:
     stance = c_phases[c].getRegisteredPhase(f'stance_{c}')
     flight = c_phases[c].getRegisteredPhase(f'flight_{c}')
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    # c_phases[c].addPhase(flight)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-    c_phases[c].addPhase(stance)
-
-
-range_trot_1 = range(4, 16, 2)
-range_trot_2 = range(5, 17, 2)
-
-lift_contact = 'lh_foot'
-for i in range_trot_1:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
-lift_contact = 'rh_foot'
-for i in range_trot_2:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
-lift_contact = 'lf_foot'
-for i in range_trot_2:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
-lift_contact = 'rf_foot'
-for i in range_trot_1:
-    c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     # c_phases[c].addPhase(flight)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#     c_phases[c].addPhase(stance)
+#
+#
+# range_trot_1 = range(4, 25, 2)
+# range_trot_2 = range(5, 26, 2)
+#
+# lift_contact = 'lh_foot'
+# for i in range_trot_1:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+# lift_contact = 'rh_foot'
+# for i in range_trot_2:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+# lift_contact = 'lf_foot'
+# for i in range_trot_2:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
+# lift_contact = 'rf_foot'
+# for i in range_trot_1:
+#     c_phases[lift_contact].addPhase(c_phases[lift_contact].getRegisteredPhase(f'flight_{lift_contact}'), i)
 
 # for name, timeline in c_phases.items():
     # print('timeline:', timeline.getName())
@@ -249,6 +256,7 @@ opts = {'ilqr.max_iter': 200,
         'ilqr.alpha_min': 0.01,
         'ilqr.step_length_threshold': 1e-9,
         'ilqr.line_search_accept_ratio': 1e-4,
+        'ilqr.verbose': False
         }
 
 # todo if receding is true ....
@@ -313,8 +321,10 @@ nc = 4
 
 elapsed_time_list = []
 elapsed_time_solution_list = []
+elapsed_time_iter_list = []
 
 while iteration < 100:
+    tic_iter = time.time()
     iteration = iteration + 1
     print(iteration)
 
@@ -364,10 +374,15 @@ while iteration < 100:
     repl.publishContactForces(rospy.Time.now(), solution['q'][:, 0], 0)
     rate.sleep()
 
+    elapsed_time_iter = time.time() - tic_iter
+    print('full_iter:', elapsed_time_iter)
+    elapsed_time_iter_list.append(elapsed_time_iter)
 
 
 print("elapsed time resetting nodes:", sum(elapsed_time_list) / len(elapsed_time_list))
 print("elapsed time solving:", sum(elapsed_time_solution_list) / len(elapsed_time_solution_list))
+print("elapsed time iterating:", sum(elapsed_time_iter_list) / len(elapsed_time_iter_list))
+
 
 
 
