@@ -156,13 +156,14 @@ class SingleRigidBodyDynamicsModel:
         srbd_robot.add_link(world_link)
 
         # todo sync origin, link name, ...
-        srbd_inertia = 3.*np.eye(3)
+        B = self.kd_real.crba()
+        I = B(q=q0_real)['B'][3:6, 3:6]
 
         self._make_floating_link(srbd_robot, 
                         link_name='base_link', 
                         parent_name='world', 
                         mass=self.kd_real.mass(), 
-                        inertia=srbd_inertia)
+                        inertia=I)
 
         # parse contacts
         self.fmap = dict()
@@ -196,8 +197,8 @@ class SingleRigidBodyDynamicsModel:
                 pass
         
         # create srbd urdf
-        urdf_srbd = srbd_robot.to_xml_string()
-        self.kd_srbd = pycasadi_kin_dyn.CasadiKinDyn(urdf_srbd)
+        self.urdf_srbd = srbd_robot.to_xml_string()
+        self.kd_srbd = pycasadi_kin_dyn.CasadiKinDyn(self.urdf_srbd)
         self.kd = self.kd_srbd
         self.joint_names = self.kd_srbd.joint_names()
 
@@ -219,8 +220,6 @@ class SingleRigidBodyDynamicsModel:
         else:
             self.a = self.prb.createInputVariable('a', self.nv)
 
-        
-
         _, base_rot_0 = self.kd_real.fk('base_link')(q0_real)  # todo: why ?
         base_pos_0, _, _ = self.kd_real.centerOfMass()(q0_real, 0, 0)
         self.q0 = self.kd_srbd.mapToQ({})
@@ -231,11 +230,13 @@ class SingleRigidBodyDynamicsModel:
         for jn in self.kd_srbd.joint_names()[2:]:
             distal_link_name = jn[:-6]  # remove trailing '_joint'
             pos_0, rot_0 = self.kd_real.fk(distal_link_name)(q0_real)
-            rel_pos = base_rot_0.T @ ( pos_0 - base_pos_0 )
+            rel_pos = base_rot_0.T @ (pos_0 - base_pos_0)
             rel_rot = base_rot_0.T @ rot_0
-            
+            #
             self.q0[q0_idx:q0_idx+3] = rel_pos.full().flatten()
             self.q0[q0_idx+3:q0_idx+7] = utils.rotationMatrixToQuaterion(rel_rot)
+            # self.q0[q0_idx:q0_idx+3] = pos_0.full().flatten()
+            # self.q0[q0_idx + 3:q0_idx + 7] = utils.rotationMatrixToQuaterion(rot_0)
             q0_idx += 7
 
 
@@ -255,6 +256,8 @@ class SingleRigidBodyDynamicsModel:
                         )
     
     def _make_box_link(self, name, mass, inertia, oxyz=[0, 0, 0], visual=None, center=False):
+        if isinstance(inertia, cs.DM):
+            inertia = inertia.full()
         
         ixx = inertia[0, 0]
         iyy = inertia[1, 1]
@@ -271,14 +274,15 @@ class SingleRigidBodyDynamicsModel:
             
 
             idiag = np.array([ixx, iyy, izz])
-            
+
             A = np.array([[0, 1, 1],
-                        [1, 0, 1], 
+                        [1, 0, 1],
                         [1, 1, 0]])
-            
-            size = np.sqrt(np.linalg.inv(A) @ idiag*12.0/mass)
+
+            size = np.sqrt(np.linalg.inv(A) @ idiag*1.0/mass)
+            # size = [0.4, 0.2, 0.05]
         else:
-            size = [0.4, 0.2, 0.05]
+            size = [0.2, 0.1, 0.02]
 
         # create link
 

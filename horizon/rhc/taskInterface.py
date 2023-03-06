@@ -76,11 +76,13 @@ class TaskInterface:
     def rti(self):
                 
         t = time.time()
-        self.solver_rti.solve()
+        check = self.solver_rti.solve()
         elapsed = time.time() - t
         print(f'rti solved in {elapsed} s')
 
         self.solution = self.solver_rti.getSolutionDict()
+
+        return check
 
 
     def resample(self, dt_res):

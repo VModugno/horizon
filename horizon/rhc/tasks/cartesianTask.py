@@ -148,6 +148,7 @@ class CartesianTask(Task):
         return rot_err
 
     def _initialize(self):
+        self.ref_matrix = None
         # todo this is wrong! how to get these variables?
         q = self.prb.getVariables('q')
         v = self.prb.getVariables('v')
@@ -273,20 +274,20 @@ class CartesianTask(Task):
     def getConstraint(self):
         return self.constr
 
-    def setRef(self, ref_traj):
+    def setRef(self): #, ref_traj):
 
         # todo shouldn't just ignore None, right?
-        if ref_traj is None:
-            return False
+        # if ref_traj is None:
+        #     return False
 
-        ref_matrix = np.array(ref_traj)
+        # ref_matrix = np.array(ref_traj)
 
         # if ref_matrix.ndim == 2 and ref_matrix.shape[1] != len(self.nodes):
         #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
         # elif ref_matrix.ndim == 1 and len(self.nodes) > 1:
         #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
 
-        self.ref.assign(ref_matrix, self.nodes)  # <==== SET TARGET
+        self.ref.assign(self.ref_matrix[:, 0:len(self.nodes)], self.nodes)  # <==== SET TARGET
 
         return True
 
@@ -301,7 +302,10 @@ class CartesianTask(Task):
         # print('=============================================')
 
         # core
-        self.constr.setNodes(self.nodes[1:])  # <==== SET NODES
+        self.constr.setNodes(self.nodes[0:])  # <==== SET NODES
+        if self.ref_matrix is not None:
+            self.setRef()
+
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
@@ -317,7 +321,7 @@ class CartesianTask(Task):
         if ref_traj is None:
             return False
 
-        ref_matrix = np.array(ref_traj)
+        self.ref_matrix = np.array(ref_traj)
 
         return True
 
