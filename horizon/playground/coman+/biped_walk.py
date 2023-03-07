@@ -7,11 +7,14 @@ from horizon.rhc.taskInterface import TaskInterface
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.utils.actionManager import ActionManager, Step
 import casadi as cs
-import rospy
+import rospy, subprocess
 
 # set up model
 path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples")
 os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
+
+bashCommand = 'rosrun robot_state_publisher robot_state_publisher'
+subprocess.Popen(bashCommand.split(), start_new_session=True)
 
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
 urdf = open(urdffile, 'r').read()
@@ -123,7 +126,8 @@ final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
 
 opts = dict()
 am = ActionManager(ti, opts)
-am._walk([10, 40], [0, 1])
+am._walk([10, 500], [0, 1])
+
 # am._step(Step(frame='l_sole', k_start=20, k_goal=30))
 
 # todo: horrible API
