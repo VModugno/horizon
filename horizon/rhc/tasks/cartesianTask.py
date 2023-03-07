@@ -5,6 +5,7 @@ from horizon.problem import Problem
 import numpy as np
 from scipy.spatial.transform import Rotation as scipy_rot
 
+
 # todo name is useless
 
 
@@ -117,8 +118,8 @@ class CartesianTask(Task):
             quat_2 = val2
 
         rot_err = quat_1[3] * quat_2[0:3] - \
-            quat_2[3] * quat_1[0:3] - \
-            cs.mtimes(self._skew(quat_2[0:3]), quat_1[0:3])
+                  quat_2[3] * quat_1[0:3] - \
+                  cs.mtimes(self._skew(quat_2[0:3]), quat_1[0:3])
 
         return rot_err
 
@@ -139,7 +140,7 @@ class CartesianTask(Task):
         R_skew = (R_err - R_err.T) / 2
 
         r = cs.vertcat(R_skew[2, 1], R_skew[0, 2], R_skew[1, 0])
-        
+
         sqrt_arg = 1 + cs.trace(R_err)
         sqrt_arg = cs.if_else(sqrt_arg > epsi, sqrt_arg, epsi)
         div = cs.sqrt(sqrt_arg)
@@ -168,7 +169,7 @@ class CartesianTask(Task):
             ee_p_base_t = ee_p_base['ee_pos']
             ee_p_base_r = ee_p_base['ee_rot']
 
-            ee_p_rel = ee_p_distal_t 
+            ee_p_rel = ee_p_distal_t
             ee_r_rel = ee_p_distal_r
 
             frame_name = f'{self.name}_{self.distal_link}_pos'
@@ -207,7 +208,7 @@ class CartesianTask(Task):
             ee_p_distal_r = ee_p_distal['ee_rot']
 
             dfk_distal = self.kin_dyn.frameVelocity(
-            self.distal_link, self.kd_frame)
+                self.distal_link, self.kd_frame)
             ee_v_distal_t = dfk_distal(q=q, qdot=v)['ee_vel_linear']
             ee_v_distal_r = dfk_distal(q=q, qdot=v)['ee_vel_angular']
             ee_v_distal = cs.vertcat(ee_v_distal_t, ee_v_distal_r)
@@ -230,7 +231,6 @@ class CartesianTask(Task):
                 ee_v_base_t = dfk_base(q=q, qdot=v)['ee_vel_linear']
                 ee_v_base_r = dfk_base(q=q, qdot=v)['ee_vel_angular']
 
-                
                 ee_v_base = cs.vertcat(ee_v_base_t, ee_v_base_r)
 
                 # express this velocity from world to base
@@ -274,20 +274,19 @@ class CartesianTask(Task):
     def getConstraint(self):
         return self.constr
 
-    def setRef(self): #, ref_traj):
+    def setRef(self, ref_traj):
 
-        # todo shouldn't just ignore None, right?
-        # if ref_traj is None:
-        #     return False
+        '''
+        possible alternative implementation of reference:
+            - adding a reference to the task addReference()
+            -
+        '''
+        if ref_traj is None:
+            return False
 
-        # ref_matrix = np.array(ref_traj)
-
-        # if ref_matrix.ndim == 2 and ref_matrix.shape[1] != len(self.nodes):
-        #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
-        # elif ref_matrix.ndim == 1 and len(self.nodes) > 1:
-        #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
-
-        self.ref.assign(self.ref_matrix[:, 0:len(self.nodes)], self.nodes)  # <==== SET TARGET
+        # horrible
+        self.ref_matrix = np.atleast_2d(np.array(ref_traj))
+        self.addReference()
 
         return True
 
@@ -304,24 +303,26 @@ class CartesianTask(Task):
         # core
         self.constr.setNodes(self.nodes[0:])  # <==== SET NODES
         if self.ref_matrix is not None:
-            self.setRef()
-
+            self.addReference()
 
         # print(f'task {self.name} nodes: {self.pos_constr.getNodes().tolist()}')
         # print(f'param task {self.name} nodes: {self.pos_tgt.getValues()[:, self.pos_constr.getNodes()].tolist()}')
         # print('===================================')
 
-    def addReference(self, ref_traj):
+    def addReference(self):  # , ref_traj):
 
-        '''
-        possible alternative implementation of reference:
-            - adding a reference to the task addReference()
-            -
-        '''
-        if ref_traj is None:
-            return False
+        # todo shouldn't just ignore None, right?
+        # if ref_traj is None:
+        #     return False
 
-        self.ref_matrix = np.array(ref_traj)
+        # ref_matrix = np.array(ref_traj)
+
+        # if ref_matrix.ndim == 2 and ref_matrix.shape[1] != len(self.nodes):
+        #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
+        # elif ref_matrix.ndim == 1 and len(self.nodes) > 1:
+        #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
+        # what if self.nodes is empty?
+        if self.nodes:
+            self.ref.assign(self.ref_matrix[:, 0:len(self.nodes)], self.nodes)  # <==== SET TARGET
 
         return True
-
