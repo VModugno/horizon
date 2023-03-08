@@ -1,7 +1,9 @@
 import copy
 
 import numpy as np
-import phase_manager.pymanager as pm
+import phase_manager.pymanager as pymanager
+import phase_manager.pyphase as pyphase
+
 from casadi_kin_dyn import pycasadi_kin_dyn
 import casadi as cs
 
@@ -21,12 +23,21 @@ class Action:
     an action is a desired (ordered) sequence of phases for a contact/set of contacts
     """
 
-    def __init__(self, name: str, phases: list):
+    def __init__(self, name: str): # phases: list
         self.name = name
-        self.phases = phases
+        self.phases = dict()
 
-    def addPhase(self, phase):
-        self.phases
+    def addPhase(self, contact, phase):
+        if contact not in self.phases:
+            self.phases[contact] = []
+        self.phases[contact].append(phase)
+
+    def getPhases(self, contact):
+        return self.phases[contact]
+
+    def getName(self):
+        return self.name
+
 
 class Step(Action):
     """
@@ -36,7 +47,7 @@ class Step(Action):
     def __init__(self):
         pass
 
-class ActionManager():
+class ActionManager:
     """
     set of actions which involves combinations of constraints and bounds
     action manager should work on top of the phase manager - task interface
@@ -47,34 +58,24 @@ class ActionManager():
 
     """
 
-    def __init__(self, task_interface: TaskInterface, phase_manager: pm.PhaseManager, opts=None):
-        # prb: Problem, urdf, kindyn, contacts_map, default_foot_z
-
-        self.ti = task_interface
-
-        self.prb = self.ti.prb
-
+    def __init__(self, phase_manager: pymanager.PhaseManager, contacts, opts=None):
         self.opts = opts
 
-        self.contact_map = self.ti.model.cmap
-        self.contacts = self.contact_map.keys()
-        self.nc = len(self.contacts)
+        self.contacts = contacts
 
-        self.phase_manager_map = dict()  #: [str, pm.SinglePhaseManager]
-        for c in self.contacts:
-            self.phase_manager_map[c] = phase_manager.getTimeline(c)
-
-        self.ns = self.prb.getNNodes()
+        self.ns = phase_manager.getNodes()
+        # map contacts with corresponding timeline in phase manager (regardless of its name)
+        # todo: CAUTION this means that contacts must be ordered like phase manager
+        # self.phase_manager_map = dict(zip(self.contacts, phase_manager.getTimelines().values()))
+        self.phase_manager_map = phase_manager.getTimelines()
+        # self.ns = self.prb.getNNodes()
         # todo list of contact is fixed?
 
         # self.constraints = list()
         # self.current_cycle = 0  # what to do here?
-        #
 
         # initialize default action dict with action for each contact (init --> None)
-        self.default_action = {key: None for key in self.contacts}
-
-        self.kd = self.ti.model.kd
+        self.default_action = None
 
         # searches in the phase manager the required tasks
         # TODO: action manager requires phases from phase manager. It searches them by NAME.
@@ -85,79 +86,41 @@ class ActionManager():
             self.stance_phases[c] = self.phase_manager_map[c].getRegisteredPhase(f'stance_{c}')
             self.swing_phases[c] = self.phase_manager_map[c].getRegisteredPhase(f'flight_{c}')
 
-        # todo: remove from here
+        #  creating a dummy default action and setting it to the actionManager
+        # todo: remove from here?
         stance_action = Action('standing_still')
         for c in self.contacts:
-            stance_action.addPhase(c) = self.stance_phase[c]
+            stance_action.addPhase(c, self.stance_phases[c])
 
         self.setDefaultAction(stance_action)
         self._add_default_action()
 
         self.action_list = []
 
+    def addAction(self, action):
+        # set nodes!
+        pass
+
     def setDefaultAction(self, action):
         # todo for now the default is robot still, in contact
 
+        # default action should set ALL the contacts behaviour
         for c in self.contacts:
             if action.getPhases(c) is None:
                 raise Exception(f"Contact {c} not set. ActionManager requires a default action for every contact ({self.contacts}).")
 
-            self.default_action[c] = action.getPhases(c)
+        self.default_action = action
 
 
     def _add_default_action(self):
-
-
+        print(f"adding default action '{self.default_action.getName()}'")
         for c in self.contacts:
-            self.phase_manager_map[c].addPhase(self.default_action[c])
+            for phase in self.default_action.getPhases(c):
 
-
-
-
-
-
-
-
-
-
-
-            # def _check_required_tasks_type(self, required_tasks):
-            #     # actionManager requires some tasks for working. It asks the TaskInterface for tasks.
-            #     task_type = dict()
-            #     for task in required_tasks:
-            #         found_task = self.ti.getTasksType(task)
-            #         if found_task is None:
-            #             raise Exception(
-            #                 'Task {} not found. ActionManager requires this task, please provide your implementation.'.format(
-            #                     task))
-            #         else:
-            #             task_type[task] = found_task
-            #
-            #     return task_type
-
-    def setRequiredTasks(self, task_dict):
-        # TODO: add some logic
-        self.required_tasks = task_dict
-
-    def setContact(self, frame, nodes):
-        """
-        establish/break contact
-        """
-        # todo reset all the other "contact" constraints on these nodes
-        # self._reset_task_constraints(frame, nodes_in_horizon_x)
-
-        # todo what to do with z_constr?
-        # self.z_constr.reset()
-
-        self.contact_constr[frame].setNodes(nodes)
-
-    # def _append_nodes(self, node_list, new_nodes):
-
-    # def _append_params(self, params_array, new_params, nodes):
-
-    # def setStep(self, step):
-        # self.action_list.append(step)
-        # self._step(step)
+                while self.phase_manager_map[c].getEmptyNodes() > 0:
+                    print(f'empty nodes in contact {c}: {self.phase_manager_map[c].getEmptyNodes()}')
+                    print(f"adding to contact '{c}' phase '{phase.getName()}'")
+                    self.phase_manager_map[c].addPhase(phase)
 
     def _step(self, step: Step):
         """
@@ -289,7 +252,7 @@ class ActionManager():
         """
         self._update_initial_state(bootstrap_solution, -1)
 
-        self._set_default_action()
+        self._add_default_action()
 
         k0 = 1
 
@@ -336,4 +299,29 @@ class ActionManager():
 
 
 if __name__ == '__main__':
-    pass
+    ns = 50
+    contacts = ['l_sole', 'r_sole']
+
+    pm = pymanager.PhaseManager(ns)
+    # phase manager handling
+    c_phases = dict()
+    for c in contacts:
+        c_phases[c] = pm.addTimeline(f'{c}')
+
+    for c in contacts:
+        # stance phase
+        stance_duration = 5
+        stance_phase = pyphase.Phase(stance_duration, f'stance_{c}')
+        c_phases[c].registerPhase(stance_phase)
+
+        flight_duration = 5
+        flight_phase = pyphase.Phase(flight_duration, f'flight_{c}')
+
+        ref_trj = np.zeros(shape=[7, 5])
+        c_phases[c].registerPhase(flight_phase)
+
+
+    # for c in contacts:
+    #     print(c_phases[c].getRegisteredPhase(f'stance_{c}'))
+
+    am = ActionManager(pm, contacts)
