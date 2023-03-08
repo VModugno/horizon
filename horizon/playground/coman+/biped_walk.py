@@ -7,7 +7,7 @@ from horizon.rhc.taskInterface import TaskInterface
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.utils.actionManager import ActionManager, Step
 import casadi as cs
-import rospy
+import rospy, subprocess
 
 # set up model
 path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples")
@@ -16,6 +16,10 @@ os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 urdffile = os.path.join(path_to_examples, 'urdf', 'cogimon.urdf')
 urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
+
+bashCommand = 'rosrun robot_state_publisher robot_state_publisher'
+subprocess.Popen(bashCommand.split(), start_new_session=True)
+
 
 base_init = np.array([0., 0., 0.96, 0., 0.0, 0.0, 1.])
 
@@ -113,8 +117,8 @@ init_force = ti.getTask('joint_regularization')
 
 
 
-final_base_x = ti.getTask('final_base_x')
-final_base_x.setRef([1, 0, 0, 0, 0, 0, 1])
+final_base_xy = ti.getTask('final_base_xy')
+final_base_xy.setRef([1, 0, 0, 0, 0, 0, 1])
 
 # final_base_y = ti.getTask('final_base_y')
 # final_base_y.setRef([0, 1, 0, 0, 0, 0, 1])

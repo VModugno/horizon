@@ -12,7 +12,7 @@ solver:
 
 
 constraints: 
- - final_base_x          # required to set x-target for the walk
+ - final_base_xy          # required to set x-target for the walk
  - foot_contact_l_sole   # required from the ActionManager
  - foot_contact_r_sole   # required from the ActionManager
  - foot_z_l_sole         # required from the ActionManager
@@ -29,10 +29,10 @@ costs:
   # - base_posture
 
 
-final_base_x:
+final_base_xy:
   type: Cartesian
   distal_link: base_link
-  indices: [0]
+  indices: [0, 1]
   nodes: final
 
 rot_l_sole:
