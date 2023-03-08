@@ -16,23 +16,25 @@ import rospy
 import os
 import subprocess
 
-
 class Action:
     """
-    simple class representing a generic action
+    an action is a desired (ordered) sequence of phases for a contact/set of contacts
     """
 
-    def __init__(self, frame: str):
-        pass
+    def __init__(self, name: str, phases: list):
+        self.name = name
+        self.phases = phases
+
+    def addPhase(self, phase):
+        self.phases
 
 class Step(Action):
     """
     simple class representing a step, contains the main info about the step
     """
 
-    def __init__(self, frame: str, clearance=0.08):
-        super().__init__(frame)
-        self.clearance = clearance
+    def __init__(self):
+        pass
 
 class ActionManager():
     """
@@ -49,12 +51,18 @@ class ActionManager():
         # prb: Problem, urdf, kindyn, contacts_map, default_foot_z
 
         self.ti = task_interface
-        self.phase_manager = phase_manager
+
         self.prb = self.ti.prb
 
         self.opts = opts
 
         self.contact_map = self.ti.model.cmap
+        self.contacts = self.contact_map.keys()
+        self.nc = len(self.contacts)
+
+        self.phase_manager_map = dict()  #: [str, pm.SinglePhaseManager]
+        for c in self.contacts:
+            self.phase_manager_map[c] = phase_manager.getTimeline(c)
 
         self.ns = self.prb.getNNodes()
         # todo list of contact is fixed?
@@ -62,63 +70,70 @@ class ActionManager():
         # self.constraints = list()
         # self.current_cycle = 0  # what to do here?
         #
-        self.contacts = self.contact_map.keys()
-        self.nc = len(self.contacts)
+
+        # initialize default action dict with action for each contact (init --> None)
+        self.default_action = {key: None for key in self.contacts}
 
         self.kd = self.ti.model.kd
 
-        # TODO: action manager requires some tasks from the ti. It searches them by NAME.
-        self.required_phases = dict()
         # searches in the phase manager the required tasks
-        #   stance_phase
-        #   swing_phase
+        # TODO: action manager requires phases from phase manager. It searches them by NAME.
+        # for now this is ugly, take a phase that is called stance + name of the contact
+        self.stance_phases = dict()
+        self.swing_phases = dict()
+        for c in self.contacts:
+            self.stance_phases[c] = self.phase_manager_map[c].getRegisteredPhase(f'stance_{c}')
+            self.swing_phases[c] = self.phase_manager_map[c].getRegisteredPhase(f'flight_{c}')
 
-        self._set_default_action()
+        # todo: remove from here
+        stance_action = Action('standing_still')
+        for c in self.contacts:
+            stance_action.addPhase(c) = self.stance_phase[c]
+
+        self.setDefaultAction(stance_action)
+        self._add_default_action()
 
         self.action_list = []
 
-    def compute_polynomial_trajectory(self, k_start, nodes, nodes_duration, p_start, p_goal, clearance, dim=None):
-
-        if dim is None:
-            dim = [0, 1, 2]
-
-        # todo check dimension of parameter before assigning it
-
-        traj_array = np.zeros(len(nodes))
-
-        start = p_start[dim]
-        goal = p_goal[dim]
-
-        index = 0
-        for k in nodes:
-            tau = (k - k_start) / nodes_duration
-            trj = _trj(tau) * clearance
-            trj += (1 - tau) * start + tau * goal
-            traj_array[index] = trj
-            index = index + 1
-
-        return np.array(traj_array)
-
-    def _set_default_action(self):
+    def setDefaultAction(self, action):
         # todo for now the default is robot still, in contact
 
+        for c in self.contacts:
+            if action.getPhases(c) is None:
+                raise Exception(f"Contact {c} not set. ActionManager requires a default action for every contact ({self.contacts}).")
+
+            self.default_action[c] = action.getPhases(c)
+
+
+    def _add_default_action(self):
+
+
+        for c in self.contacts:
+            self.phase_manager_map[c].addPhase(self.default_action[c])
 
 
 
 
-    # def _check_required_tasks_type(self, required_tasks):
-    #     # actionManager requires some tasks for working. It asks the TaskInterface for tasks.
-    #     task_type = dict()
-    #     for task in required_tasks:
-    #         found_task = self.ti.getTasksType(task)
-    #         if found_task is None:
-    #             raise Exception(
-    #                 'Task {} not found. ActionManager requires this task, please provide your implementation.'.format(
-    #                     task))
-    #         else:
-    #             task_type[task] = found_task
-    #
-    #     return task_type
+
+
+
+
+
+
+
+            # def _check_required_tasks_type(self, required_tasks):
+            #     # actionManager requires some tasks for working. It asks the TaskInterface for tasks.
+            #     task_type = dict()
+            #     for task in required_tasks:
+            #         found_task = self.ti.getTasksType(task)
+            #         if found_task is None:
+            #             raise Exception(
+            #                 'Task {} not found. ActionManager requires this task, please provide your implementation.'.format(
+            #                     task))
+            #         else:
+            #             task_type[task] = found_task
+            #
+            #     return task_type
 
     def setRequiredTasks(self, task_dict):
         # TODO: add some logic
