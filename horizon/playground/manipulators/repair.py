@@ -68,10 +68,10 @@ def add_cartesian_tasks_pos():
     ee_cart_2 = ti.setTaskFromDict(cart_2)
 
     # goal_vec = [0, 0, 0., 0, 0, 0, 1]
-    goal_vec = [0.5, -0.3, 0.5, 0, 0, 0, 1]
+    goal_vec = np.array([[0.5, -0.3, 0.5, 0, 0, 0, 1]]).T
     # goal_vec = [0.5, -0.2, 0.5, 0, 0.7071068, 0, 0.7071068]
     # goal_vec_1 = [0., 0.3, 0., 0, 0., 0., 1]  # 90deg on the y
-    goal_vec_1 = [0., 0.3, 0., 0, 0.7071068, 0, 0.7071068]  # 90deg on the y
+    goal_vec_1 = np.array([[0., 0.3, 0., 0, 0.7071068, 0, 0.7071068]]).T  # 90deg on the y
     # goal_vec_1 = [0., 0.3, 0., 0, 0, 0.3826834, 0.9238795]  # 45deg on the x
     # goal_vec = [0.5, -0.2, 0.5, 0.2705981, 0.2705981, 0, 0.9238795]
 
