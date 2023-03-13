@@ -293,6 +293,7 @@ class CartesianTask(Task):
     def setNodes(self, nodes):
         super().setNodes(nodes)
 
+        # print(f"cartesian task '{self.getName()}': ", self.nodes)
         if not nodes:
             self.nodes = []
             self.constr.setNodes(self.nodes)
@@ -326,3 +327,12 @@ class CartesianTask(Task):
             self.ref.assign(self.ref_matrix[:, 0:len(self.nodes)], self.nodes)  # <==== SET TARGET
 
         return True
+
+    def getDim(self):
+        # todo: if its position is seven, if its velocity is 6 (now it's one because BUGS)
+        return 7
+
+    def assign(self, val):
+        self.ref.assign(val)  # <==== SET TARGET
+
+        return 1
