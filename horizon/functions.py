@@ -102,7 +102,7 @@ class AbstractFunction:
         """
         return misc.getNodesFromBinary(self._active_nodes_array)
 
-    def setNodes(self, nodes, erasing=False):
+    def setNodes(self, nodes, erasing=True):
         """
         Setter for the active nodes of the function.
 
