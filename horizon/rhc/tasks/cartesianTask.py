@@ -187,6 +187,8 @@ class CartesianTask(Task):
 
             self.ref = self.pose_tgt
 
+            # self.initial_ref_matrix = self.ref.getValues().copy()
+
             fun_trans = ee_p_rel - self.pose_tgt[:3]
             # todo check norm_2 with _compute_orientation_error2
 
@@ -290,13 +292,13 @@ class CartesianTask(Task):
 
         return True
 
-    def setNodes(self, nodes):
+    def setNodes(self, nodes, erasing=True):
         super().setNodes(nodes)
 
         # print(f"cartesian task '{self.getName()}': ", self.nodes)
         if not nodes:
             self.nodes = []
-            self.constr.setNodes(self.nodes)
+            self.constr.setNodes(self.nodes, erasing=erasing)
             return 0
 
         # print('=============================================')
@@ -332,7 +334,12 @@ class CartesianTask(Task):
         # todo: if its position is seven, if its velocity is 6 (now it's one because BUGS)
         return 7
 
-    def assign(self, val):
-        self.ref.assign(val)  # <==== SET TARGET
+    def getValues(self):
+        # necessary method for using this task as an item + reference in phaseManager
+        return self.ref.getValues()
 
+    def assign(self, val, nodes=None):
+        # necessary method for using this task as an item + reference in phaseManager
+        self.ref.assign(val, nodes)
         return 1
+    

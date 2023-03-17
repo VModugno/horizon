@@ -258,7 +258,7 @@ class TaskInterface:
 
         # todo this should probably go in each single task definition --> i don't have the info from the ti then
         shortcuts = {
-            'nodes': {'final': self.prb.getNNodes() - 1, 'all': range(self.prb.getNNodes())},
+            'nodes': {'final': self.prb.getNNodes() - 1, 'all': list(range(self.prb.getNNodes()))},
             # todo: how to choose the value to substitute depending on the item? (indices of q: self.model.nq, indices of f: self.f.size ...)
             # 'indices': {'floating_base': range(7), 'joints': range(7, self.model.nq + 1)}
         }

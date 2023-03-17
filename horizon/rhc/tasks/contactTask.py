@@ -25,7 +25,7 @@ class ContactTask(Task):
         super().__init__(*args, **kwargs)
 
 
-    def setNodes(self, nodes):
+    def setNodes(self, nodes, erasing=True):
 
         self.interaction_task.setContact(nodes)  # this is from taskInterface
-        self.cartesian_task.setNodes(nodes)  # state + starting from node 1  # this is from taskInterface
+        self.cartesian_task.setNodes(nodes, erasing)  # state + starting from node 1  # this is from taskInterface

@@ -49,7 +49,7 @@ class Task:
         self.indices = np.array(self.indices) if self.indices is not None else None
         # self.nodes = list(range(self.prb.getNNodes()))
 
-    def setNodes(self, nodes):
+    def setNodes(self, nodes, erasing=True):
         self.nodes = nodes
         self.n_active = len(self.nodes)
 
