@@ -14,6 +14,7 @@ from horizon.transcriptions.transcriptor import Transcriptor
 from horizon.rhc.tasks.posturalTask import PosturalTask
 from horizon.rhc.tasks.limitsTask import JointLimitsTask
 from horizon.rhc.tasks.regularizationTask import RegularizationTask
+from horizon.transcriptions import integrators
 from typing import List, Dict, Union, Tuple
 import numpy as np
 from horizon.rhc import task_factory, plugin_handler, solver_interface
@@ -85,21 +86,29 @@ class TaskInterface:
         return check
 
 
-    def resample(self, dt_res):
-        
+    def resample(self, dt_res, dae=None, nodes=None, resample_tau=True):
+
+        if nodes is None:
+            nodes = self.prb.getNNodes
+
+        if dae is None:
+            integrator = self.prb.getIntegrator()
+        else:
+            integrator = integrators.EULER(dae)
+
         u_res = resampler_trajectory.resample_input(
-            self.solution['u_opt'], 
+            self.solution['u_opt'][:, 0:nodes],
             self.prb.getDt(), 
             dt_res)
 
         x_res = resampler_trajectory.resampler(
-            self.solution['x_opt'], 
-            self.solution['u_opt'], 
+            self.solution['x_opt'][:, 0:nodes+1],
+            self.solution['u_opt'][:, 0:nodes],
             self.prb.getDt(), 
             dt_res, 
             dae=None,
-            f_int=self.prb.getIntegrator())
-            
+            f_int=integrator)
+
         self.solution['dt_res'] = dt_res
         self.solution['x_opt_res'] = x_res
         self.solution['u_opt_res'] = u_res
@@ -114,8 +123,6 @@ class TaskInterface:
             off, dim = self.prb.getInput().getVarIndex(sname)
             self.solution[f'{sname}_res'] = u_res[off:off+dim, :]
 
-        # get tau resampled
-
         # new fmap with resampled forces
         if self.model.fmap:
 
@@ -127,33 +134,35 @@ class TaskInterface:
             for frame, wrench in self.model.fmap.items():
                 fmap_res[frame] = self.solution[f'{wrench.getName()}_res']
 
-            tau = np.zeros([self.model.tau.shape[0], self.prb.getNNodes() -1])
-            tau_res = np.zeros([self.model.tau.shape[0], u_res.shape[1]])
+            # get tau resampled
+            if resample_tau:
+                tau = np.zeros([self.model.tau.shape[0], self.prb.getNNodes() -1])
+                tau_res = np.zeros([self.model.tau.shape[0], u_res.shape[1]])
 
-            id = kin_dyn.InverseDynamics(self.model.kd, fmap_res.keys(), self.model.kd_frame)
+                id = kin_dyn.InverseDynamics(self.model.kd, fmap_res.keys(), self.model.kd_frame)
 
-                # id_fn = kin_dyn.InverseDynamics(self.kd, self.fmap.keys(), self.kd_frame)
-                # self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
-                # self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
+                    # id_fn = kin_dyn.InverseDynamics(self.kd, self.fmap.keys(), self.kd_frame)
+                    # self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
+                    # self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
 
-            # todo: this is horrible. id.call should take matrices, I should not iter over each node
+                # todo: this is horrible. id.call should take matrices, I should not iter over each node
 
-            for i in range(tau.shape[1]):
-                fmap_i = dict()
-                for frame, wrench in fmap.items():
-                    fmap_i[frame] = wrench[:, i]
-                tau_i = id.call(self.solution['q'][:, i], self.solution['v'][:, i], self.solution['a'][:, i], fmap_i)
-                tau[:, i] = tau_i.toarray().flatten()
+                for i in range(tau.shape[1]):
+                    fmap_i = dict()
+                    for frame, wrench in fmap.items():
+                        fmap_i[frame] = wrench[:, i]
+                    tau_i = id.call(self.solution['q'][:, i], self.solution['v'][:, i], self.solution['a'][:, i], fmap_i)
+                    tau[:, i] = tau_i.toarray().flatten()
 
-            for i in range(tau_res.shape[1]):
-                fmap_res_i = dict()
-                for frame, wrench in fmap_res.items():
-                    fmap_res_i[frame] = wrench[:, i]
-                tau_res_i = id.call(self.solution['q_res'][:, i], self.solution['v_res'][:, i], self.solution['a_res'][:, i], fmap_res_i)
-                tau_res[:, i] = tau_res_i.toarray().flatten()
+                for i in range(tau_res.shape[1]):
+                    fmap_res_i = dict()
+                    for frame, wrench in fmap_res.items():
+                        fmap_res_i[frame] = wrench[:, i]
+                    tau_res_i = id.call(self.solution['q_res'][:, i], self.solution['v_res'][:, i], self.solution['a_res'][:, i], fmap_res_i)
+                    tau_res[:, i] = tau_res_i.toarray().flatten()
 
-            self.solution['tau'] = tau
-            self.solution['tau_res'] = tau_res
+                self.solution['tau'] = tau
+                self.solution['tau_res'] = tau_res
 
 
     def save_solution(self, filename):
