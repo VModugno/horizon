@@ -304,7 +304,7 @@ class CartesianTask(Task):
         # print('=============================================')
 
         # core
-        self.constr.setNodes(self.nodes[0:])  # <==== SET NODES
+        self.constr.setNodes(self.nodes[0:], erasing=erasing)  # <==== SET NODES
         if self.ref_matrix is not None:
             self.addReference()
 
