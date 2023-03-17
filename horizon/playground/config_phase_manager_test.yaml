@@ -98,6 +98,7 @@ zero_velocity_l_foot:
   type: Cartesian
   distal_link: l_sole
   indices: [0, 1, 2]
+#  nodes: all
   cartesian_type: velocity
 
 #interaction_r_foot:
@@ -120,6 +121,7 @@ zero_velocity_r_foot:
   type: Cartesian
   distal_link: r_sole
   indices: [0, 1, 2]
+#  nodes: all
   cartesian_type: velocity
 # ==================================
 
@@ -150,14 +152,14 @@ foot_z_l_sole:
   distal_link: l_sole
   indices: [2]
   cartesian_type: position
-  nodes: all
+#  nodes: all
 
 foot_z_r_sole:
   type: Cartesian
   distal_link: r_sole
   indices: [2]
   cartesian_type: position
-  nodes: all
+#  nodes: all
 
 #foot_xy_l_sole:
 #  type: Cartesian

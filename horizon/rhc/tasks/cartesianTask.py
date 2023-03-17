@@ -293,7 +293,7 @@ class CartesianTask(Task):
         return True
 
     def setNodes(self, nodes, erasing=True):
-        super().setNodes(nodes)
+        super().setNodes(nodes, erasing=erasing)
 
         # print(f"cartesian task '{self.getName()}': ", self.nodes)
         if not nodes:

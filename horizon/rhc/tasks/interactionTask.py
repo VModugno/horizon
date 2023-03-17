@@ -44,8 +44,8 @@ class InteractionTask(Task):
         return self.frame
 
     # todo crazy misleading name
-    def setNodes(self, nodes):
-        super().setNodes(nodes)
+    def setNodes(self, nodes, erasing=True):
+        super().setNodes(nodes, erasing=erasing)
 
         self.nodes = nodes
         self._reset()
@@ -184,7 +184,16 @@ class VertexContact(InteractionTask):
 
         self.all_nodes = self.forces[0].getNodes()
 
+        # no initializaton of interaction task?
+        self.initialize()
+
+    def initialize(self):
+
         self.fn_barrier = self.make_fn_barrier()
+
+        # initialize everything with nodes specified
+        self.setNodes(self.nodes)
+
 
     def make_fn_barrier(self):
         fn_barrier_cost = []
