@@ -37,7 +37,7 @@ class InteractionTask(Task):
     def make_friction_cone(self):
         pass
 
-    def setContact(self, nodes):
+    def setContact(self, nodes, erasing=True):
         pass
 
     def getFrame(self):
@@ -128,12 +128,13 @@ class SurfaceContact(InteractionTask):
         fc = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost)
         return fc
 
-    def setContact(self, nodes):
+    def setContact(self, nodes, erasing=True):
 
         good_nodes = [n for n in nodes if n <= self.all_nodes[-1]]
 
         # start with all swing
-        self._set_zero(self.all_nodes)
+        if erasing:
+            self._set_zero(self.all_nodes)
 
         # no force bounds when in contact
         self.wrench.setBounds(lb=np.full(self.wrench.getDim(), -np.inf),
@@ -141,17 +142,17 @@ class SurfaceContact(InteractionTask):
                               nodes=good_nodes)
 
         # add normal force constraint
-        self.fn_barrier.setNodes(good_nodes)
+        self.fn_barrier.setNodes(good_nodes, erasing=erasing)
 
         # add cop constraint
         if self.cop_constr:
             # note: this resets bounds to (0, 0) !!!!!! EVIL!!!!!! SATAN!!!!!!
-            self.cop_constr.setNodes(good_nodes)
+            self.cop_constr.setNodes(good_nodes, erasing=erasing)
             # todo: this should be unnecessary, change behaviour of setNodes?
             # self.cop_constr.setLowerBounds(-np.inf * np.ones(4))
 
         if self.fc_constr:
-            self.fc_constr.setNodes(good_nodes)
+            self.fc_constr.setNodes(good_nodes, erasing=erasing)
 
     def getWrench(self):
         return self.wrench
@@ -204,13 +205,13 @@ class VertexContact(InteractionTask):
         fc = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost)
         return fc
 
-    def setContact(self, nodes):
+    def setContact(self, nodes, erasing=True):
 
         good_nodes = [n for n in nodes if n <= self.all_nodes[-1]]
 
         # start with all swing
-
-        self._set_zero(self.all_nodes)
+        if erasing:
+            self._set_zero(self.all_nodes)
 
         for f in self.forces:
             # no force bounds when in contact
@@ -219,11 +220,11 @@ class VertexContact(InteractionTask):
                         nodes=good_nodes)
 
         # add normal force constraint
-        self.fn_barrier.setNodes(good_nodes)
+        self.fn_barrier.setNodes(good_nodes, erasing=erasing)
 
         # set friction cone
         if self.fc_constr:
-            self.fc_constr.setNodes(good_nodes)
+            self.fc_constr.setNodes(good_nodes, erasing=erasing)
 
     def getWrench(self):
         return self.forces
