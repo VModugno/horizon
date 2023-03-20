@@ -322,6 +322,35 @@ nc = 4
 elapsed_time_list = []
 elapsed_time_solution_list = []
 elapsed_time_iter_list = []
+elapsed_time_resample_list = []
+
+from horizon.utils.resampler_trajectory import Resampler
+
+dt_res = 0.001
+resampler = Resampler(solution['x_opt'].shape[0], solution['x_opt'].shape[1], ns+1, prb.getDt(), dt_res, dae=None, f_int=prb.getIntegrator())
+
+ml.add('dt', dt)
+ml.add('dt_res', dt_res)
+
+n_nodes_res = int(round(resampler.node_time_array[-1] / dt_res)) + 1
+# ml.add('dt_res_array', resampler.node_time_array)
+# ml.create('x_opt_res', resampler.state_res.shape[0])
+
+dt_array = np.empty([1, ns + 1])
+dt_array[:, 0] = 0.
+for i in range(1, ns + 1):
+    dt_array[:, i] = dt_array[:, i - 1] + dt
+
+dt_array_res = np.empty([1, n_nodes_res])
+dt_array_res[:, 0] = 0.
+for i in range(1, n_nodes_res):
+    dt_array_res[:, i] = dt_array_res[:, i - 1] + dt_res
+
+
+import matplotlib.pyplot as plt
+
+plt.ion()
+plt.show()
 
 while iteration < 100:
     tic_iter = time.time()
@@ -360,14 +389,28 @@ while iteration < 100:
     elapsed_time_solution_list.append(elapsed_time_solving)
     solution = solver_rti.getSolutionDict()
 
-    # for name, element in solution.items():
-    #     ml.add(name, element[:, 0])
-    #
+    tic_resample = time.time()
+    x_res = resampler.resample(solution['x_opt'], solution['u_opt'])
+    elapsed_time_resampling = time.time() - tic_resample
+    print('resample:', elapsed_time_resampling)
+    elapsed_time_resample_list.append(elapsed_time_resampling)
+
+    for name, element in solution.items():
+        ml.add(name, element[:, 0])
+
     # for contact in contacts:
     #     FK = kd.fk(contact)
     #     contact_pos = FK(q=solution['q'][:, 0])['ee_pos']
     #     ml.add(contact + "pos", contact_pos)
 
+
+    # dim_to_plot = 12
+    # ax = plt.gca()
+    # ax.clear()
+    # plt.plot(dt_array.flatten(), solution['x_opt'][np.newaxis, dim_to_plot, :].flatten())
+    # plt.plot(dt_array_res.flatten(), x_res[np.newaxis, dim_to_plot, :].flatten())
+    # plt.pause(0.05)
+    # plt.draw()
 
     # for name, parameters in prb.getParameters().items():
     #     if name == 'lh_foot_z_des':
@@ -403,3 +446,4 @@ while iteration < 100:
 print("elapsed time resetting nodes:", sum(elapsed_time_list) / len(elapsed_time_list))
 print("elapsed time solving:", sum(elapsed_time_solution_list) / len(elapsed_time_solution_list))
 print("elapsed time iterating:", sum(elapsed_time_iter_list) / len(elapsed_time_iter_list))
+print("elapsed time resampling:", sum(elapsed_time_resample_list) / len(elapsed_time_resample_list))
