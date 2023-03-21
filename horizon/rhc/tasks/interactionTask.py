@@ -25,8 +25,6 @@ class InteractionTask(Task):
         self.indices = np.array([0, 1, 2, 3, 4, 5]).astype(int) if self.indices is None else np.array(
             self.indices).astype(int)
 
-        self.fc_constr = self.make_friction_cone() if enable_fc else None
-
     @abstractmethod
     def getWrench(self):
         pass
@@ -81,6 +79,7 @@ class SurfaceContact(InteractionTask):
         self.all_nodes = self.wrench.getNodes()
 
         self.cop_constr = self.make_cop() if enable_cop else None
+        self.fc_constr = self.make_friction_cone() if self.enable_fc else None
 
         self.fn_barrier = self.make_fn_barrier()
 
@@ -184,12 +183,12 @@ class VertexContact(InteractionTask):
 
         self.all_nodes = self.forces[0].getNodes()
 
-        # no initializaton of interaction task?
         self.initialize()
 
     def initialize(self):
 
         self.fn_barrier = self.make_fn_barrier()
+        self.fc_constr = self.make_friction_cone() if self.enable_fc else None
 
         # initialize everything with nodes specified
         self.setNodes(self.nodes)
@@ -207,8 +206,8 @@ class VertexContact(InteractionTask):
         fcost = []
         for f in self.forces:
             mu = self.friction_coeff
-            fcost = barrier_fun(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
-            fcost.append(fcost)
+            fcost_f = barrier_fun(f[2] ** 2 * mu ** 2 - cs.sumsqr(f[:2]))
+            fcost.append(fcost_f)
 
         fcost = cs.vertcat(*fcost)
         fc = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost)

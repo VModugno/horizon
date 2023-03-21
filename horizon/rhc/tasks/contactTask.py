@@ -1,10 +1,5 @@
-import casadi as cs
-import numpy as np
 from horizon.rhc.tasks.cartesianTask import CartesianTask
-from horizon.rhc.tasks.rollingTask import RollingTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
-from horizon.functions import RecedingConstraint, RecedingCost
-from horizon.utils.utils import barrier as barrier_fun
 from horizon.rhc.tasks.task import Task
 
 # todo this is a composition of atomic tasks: how to do?
@@ -29,7 +24,6 @@ class ContactTask(Task):
     def initialize(self):
 
         self.setNodes(self.nodes)
-
 
     def setNodes(self, nodes, erasing=True):
 

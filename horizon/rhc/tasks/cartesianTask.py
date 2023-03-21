@@ -326,7 +326,7 @@ class CartesianTask(Task):
         #     raise ValueError(f'Wrong nodes dimension inserted: ({self.ref.shape[1]} != {len(self.nodes)})')
         # what if self.nodes is empty?
         if self.nodes:
-            self.ref.assign(self.ref_matrix[:, 0:len(self.nodes)], self.nodes)  # <==== SET TARGET
+            self.ref.assign(self.ref_matrix[:, :len(self.nodes)], self.nodes)  # <==== SET TARGET
 
         return True
 
