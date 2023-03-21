@@ -925,7 +925,9 @@ class RecedingCost(RecedingFunction):
         # eliminate/enable cost functions by setting their weight
         nodes_mask = self._zero_nodes_mask.copy()
         # nodes_mask = np.zeros([self.weight_mask.getDim(), np.sum(self._feas_nodes_array).astype(int)])
-        nodes_mask[:, nodes] = 1
+
+        # getNodes because if it is not erasing, self.getNodes() may contain more nodes than "nodes"
+        nodes_mask[:, self.getNodes()] = 1
         self.weight_mask.assign(nodes_mask)
 
     # def shift(self):
