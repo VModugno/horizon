@@ -77,7 +77,7 @@ def toRot(q):
     """
     Compute rotation matrix associated to given quaternion q
     Args:
-        q: quaternion
+        q: quaternion (q[0] = qw  q[1] = qx  q[2] = qy  q[3] = qz
 
     Returns:
         R: rotation matrix
@@ -85,7 +85,7 @@ def toRot(q):
     """
 
     R = cs.SX.zeros(3, 3)
-    qi = q[0]; qj = q[1]; qk = q[2]; qr = q[3]
+    qi = q[1]; qj = q[2]; qk = q[3]; qr = q[0]
     R[0, 0] = 1. - 2. * (qj * qj + qk * qk)
     R[0, 1] = 2. * (qi * qj - qk * qr)
     R[0, 2] = 2. * (qi * qk + qj * qr)
@@ -97,6 +97,12 @@ def toRot(q):
     R[2, 2] = 1. - 2. * (qi * qi + qj * qj)
 
     return R
+
+def angular_velocities(q1, q2, dt):
+    return (2 / dt) * np.array([
+        q1[3]*q2[0] - q1[1]*q2[3] - q1[1]*q2[2] + q1[2]*q2[1],
+        q1[3]*q2[1] + q1[1]*q2[2] - q1[1]*q2[3] - q1[2]*q2[0],
+        q1[3]*q2[2] - q1[1]*q2[1] + q1[1]*q2[0] - q1[2]*q2[3]])
 
 def rotationMatrixToQuaterion(R):
     """
@@ -218,7 +224,20 @@ def double_integrator(q, v, a, kd=None):
 
     return cs.vertcat(qdot_fn(q, v), a)
 
+def single_integrator(q, v, kd=None):
+
+    if kd is None:
+        xdot = v
+        return xdot
+
+    qdot_fn = kd.qdot()
+
+    return qdot_fn(q, v)
+
 
 def barrier(x):
     return cs.if_else(x > 0, 0, x)
+
+def barrier1(x):
+    return cs.if_else(x < 0, 0, x)
 

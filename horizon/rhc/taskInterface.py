@@ -85,11 +85,10 @@ class TaskInterface:
 
         return check
 
-
     def resample(self, dt_res, dae=None, nodes=None, resample_tau=True):
 
         if nodes is None:
-            nodes = self.prb.getNNodes
+            nodes = list(range(self.prb.getNNodes + 1))
 
         if dae is None:
             integrator = self.prb.getIntegrator()
@@ -97,15 +96,15 @@ class TaskInterface:
             integrator = integrators.EULER(dae)
 
         u_res = resampler_trajectory.resample_input(
-            self.solution['u_opt'][:, 0:nodes],
-            self.prb.getDt(), 
+            self.solution['u_opt'][:, nodes[:-1]],
+            self.prb.getDt(),
             dt_res)
 
         x_res = resampler_trajectory.resampler(
-            self.solution['x_opt'][:, 0:nodes+1],
-            self.solution['u_opt'][:, 0:nodes],
-            self.prb.getDt(), 
-            dt_res, 
+            self.solution['x_opt'][:, nodes],
+            self.solution['u_opt'][:, nodes[:-1]],
+            self.prb.getDt(),
+            dt_res,
             dae=None,
             f_int=integrator)
 
@@ -116,12 +115,12 @@ class TaskInterface:
         for s in self.prb.getState():
             sname = s.getName()
             off, dim = self.prb.getState().getVarIndex(sname)
-            self.solution[f'{sname}_res'] = x_res[off:off+dim, :]
+            self.solution[f'{sname}_res'] = x_res[off:off + dim, :]
 
         for s in self.prb.getInput():
             sname = s.getName()
             off, dim = self.prb.getInput().getVarIndex(sname)
-            self.solution[f'{sname}_res'] = u_res[off:off+dim, :]
+            self.solution[f'{sname}_res'] = u_res[off:off + dim, :]
 
         # new fmap with resampled forces
         if self.model.fmap:
@@ -136,14 +135,14 @@ class TaskInterface:
 
             # get tau resampled
             if resample_tau:
-                tau = np.zeros([self.model.tau.shape[0], self.prb.getNNodes() -1])
+                tau = np.zeros([self.model.tau.shape[0], self.prb.getNNodes() - 1])
                 tau_res = np.zeros([self.model.tau.shape[0], u_res.shape[1]])
 
                 id = kin_dyn.InverseDynamics(self.model.kd, fmap_res.keys(), self.model.kd_frame)
 
-                    # id_fn = kin_dyn.InverseDynamics(self.kd, self.fmap.keys(), self.kd_frame)
-                    # self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
-                    # self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
+                # id_fn = kin_dyn.InverseDynamics(self.kd, self.fmap.keys(), self.kd_frame)
+                # self.tau = id_fn.call(self.q, self.v, self.a, self.fmap)
+                # self.prb.createIntermediateConstraint('dynamics', self.tau[:6])
 
                 # todo: this is horrible. id.call should take matrices, I should not iter over each node
 
@@ -151,14 +150,16 @@ class TaskInterface:
                     fmap_i = dict()
                     for frame, wrench in fmap.items():
                         fmap_i[frame] = wrench[:, i]
-                    tau_i = id.call(self.solution['q'][:, i], self.solution['v'][:, i], self.solution['a'][:, i], fmap_i)
+                    tau_i = id.call(self.solution['q'][:, i], self.solution['v'][:, i], self.solution['a'][:, i],
+                                    fmap_i)
                     tau[:, i] = tau_i.toarray().flatten()
 
                 for i in range(tau_res.shape[1]):
                     fmap_res_i = dict()
                     for frame, wrench in fmap_res.items():
                         fmap_res_i[frame] = wrench[:, i]
-                    tau_res_i = id.call(self.solution['q_res'][:, i], self.solution['v_res'][:, i], self.solution['a_res'][:, i], fmap_res_i)
+                    tau_res_i = id.call(self.solution['q_res'][:, i], self.solution['v_res'][:, i],
+                                        self.solution['a_res'][:, i], fmap_res_i)
                     tau_res[:, i] = tau_res_i.toarray().flatten()
 
                 self.solution['tau'] = tau
