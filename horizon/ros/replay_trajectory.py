@@ -62,7 +62,7 @@ class replay_trajectory:
             trajectory_markers = []
 
         if future_trajectory_markers is None:
-            future_trajectory_markers = {}
+            future_trajectory_markers = dict()
 
         if frame_force_mapping is None:
             frame_force_mapping = {}
@@ -213,7 +213,7 @@ class replay_trajectory:
         '''
         self.slow_down_rate = 1./slow_down_factor
 
-    def publish_joints(self, qk, is_floating_base=True, base_link='base_link', skip_tf=False, trajectory_marker_action=Marker.ADD):
+    def publish_joints(self, qk, is_floating_base=True, base_link='base_link', skip_tf=False, trajectory_marker_action=Marker.ADD, prefix=''):
 
         joint_state_pub = JointState()
         joint_state_pub.header = Header()
@@ -230,8 +230,8 @@ class replay_trajectory:
             q = normalize_quaternion(qk[iq:iq+7])
 
             m = geometry_msgs.msg.TransformStamped()
-            m.header.frame_id = parent
-            m.child_frame_id = child
+            m.header.frame_id = prefix + '/' + parent
+            m.child_frame_id = prefix + '/' + child
             m.transform.translation.x = q[0]
             m.transform.translation.y = q[1]
             m.transform.translation.z = q[2]
