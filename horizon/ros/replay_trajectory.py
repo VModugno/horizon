@@ -62,7 +62,7 @@ class replay_trajectory:
             trajectory_markers = []
 
         if future_trajectory_markers is None:
-            future_trajectory_markers = []
+            future_trajectory_markers = {}
 
         if frame_force_mapping is None:
             frame_force_mapping = {}
