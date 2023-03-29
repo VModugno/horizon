@@ -1,5 +1,6 @@
 import random
 
+import numpy
 import numpy as np
 import casadi as cs
 import rospy
@@ -43,7 +44,9 @@ class replay_trajectory:
                  kindyn=None,
                  fixed_joint_map=None,
                  trajectory_markers=None,
-                 trajectory_markers_opts=None):
+                 trajectory_markers_opts=None,
+                 future_trajectory_markers=None,
+                 future_trajectory_markers_opts=None):
         """
         Contructor
         Args:
@@ -58,8 +61,14 @@ class replay_trajectory:
         if trajectory_markers is None:
             trajectory_markers = []
 
+        if future_trajectory_markers is None:
+            future_trajectory_markers = []
+
         if frame_force_mapping is None:
             frame_force_mapping = {}
+
+        if future_trajectory_markers_opts is None:
+            future_trajectory_markers_opts = {}
 
         if fixed_joint_map is None:
             fixed_joint_map = {}
@@ -86,6 +95,7 @@ class replay_trajectory:
             trajectory_markers_opts = {}
 
         self.tv = dict()
+        self.future_tv = dict()
 
         for frame in trajectory_markers:
 
@@ -98,6 +108,19 @@ class replay_trajectory:
                          1.]
 
             self.tv[frame] = TrajectoryViewer(frame, color=color)
+
+
+        for frame, parent in future_trajectory_markers.items():
+
+            if 'colors' in future_trajectory_markers_opts:
+                color = future_trajectory_markers_opts['colors'][frame]
+            else:
+                color = [random.uniform(0, 1),
+                         random.uniform(0, 1),
+                         random.uniform(0, 1),
+                         1.]
+
+            self.future_tv[frame] = TrajectoryViewer(frame, parent, color=color, pub_name="future_marker_array/")
 
         # WE CHECK IF WE HAVE TO ROTATE CONTACT FORCES:
         if force_reference_frame is cas_kin_dyn.CasadiKinDyn.LOCAL_WORLD_ALIGNED:
@@ -130,6 +153,14 @@ class replay_trajectory:
             for key in self.frame_force_mapping:
                 self.force_pub.append(rospy.Publisher(key+'_forces', geometry_msgs.msg.WrenchStamped, queue_size=10))
 
+    def publish_past_trajectory_marker(self, trajectory_marker_action=Marker.ADD):
+
+        for elem in self.tv.values():
+            elem.publish_sphere(action=trajectory_marker_action)
+
+    def publish_future_trajectory_marker(self, frame, traj):
+
+        self.future_tv[frame].publish_line(traj)
 
     def publishContactForces(self, time, qk, k):
         i = 0
@@ -221,8 +252,8 @@ class replay_trajectory:
         joint_state_pub.effort = []
 
         # action = Marker.ADD
-        for elem in self.tv.values():
-            elem.publish_once(action=trajectory_marker_action)
+        # for elem in self.tv.values():
+        #     elem.publish_once(action=trajectory_marker_action)
 
         self.pub.publish(joint_state_pub)
 
