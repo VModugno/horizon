@@ -210,7 +210,7 @@ class VertexContact(InteractionTask):
             fcost.append(fcost_f)
 
         fcost = cs.vertcat(*fcost)
-        fc = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost)
+        fc = self.prb.createIntermediateResidual(f'{self.frame}_fc', 3e-1 * fcost, self.all_nodes)
         return fc
 
     def setContact(self, nodes, erasing=True):
