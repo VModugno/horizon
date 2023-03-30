@@ -226,11 +226,5 @@ if __name__ == '__main__':
     data1 = json.loads(obj_text_1)
     data2 = json.loads(obj_text_2)
 
-    # print(data1['constraint']['foot_z_l_sole_l_sole_pos_cartesian_task']['nodes'])
-    # exit()
     print("comparing d1 to d2:")
-    # compare_dicts(data1, data2)
     compare_dicts(data1, data2)
-
-    # print(data1['param']['com_height_base_link_pos_tgt']["values"])
-    # print(data2['param']['com_height_base_link_pos_tgt']["values"])
