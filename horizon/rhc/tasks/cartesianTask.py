@@ -209,6 +209,7 @@ class CartesianTask(Task):
             ee_p_distal_t = ee_p_distal['ee_pos']
             ee_p_distal_r = ee_p_distal['ee_rot']
 
+            # vel info
             dfk_distal = self.kin_dyn.frameVelocity(
                 self.distal_link, self.kd_frame)
             ee_v_distal_t = dfk_distal(q=q, qdot=v)['ee_vel_linear']
@@ -226,7 +227,7 @@ class CartesianTask(Task):
 
                 ee_p_rel = ee_p_distal_t - ee_p_base_t
                 # ========================================================================
-                # vel info
+
 
                 dfk_base = self.kin_dyn.frameVelocity(
                     self.base_link, self.kd_frame)
