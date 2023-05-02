@@ -16,6 +16,7 @@ path_to_examples = os.path.abspath(os.path.dirname(__file__) + "/../../examples"
 os.environ['ROS_PACKAGE_PATH'] += ':' + path_to_examples
 
 urdffile = os.path.join(path_to_examples, 'urdf', 'centauro.urdf')
+# urdffile = os.path.join(path_to_examples, 'urdf', 'centauro_big_wheels.urdf')
 urdf = open(urdffile, 'r').read()
 rospy.set_param('/robot_description', urdf)
 
@@ -27,7 +28,7 @@ fixed_joint_map = {'torso_yaw': 0.00,   # 0.00,
                     'j_arm1_4': -2.2,  # 0.3,
                     'j_arm1_5': 0.00,   # 0.00,
                     'j_arm1_6': -1.3,   # 0.,
-                    'j_arm1_7': 0.0,    # 0.0,
+                    # 'j_arm1_7': 0.0,    # 0.0,
 
                     'j_arm2_1': 1.50,   # 1.60,
                     'j_arm2_2': 0.1,    # 0.,
@@ -35,7 +36,7 @@ fixed_joint_map = {'torso_yaw': 0.00,   # 0.00,
                     'j_arm2_4': -2.2,   #-0.3,
                     'j_arm2_5': 0.0,    # 0.0,
                     'j_arm2_6': -1.3,   # 0.,
-                    'j_arm2_7': 0.0,    # 0.0,
+                    # 'j_arm2_7': 0.0,    # 0.0,
                     'd435_head_joint': 0.0,
                     'velodyne_joint': 0.0,
 
@@ -137,7 +138,7 @@ init_force = ti.getTask('joint_regularization')
 # init_force.setRef(2, f0)
 
 final_base_x = ti.getTask('final_base_xy')
-final_base_x.setRef([.6, 0, 0, 0, 0, 0, 1])
+final_base_x.setRef(np.array([[.6, 0, 0, 0, 0, 0, 1]]).T)
 
 
 # final_base_y = ti.getTask('base_posture')
@@ -210,73 +211,73 @@ ti.finalize()
 ti.bootstrap()
 solution = ti.solution
 ti.resample(0.001)
-ti.save_solution('centauro_up.mat')
+# ti.save_solution('centauro_up.mat')
 ti.replay_trajectory()
 exit()
 
-n_nodes = ti.prb.getNNodes()
-nodes_vec = np.zeros([n_nodes])
+# n_nodes = ti.prb.getNNodes()
+# nodes_vec = np.zeros([n_nodes])
+#
+# for i in range(1, n_nodes):
+#     nodes_vec[i] = nodes_vec[i - 1] + ti.prb.getDt()
+#
+# num_samples = ti.solution['tau_res'].shape[1]
+# dt_res = ti.solution['dt_res']
+#
+# nodes_vec_res = np.zeros([num_samples + 1])
+# for i in range(1, num_samples + 1):
+#     nodes_vec_res[i] = nodes_vec_res[i - 1] + dt_res
+#
+#
+# tau_sol_res = ti.solution['tau_res']
+# tau_sol_base = tau_sol_res[:6, :]
+#
+#
+# from matplotlib import pyplot as plt
+# threshold = 5
+# ## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
+# indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
+# # these indices corresponds to some nodes ..
+# values_exceed = nodes_vec_res[indices_exceed]
+#
+# ## search for duplicates and remove them, both in indices_exceed and values_exceed
+# indices_duplicates = np.where(np.in1d(values_exceed, nodes_vec))
+# value_duplicates = values_exceed[indices_duplicates]
+#
+# values_exceed = np.delete(values_exceed, np.where(np.in1d(values_exceed, value_duplicates)))
+# indices_exceed = np.delete(indices_exceed, indices_duplicates)
+#
+# ## base vector nodes augmented with new nodes + sort
+# nodes_vec_augmented = np.concatenate((nodes_vec, values_exceed))
+# nodes_vec_augmented.sort(kind='mergesort')
+#
+# plot_tau_base = True
+# if plot_tau_base:
+#     plt.figure()
+#     for dim in range(6):
+#         plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[dim, :]))
+#     plt.title('tau on base')
+#
+#
+#     plt.hlines([threshold], nodes_vec[0], nodes_vec[-1], linestyles='dashed', colors='k', linewidth=0.4)
+#     plt.hlines([-threshold], nodes_vec[0], nodes_vec[-1], linestyles='dashed', colors='k', linewidth=0.4)
+#
+#     plt.show()
 
-for i in range(1, n_nodes):
-    nodes_vec[i] = nodes_vec[i - 1] + ti.prb.getDt()
+# print(nodes_vec_augmented.shape)
+# from horizon.utils import refiner
 
-num_samples = ti.solution['tau_res'].shape[1]
-dt_res = ti.solution['dt_res']
-
-nodes_vec_res = np.zeros([num_samples + 1])
-for i in range(1, num_samples + 1):
-    nodes_vec_res[i] = nodes_vec_res[i - 1] + dt_res
-
-
-tau_sol_res = ti.solution['tau_res']
-tau_sol_base = tau_sol_res[:6, :]
-
-
-from matplotlib import pyplot as plt
-threshold = 5
-## get index of values greater than a given threshold for each dimension of the vector, and remove all the duplicate values (given by the fact that there are more dimensions)
-indices_exceed = np.unique(np.argwhere(np.abs(tau_sol_base) > threshold)[:, 1])
-# these indices corresponds to some nodes ..
-values_exceed = nodes_vec_res[indices_exceed]
-
-## search for duplicates and remove them, both in indices_exceed and values_exceed
-indices_duplicates = np.where(np.in1d(values_exceed, nodes_vec))
-value_duplicates = values_exceed[indices_duplicates]
-
-values_exceed = np.delete(values_exceed, np.where(np.in1d(values_exceed, value_duplicates)))
-indices_exceed = np.delete(indices_exceed, indices_duplicates)
-
-## base vector nodes augmented with new nodes + sort
-nodes_vec_augmented = np.concatenate((nodes_vec, values_exceed))
-nodes_vec_augmented.sort(kind='mergesort')
-
-plot_tau_base = True
-if plot_tau_base:
-    plt.figure()
-    for dim in range(6):
-        plt.plot(nodes_vec_res[:-1], np.array(tau_sol_res[dim, :]))
-    plt.title('tau on base')
-
-
-    plt.hlines([threshold], nodes_vec[0], nodes_vec[-1], linestyles='dashed', colors='k', linewidth=0.4)
-    plt.hlines([-threshold], nodes_vec[0], nodes_vec[-1], linestyles='dashed', colors='k', linewidth=0.4)
-
-    plt.show()
-
-print(nodes_vec_augmented.shape)
-from horizon.utils import refiner
-
-ref = refiner.Refiner(prb, nodes_vec_augmented, ti.solver_bs)
-
-ref.resetProblem()
-ref.resetFunctions()
-ref.resetVarBounds()
-ref.resetInitialGuess()
-ref.addProximalCosts()
-ref.solveProblem()
-sol_var, sol_cnsrt, sol_dt = ref.getSolution()
-
-new_prb = ref.getAugmentedProblem()
+# ref = refiner.Refiner(prb, nodes_vec_augmented, ti.solver_bs)
+#
+# ref.resetProblem()
+# ref.resetFunctions()
+# ref.resetVarBounds()
+# ref.resetInitialGuess()
+# ref.addProximalCosts()
+# ref.solveProblem()
+# sol_var, sol_cnsrt, sol_dt = ref.getSolution()
+#
+# new_prb = ref.getAugmentedProblem()
 
 # ms = mat_storer.matStorer(f'refiner_spot_jump.mat')
 # sol_cnsrt_dict = dict()
