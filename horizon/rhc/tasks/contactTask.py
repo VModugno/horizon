@@ -1,4 +1,5 @@
 from horizon.rhc.tasks.cartesianTask import CartesianTask
+from horizon.rhc.tasks.rollingTask import RollingTask
 from horizon.rhc.tasks.interactionTask import InteractionTask
 from horizon.rhc.tasks.task import Task
 

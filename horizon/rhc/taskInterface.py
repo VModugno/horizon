@@ -88,7 +88,7 @@ class TaskInterface:
     def resample(self, dt_res, dae=None, nodes=None, resample_tau=True):
 
         if nodes is None:
-            nodes = list(range(self.prb.getNNodes + 1))
+            nodes = list(range(self.prb.getNNodes() + 1))
 
         if dae is None:
             integrator = self.prb.getIntegrator()
@@ -96,13 +96,13 @@ class TaskInterface:
             integrator = integrators.EULER(dae)
 
         u_res = resampler_trajectory.resample_input(
-            self.solution['u_opt'][:, nodes[:-1]],
+            self.solution['u_opt'][:, [index for index in nodes if index < self.prb.getNNodes() - 1]],
             self.prb.getDt(),
             dt_res)
 
         x_res = resampler_trajectory.resampler(
-            self.solution['x_opt'][:, nodes],
-            self.solution['u_opt'][:, nodes[:-1]],
+            self.solution['x_opt'][:, [index for index in nodes if index < self.prb.getNNodes()]],
+            self.solution['u_opt'][:, [index for index in nodes if index < self.prb.getNNodes() - 1]],
             self.prb.getDt(),
             dt_res,
             dae=None,
