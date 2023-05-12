@@ -372,6 +372,45 @@ class Resampler:
 
         return self.state_res, input_res
 
+
+def linear_resampler(vec, dt, dt_res):
+    inputs = vec
+
+    n_nodes_res = int(round(dt / dt_res))
+    input_res = np.empty([inputs.shape[0], n_nodes_res])
+
+    node_time_array = np.array([i * dt for i in range(inputs.shape[1])])
+
+    input_res[:, 0] = inputs[:, 0]
+
+    t = 0
+    node = 0
+    input_prev = input_res[:, node]
+
+    for i in range(1, n_nodes_res):
+        t += dt_res
+
+
+        slope = (inputs[:, node + 1] - inputs[:, node]) / dt
+
+        while t > node_time_array[node + 1] and t < node_time_array[-1]:
+            node += 1
+
+            # integrate from the node just exceed with the relative input for the exceeding time
+            input_prev = inputs[:, node]
+
+        # integrate the state using the input at the desired node
+        input_int = input_prev + slope * (t - node_time_array[node])
+
+        input_res[:, i] = input_int
+
+        # if last resampled value is beyond or last original node, use last original value
+        if t >= node_time_array[-1]:
+            input_res[:, i] = inputs[:, -1]
+            break
+
+    return input_res
+
 def resampler(state_vec, input_vec, nodes_dt, desired_dt, dae, f_int=None):
 
     # convert to np if not np already
