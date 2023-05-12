@@ -114,6 +114,6 @@ class RollingTask(Task):
         self.constr = self.instantiator(f'{self.name}_rolling_task', self.weight * fun, nodes=self.nodes)
 
 
-    def setNodes(self, nodes):
-        self.constr.setNodes(nodes)
+    def setNodes(self, nodes, erasing=True):
+        self.constr.setNodes(nodes, erasing)
 
